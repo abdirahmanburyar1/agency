@@ -1,0 +1,124 @@
+// Daybah Travel Agency - Schema from Excel structure
+// Dev: Docker Postgres | Prod: Vercel Postgres
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --- Core transaction tables ---
+
+model Ticket {
+  id         String    @id @default(cuid())
+  date       DateTime  @map("date")
+  month      String    @map("month")
+  invoice    String?   @map("invoice")
+  sponsor    String?   @map("sponsor")
+  customerName String? @map("customer_name")
+  airline    String?   @map("airline")
+  route      String?   @map("route")
+  flight     String?   @map("flight")
+  departure  DateTime? @map("departure")
+  return     DateTime? @map("return")
+  netCost    Decimal   @map("net_cost") @db.Decimal(12, 2)
+  netSales   Decimal   @map("net_sales") @db.Decimal(12, 2)
+  profit     Decimal   @map("profit") @db.Decimal(12, 2)
+  pMethod    String?   @map("p_method")
+  account    String?   @map("account")
+  pStatus    String?   @map("p_status")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  @@map("tickets")
+}
+
+model Visa {
+  id         String    @id @default(cuid())
+  date       DateTime  @map("date")
+  month      String    @map("month")
+  sponsor    String?   @map("sponsor")
+  customer   String?   @map("customer")
+  country    String?   @map("country")
+  type       String?   @map("type")
+  netCost    Decimal   @map("net_cost") @db.Decimal(12, 2)
+  netSales   Decimal   @map("net_sales") @db.Decimal(12, 2)
+  profit     Decimal   @map("profit") @db.Decimal(12, 2)
+  deposit    Decimal?  @map("deposit") @db.Decimal(12, 2)
+  pickupDate DateTime? @map("pickup_date")
+  pMethod    String?   @map("p_method")
+  account    String?   @map("account")
+  pStatus    String?   @map("p_status")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  @@map("visas")
+}
+
+model Expense {
+  id         String   @id @default(cuid())
+  date       DateTime @map("date")
+  month      String   @map("month")
+  amount     Decimal  @map("amount") @db.Decimal(12, 2)
+  description String? @map("description")
+  category   String?  @map("category")
+  paidBy     String?  @map("paid_by")
+  receivedBy String?  @map("received_by")
+  pMethod    String?  @map("p_method")
+  account    String?  @map("account")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@map("expenses")
+}
+
+model Receivable {
+  id           String    @id @default(cuid())
+  date         DateTime  @map("date")
+  month        String    @map("month")
+  invoice      String?   @map("invoice")
+  customerName String?   @map("customer_name")
+  mobile       String?   @map("mobile")
+  sponsor      String?   @map("sponsor")
+  amount       Decimal   @map("amount") @db.Decimal(12, 2)
+  balance      Decimal   @map("balance") @db.Decimal(12, 2)
+  deadline     DateTime? @map("deadline")
+  remaining    Int?      @map("remaining")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  @@map("receivables")
+}
+
+model Payable {
+  id          String    @id @default(cuid())
+  date        DateTime  @map("date")
+  month       String    @map("month")
+  invoice     String?   @map("invoice")
+  name        String?   @map("name")
+  description String?   @map("description")
+  amount      Decimal   @map("amount") @db.Decimal(12, 2)
+  balance     Decimal   @map("balance") @db.Decimal(12, 2)
+  deadline    DateTime? @map("deadline")
+  remaining   Int?      @map("remaining")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  @@map("payables")
+}
+
+model Payment {
+  id         String   @id @default(cuid())
+  date       DateTime @map("date")
+  month      String   @map("month")
+  type       String   @map("type") // "Receivables" | "Payables"
+  name       String?  @map("name")
+  description String? @map("description")
+  amount     Decimal  @map("amount") @db.Decimal(12, 2)
+  airline    String?  @map("airline")
+  reference  String?  @map("reference")
+  pMethod    String?  @map("p_method")
+  account    String?  @map("account")
+  confirmed  Boolean? @map("confirmed")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@map("payments")
+}
