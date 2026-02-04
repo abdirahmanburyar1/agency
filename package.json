@@ -21,7 +21,7 @@
   "dependencies": {
     "@prisma/client": "^6",
     "bcryptjs": "^2",
-    "imagekit": "^6.0.0",
+    "@imagekit/nodejs": "^7.0.0",
     "jspdf": "^4.1.0",
     "jspdf-autotable": "^5.0.7",
     "next": "16.1.6",

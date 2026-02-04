@@ -16,7 +16,7 @@ export async function GET() {
   }
 
   try {
-    const token = imagekit.getAuthenticationParameters();
+    const token = imagekit.helper.getAuthenticationParameters();
     return NextResponse.json(token);
   } catch {
     return NextResponse.json(

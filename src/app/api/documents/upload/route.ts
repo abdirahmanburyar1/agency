@@ -42,13 +42,12 @@ export async function POST(request: Request) {
   }
 
   try {
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
     const fileName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
+    const uploadFileName = `daybah_${entityType}_${entityId}_${Date.now()}_${fileName}`;
 
-    const result = await imagekit.upload({
-      file: buffer,
-      fileName: `daybah_${entityType}_${entityId}_${Date.now()}_${fileName}`,
+    const result = await imagekit.files.upload({
+      file: file,
+      fileName: uploadFileName,
       folder: `/daybah/${entityType}/${entityId}`,
     });
 
@@ -56,8 +55,8 @@ export async function POST(request: Request) {
       data: {
         entityType,
         entityId,
-        imageKitId: result.fileId,
-        url: result.url,
+        imageKitId: result.fileId ?? "",
+        url: result.url ?? "",
         fileName: file.name,
         createdBy: userId ?? undefined,
       },

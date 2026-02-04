@@ -25,7 +25,7 @@ export async function DELETE(
     }
 
     try {
-      await imagekit.deleteFile(doc.imageKitId);
+      await imagekit.files.delete(doc.imageKitId);
     } catch (ikError) {
       console.error("ImageKit delete error:", ikError);
     }

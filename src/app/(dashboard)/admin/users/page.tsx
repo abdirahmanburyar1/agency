@@ -12,12 +12,14 @@ export default async function UsersPage() {
   const canCreate = await (await import("@/lib/permissions")).canAccess(PERMISSION.USERS_CREATE);
   const canEdit = await (await import("@/lib/permissions")).canAccess(PERMISSION.USERS_EDIT);
 
-  let users: Awaited<ReturnType<typeof prisma.user.findMany>> = [];
-  try {
-    users = await prisma.user.findMany({
+  const usersQuery = () =>
+    prisma.user.findMany({
       include: { role: true },
       orderBy: { createdAt: "desc" },
     });
+  let users: Awaited<ReturnType<typeof usersQuery>> = [];
+  try {
+    users = await usersQuery();
   } catch (err) {
     if (isDbConnectionError(err)) {
       return (
