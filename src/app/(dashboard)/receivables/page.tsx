@@ -8,18 +8,20 @@ import { isDbConnectionError } from "@/lib/db-safe";
 export default async function ReceivablesPage() {
   await requirePermission(PERMISSION.RECEIVABLES_VIEW, { redirectOnForbidden: true });
 
-  let payments: Awaited<ReturnType<typeof prisma.payment.findMany>>;
+  const paymentsQuery = () =>
+    prisma.payment.findMany({
+      where: { canceledAt: null },
+      orderBy: { date: "desc" },
+      include: {
+        ticket: { include: { customer: true } },
+        visa: { include: { customerRelation: true } },
+        hajUmrahBooking: { include: { customer: true } },
+        receipts: true,
+      },
+    });
+  let payments: Awaited<ReturnType<typeof paymentsQuery>>;
   try {
-    payments = await prisma.payment.findMany({
-    where: { canceledAt: null },
-    orderBy: { date: "desc" },
-    include: {
-      ticket: { include: { customer: true } },
-      visa: { include: { customerRelation: true } },
-      hajUmrahBooking: { include: { customer: true } },
-      receipts: true,
-    },
-  });
+    payments = await paymentsQuery();
   } catch (err) {
     if (isDbConnectionError(err)) {
       return (

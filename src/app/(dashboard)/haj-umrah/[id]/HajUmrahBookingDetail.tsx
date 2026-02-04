@@ -442,7 +442,7 @@ export default function HajUmrahBookingDetail({ booking, canEdit }: Props) {
             </thead>
             <tbody>
               {(canEditBooking ? packageLines : booking.packages).map((bp, index) => (
-                <tr key={canEditBooking ? bp.packageId + index : (bp as { id: string }).id} className="border-b border-zinc-100 dark:border-zinc-700/50">
+                <tr key={`${bp.packageId}-${index}`} className="border-b border-zinc-100 dark:border-zinc-700/50">
                   <td className="py-3 pr-4">
                     <span className="font-medium text-zinc-900 dark:text-white">{"packageName" in bp ? bp.packageName : (bp as { packageName: string }).packageName}</span>
                     <span className="ml-1 text-zinc-500">({"packageType" in bp ? bp.packageType : (bp as { packageType: string }).packageType})</span>

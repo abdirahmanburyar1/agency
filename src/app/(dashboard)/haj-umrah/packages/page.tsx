@@ -11,11 +11,13 @@ export default async function HajUmrahPackagesPage() {
   const canEdit = await (await import("@/lib/permissions")).canAccess(PERMISSION.HAJ_UMRAH_EDIT);
   const canCreate = await (await import("@/lib/permissions")).canAccess(PERMISSION.HAJ_UMRAH_CREATE);
 
-  let packages: Awaited<ReturnType<typeof prisma.hajUmrahPackage.findMany>> = [];
-  try {
-    packages = await prisma.hajUmrahPackage.findMany({
+  const packagesQuery = () =>
+    prisma.hajUmrahPackage.findMany({
       orderBy: [{ type: "asc" }, { name: "asc" }],
     });
+  let packages: Awaited<ReturnType<typeof packagesQuery>> = [];
+  try {
+    packages = await packagesQuery();
   } catch (err) {
     if (isDbConnectionError(err)) {
       return (

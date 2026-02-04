@@ -19,13 +19,15 @@ export default async function HajUmrahPage({
     (await import("@/lib/permissions")).canAccess(PERMISSION.HAJ_UMRAH_EDIT),
   ]);
 
-  let bookings: Awaited<ReturnType<typeof prisma.hajUmrahBooking.findMany>> = [];
-  try {
-    bookings = await prisma.hajUmrahBooking.findMany({
+  const bookingsQuery = () =>
+    prisma.hajUmrahBooking.findMany({
       where: { canceledAt: null },
       orderBy: { createdAt: "desc" },
-      include: { customer: true, campaign: true, packages: { include: { package: true } } },
+      include: { customer: true, campaign: { include: { leader: true } }, packages: { include: { package: true } } },
     });
+  let bookings: Awaited<ReturnType<typeof bookingsQuery>> = [];
+  try {
+    bookings = await bookingsQuery();
   } catch (err) {
     if (isDbConnectionError(err)) {
       return (

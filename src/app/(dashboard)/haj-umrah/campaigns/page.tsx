@@ -10,15 +10,17 @@ export default async function HajUmrahCampaignsPage() {
   await requirePermission(PERMISSION.HAJ_UMRAH_VIEW, { redirectOnForbidden: true });
   const canCreate = await (await import("@/lib/permissions")).canAccess(PERMISSION.HAJ_UMRAH_CREATE);
 
-  let campaigns: Awaited<ReturnType<typeof prisma.hajUmrahCampaign.findMany>> = [];
-  try {
-    campaigns = await prisma.hajUmrahCampaign.findMany({
+  const campaignsQuery = () =>
+    prisma.hajUmrahCampaign.findMany({
       orderBy: { date: "desc" },
       include: {
         _count: { select: { bookings: true } },
         leader: { select: { id: true, name: true, email: true } },
       },
     });
+  let campaigns: Awaited<ReturnType<typeof campaignsQuery>> = [];
+  try {
+    campaigns = await campaignsQuery();
   } catch (err) {
     if (isDbConnectionError(err)) {
       return (

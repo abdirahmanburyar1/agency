@@ -12,16 +12,20 @@ export default async function TicketsPage() {
     PERMISSION.TICKETS_CREATE
   );
 
-  let tickets: Awaited<ReturnType<typeof prisma.ticket.findMany>>;
-  let customers: Awaited<ReturnType<typeof prisma.customer.findMany>>;
+  const ticketsQuery = () =>
+    prisma.ticket.findMany({
+      where: { canceledAt: null },
+      orderBy: { createdAt: "desc" },
+      include: { customer: true },
+    });
+  type TicketsResult = Awaited<ReturnType<typeof ticketsQuery>>;
+  type CustomersResult = { id: string; name: string }[];
+  let tickets: TicketsResult;
+  let customers: CustomersResult;
   let airlineRows: { airline: string | null }[];
   try {
     const result = await Promise.all([
-      prisma.ticket.findMany({
-        where: { canceledAt: null },
-        orderBy: { createdAt: "desc" },
-        include: { customer: true },
-      }),
+      ticketsQuery(),
       prisma.customer.findMany({
         orderBy: { name: "asc" },
         select: { id: true, name: true },

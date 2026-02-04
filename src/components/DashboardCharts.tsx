@@ -35,13 +35,14 @@ export default function DashboardCharts({
     totalRevenue: (d.ticketRevenue ?? 0) + (d.visaRevenue ?? 0) + (d.hajUmrahRevenue ?? 0),
   }));
 
-  const renderBarTooltip = ({ active, payload, label }: { active?: boolean; payload?: Array<{ name: string; value: number; color: string }>; label?: string }) => {
-    if (!active || !payload?.length || !label) return null;
+  const renderBarTooltip = ({ active, payload, label }: { active?: boolean; payload?: readonly { name?: string; value?: number; color?: string }[]; label?: string | number }) => {
+    if (!active || !payload?.length || label == null) return null;
+    const labelStr = String(label);
     const totalRev = (payload.find((p) => p.name === "Tickets")?.value ?? 0) + (payload.find((p) => p.name === "Visas")?.value ?? 0) + (payload.find((p) => p.name === "Haj & Umrah")?.value ?? 0);
     const expenses = payload.find((p) => p.name === "Expenses")?.value ?? 0;
     return (
       <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-lg dark:border-slate-700 dark:bg-slate-900">
-        <p className="mb-2 font-semibold text-slate-800 dark:text-slate-200">{label}</p>
+        <p className="mb-2 font-semibold text-slate-800 dark:text-slate-200">{labelStr}</p>
         <div className="space-y-1 text-sm">
           <p className="flex justify-between gap-4"><span className="text-slate-600 dark:text-slate-400">Tickets</span><span className="font-medium">${(payload.find((p) => p.name === "Tickets")?.value ?? 0).toLocaleString()}</span></p>
           <p className="flex justify-between gap-4"><span className="text-slate-600 dark:text-slate-400">Visas</span><span className="font-medium">${(payload.find((p) => p.name === "Visas")?.value ?? 0).toLocaleString()}</span></p>
@@ -128,7 +129,7 @@ export default function DashboardCharts({
                 tickLine={false}
               />
               <Tooltip
-                formatter={(value: number) => [`$${value.toLocaleString()}`, "Revenue"]}
+                formatter={(value: number | undefined) => [`$${(value ?? 0).toLocaleString()}`, "Revenue"]}
                 contentStyle={{
                   backgroundColor: "rgb(255 255 255)",
                   border: "1px solid rgb(226 232 240)",

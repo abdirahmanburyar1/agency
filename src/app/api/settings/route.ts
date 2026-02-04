@@ -21,7 +21,7 @@ export async function GET(request: Request) {
     : TYPES;
 
   const settings = await prisma.setting.findMany({
-    where: { type: { in: types } },
+    where: { type: { in: [...types] } },
     orderBy: [{ type: "asc" }, { sortOrder: "asc" }, { value: "asc" }],
   });
 

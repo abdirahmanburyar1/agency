@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import type { PrismaPromise } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { requirePermission } from "@/lib/permissions";
 import { PERMISSION } from "@/lib/permissions";
@@ -109,7 +110,7 @@ export async function PATCH(
       profit: newProfit,
     };
 
-    const ops: Parameters<typeof prisma.$transaction>[0] = [
+    const ops: PrismaPromise<unknown>[] = [
       prisma.ticket.update({
         where: { id },
         data: updateData,

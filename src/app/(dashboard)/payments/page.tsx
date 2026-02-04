@@ -9,9 +9,8 @@ import PaymentsTableWithFilters, { type SerializedPayment } from "./PaymentsTabl
 export default async function PaymentsPage() {
   await requirePermission(PERMISSION.PAYMENTS_VIEW, { redirectOnForbidden: true });
 
-  let payments: Awaited<ReturnType<typeof prisma.payment.findMany>>;
-  try {
-    payments = await prisma.payment.findMany({
+  const paymentsQuery = () =>
+    prisma.payment.findMany({
       where: { canceledAt: null },
       orderBy: { createdAt: "desc" },
       include: {
@@ -21,6 +20,9 @@ export default async function PaymentsPage() {
         receipts: true,
       },
     });
+  let payments: Awaited<ReturnType<typeof paymentsQuery>>;
+  try {
+    payments = await paymentsQuery();
   } catch (err) {
     if (isDbConnectionError(err)) {
       return (

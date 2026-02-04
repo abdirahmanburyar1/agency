@@ -9,13 +9,15 @@ import PayablesTableWithFilters, { type SerializedPayable } from "./PayablesTabl
 export default async function PayablesPage() {
   await requirePermission(PERMISSION.PAYABLES_VIEW, { redirectOnForbidden: true });
 
-  let payables: Awaited<ReturnType<typeof prisma.payable.findMany>>;
-  try {
-    payables = await prisma.payable.findMany({
+  const payablesQuery = () =>
+    prisma.payable.findMany({
       where: { canceledAt: null },
       orderBy: { date: "desc" },
       include: { ticket: true, visa: true },
     });
+  let payables: Awaited<ReturnType<typeof payablesQuery>>;
+  try {
+    payables = await payablesQuery();
   } catch (err) {
     if (isDbConnectionError(err)) {
       return (

@@ -19,9 +19,8 @@ export default async function LeaderCampaignDetailPage({
   if (!userId) notFound();
 
   const { id } = await params;
-  let campaign: Awaited<ReturnType<typeof prisma.hajUmrahCampaign.findFirst>> = null;
-  try {
-    campaign = await prisma.hajUmrahCampaign.findFirst({
+  const campaignQuery = () =>
+    prisma.hajUmrahCampaign.findFirst({
       where: { id, leaderId: userId },
       include: {
         leader: { select: { id: true, name: true, email: true } },
@@ -31,6 +30,9 @@ export default async function LeaderCampaignDetailPage({
         },
       },
     });
+  let campaign: Awaited<ReturnType<typeof campaignQuery>> = null;
+  try {
+    campaign = await campaignQuery();
   } catch (err) {
     if (isDbConnectionError(err)) {
       return (
