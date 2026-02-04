@@ -2,7 +2,7 @@ import Link from "next/link";
 import { requirePermission } from "@/lib/permissions";
 import { PERMISSION } from "@/lib/permissions";
 import CreatePackageForm from "./CreatePackageForm";
-import { PackageIcon } from "../icons";
+import { PackageIcon } from "../../icons";
 
 export default async function NewPackagePage() {
   await requirePermission(PERMISSION.HAJ_UMRAH_CREATE, { redirectOnForbidden: true });

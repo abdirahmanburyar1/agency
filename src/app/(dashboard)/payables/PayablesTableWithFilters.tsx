@@ -2,6 +2,9 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import * as XLSX from "xlsx";
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
 
 export type SerializedPayable = {
   id: string;
@@ -36,6 +39,18 @@ const SOURCE_OPTIONS = [
   { value: "visa", label: "Visa" },
   { value: "haj_umrah", label: "Haj & Umrah" },
 ];
+
+function sourceLabel(p: SerializedPayable): string {
+  if (p.source === "ticket") return "Ticket";
+  if (p.source === "visa") return "Visa";
+  if (p.source === "haj_umrah") return "Haj & Umrah";
+  return "—";
+}
+
+function formatDate(iso: string | null): string {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleDateString();
+}
 
 export default function PayablesTableWithFilters({ payables: allPayables }: PayablesTableWithFiltersProps) {
   const [search, setSearch] = useState("");
@@ -74,6 +89,52 @@ export default function PayablesTableWithFilters({ payables: allPayables }: Paya
     setSource("");
     setDateFrom("");
     setDateTo("");
+  };
+
+  const exportToExcel = () => {
+    const headers = ["Date", "Source", "Name", "Description", "Amount", "Balance", "Deadline", "Remaining"];
+    const rows = filteredPayables.map((p) => [
+      formatDate(p.date),
+      sourceLabel(p),
+      p.name ?? "",
+      p.description ?? "",
+      p.amount,
+      p.balance,
+      formatDate(p.deadline),
+      p.remaining != null ? `${p.remaining} days` : "",
+    ]);
+    const data = [headers, ...rows, [], ["Total balance (visible rows)", "", "", "", "", totalBalance, "", ""]];
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Payables");
+    XLSX.writeFile(wb, `payables-${new Date().toISOString().slice(0, 10)}.xlsx`);
+  };
+
+  const exportToPdf = () => {
+    const doc = new jsPDF({ orientation: "landscape" });
+    doc.setFontSize(14);
+    doc.text("Payables", 14, 12);
+    const headers = [["Date", "Source", "Name", "Description", "Amount", "Balance", "Deadline", "Remaining"]];
+    const body = filteredPayables.map((p) => [
+      formatDate(p.date),
+      sourceLabel(p),
+      p.name ?? "",
+      (p.description ?? "").slice(0, 30),
+      `$${p.amount.toLocaleString()}`,
+      `$${p.balance.toLocaleString()}`,
+      formatDate(p.deadline),
+      p.remaining != null ? `${p.remaining} days` : "",
+    ]);
+    autoTable(doc, {
+      head: headers,
+      body,
+      startY: 18,
+      styles: { fontSize: 8 },
+    });
+    const finalY = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY ?? 18;
+    doc.setFontSize(10);
+    doc.text(`Total balance (visible rows): $${totalBalance.toLocaleString()}`, 14, finalY + 8);
+    doc.save(`payables-${new Date().toISOString().slice(0, 10)}.pdf`);
   };
 
   return (
@@ -148,6 +209,25 @@ export default function PayablesTableWithFilters({ payables: allPayables }: Paya
             Showing {filteredPayables.length} of {allPayables.length} payable(s)
           </p>
         )}
+        <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-zinc-200 pt-4 dark:border-zinc-700">
+          <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Export (visible rows):</span>
+          <button
+            type="button"
+            onClick={exportToExcel}
+            disabled={filteredPayables.length === 0}
+            className="rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium text-zinc-700 hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
+          >
+            Excel
+          </button>
+          <button
+            type="button"
+            onClick={exportToPdf}
+            disabled={filteredPayables.length === 0}
+            className="rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium text-zinc-700 hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
+          >
+            PDF
+          </button>
+        </div>
       </div>
 
       <div className="overflow-x-auto rounded-lg border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
