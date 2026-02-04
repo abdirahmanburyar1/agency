@@ -10,15 +10,139 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// --- Auth & RBAC ---
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String    @map("password_hash")
+  name         String?
+  roleId       String    @map("role_id")
+  userType     String?   @map("user_type") // officer | leader
+  isActive     Boolean   @default(true) @map("is_active")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  role   Role   @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  documents Document[]
+  approvedExpenses Expense[]
+  ledCampaigns HajUmrahCampaign[]
+
+  @@map("users")
+}
+
+model Role {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  users      User[]
+  permissions RolePermission[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id       String   @id @default(cuid())
+  code     String   @unique // e.g. "tickets.view", "visas.create"
+  name     String
+  resource String   @map("resource") // e.g. "tickets", "visas"
+  action   String   @map("action")   // view, create, edit, delete
+  createdAt DateTime @default(now()) @map("created_at")
+
+  roles RolePermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId       String @map("role_id")
+  permissionId String @map("permission_id")
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+// --- Settings (preconfigured options for tickets) ---
+
+model Setting {
+  id        String   @id @default(cuid())
+  type      String   @map("type")   // airline | payment_method | flight | payment_status
+  value     String   @map("value")
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([type, value])
+  @@index([type])
+  @@map("settings")
+}
+
+// --- Document storage (ImageKit) ---
+
+model Document {
+  id         String   @id @default(cuid())
+  entityType String   @map("entity_type") // ticket, visa, receivable, etc.
+  entityId   String   @map("entity_id")
+  imageKitId String   @map("image_kit_id")
+  url        String
+  fileName   String   @map("file_name")
+  createdAt  DateTime @default(now()) @map("created_at")
+  createdBy  String?  @map("created_by")
+
+  user User? @relation(fields: [createdBy], references: [id], onDelete: SetNull)
+
+  @@index([entityType, entityId])
+  @@map("documents")
+}
+
+// --- Customer (shared by tickets, visas, haj-umrah) ---
+
+model Customer {
+  id        String   @id @default(cuid())
+  name      String   @map("name")
+  email     String?  @map("email")
+  phone     String?  @map("phone")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  tickets       Ticket[]
+  visas         Visa[]
+  hajUmrahBookings HajUmrahBooking[]
+
+  @@map("customers")
+}
+
+// --- Employee (for expense tracking) ---
+
+model Employee {
+  id        String   @id @default(cuid())
+  name      String   @map("name")
+  role      String?  @map("role") // position/title
+  phone     String?  @map("phone")
+  email     String?  @map("email")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  expenses Expense[]
+
+  @@map("employees")
+}
+
 // --- Core transaction tables ---
 
 model Ticket {
-  id         String    @id @default(cuid())
-  date       DateTime  @map("date")
-  month      String    @map("month")
-  invoice    String?   @map("invoice")
-  sponsor    String?   @map("sponsor")
-  customerName String? @map("customer_name")
+  id           String    @id @default(cuid())
+  ticketNumber Int?      @unique @map("ticket_number") // auto-generated sequential: 1, 2, 3...
+  reference    String    @default("") @map("reference") // manual reference e.g. booking/PNR (required for new tickets)
+  date         DateTime  @map("date")
+  month        String    @map("month")
+  invoice      String?   @map("invoice")
+  sponsor      String?   @map("sponsor")
+  customerId   String?   @map("customer_id")
+  customerName String?   @map("customer_name")
   airline    String?   @map("airline")
   route      String?   @map("route")
   flight     String?   @map("flight")
@@ -27,66 +151,80 @@ model Ticket {
   netCost    Decimal   @map("net_cost") @db.Decimal(12, 2)
   netSales   Decimal   @map("net_sales") @db.Decimal(12, 2)
   profit     Decimal   @map("profit") @db.Decimal(12, 2)
-  pMethod    String?   @map("p_method")
-  account    String?   @map("account")
-  pStatus    String?   @map("p_status")
   createdAt  DateTime  @default(now()) @map("created_at")
+  canceledAt DateTime? @map("canceled_at")
+
+  customer    Customer?          @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  payments    Payment[]
+  payables    Payable[]
+  adjustments TicketAdjustment[]
 
   @@map("tickets")
 }
 
+model TicketAdjustment {
+  id               String   @id @default(cuid())
+  ticketId         String   @map("ticket_id")
+  previousNetSales Decimal  @default(0) @map("previous_net_sales") @db.Decimal(12, 2)
+  previousNetCost  Decimal  @default(0) @map("previous_net_cost") @db.Decimal(12, 2)
+  newNetSales      Decimal  @default(0) @map("new_net_sales") @db.Decimal(12, 2)
+  newNetCost       Decimal  @default(0) @map("new_net_cost") @db.Decimal(12, 2)
+  reason           String?  @map("reason")
+  date             DateTime @map("date")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId])
+  @@map("ticket_adjustments")
+}
+
 model Visa {
-  id         String    @id @default(cuid())
-  date       DateTime  @map("date")
-  month      String    @map("month")
-  sponsor    String?   @map("sponsor")
-  customer   String?   @map("customer")
-  country    String?   @map("country")
-  type       String?   @map("type")
-  netCost    Decimal   @map("net_cost") @db.Decimal(12, 2)
-  netSales   Decimal   @map("net_sales") @db.Decimal(12, 2)
-  profit     Decimal   @map("profit") @db.Decimal(12, 2)
-  deposit    Decimal?  @map("deposit") @db.Decimal(12, 2)
-  pickupDate DateTime? @map("pickup_date")
-  pMethod    String?   @map("p_method")
-  account    String?   @map("account")
-  pStatus    String?   @map("p_status")
-  createdAt  DateTime  @default(now()) @map("created_at")
+  id           String    @id @default(cuid())
+  visaNumber   Int?      @unique @map("visa_number") // auto-generated sequential
+  reference    String    @default("") @map("reference") // manual reference (required)
+  date         DateTime  @map("date")
+  month        String    @map("month")
+  sponsor      String?   @map("sponsor")
+  customerId   String?   @map("customer_id")
+  customer     String?   @map("customer")
+  country      String?   @map("country")
+  netCost      Decimal   @map("net_cost") @db.Decimal(12, 2)
+  netSales     Decimal   @map("net_sales") @db.Decimal(12, 2)
+  profit       Decimal   @map("profit") @db.Decimal(12, 2)
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  customerRelation Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  payments         Payment[]
+  payables         Payable[]
 
   @@map("visas")
 }
 
 model Expense {
-  id         String   @id @default(cuid())
-  date       DateTime @map("date")
-  month      String   @map("month")
-  amount     Decimal  @map("amount") @db.Decimal(12, 2)
-  description String? @map("description")
-  category   String?  @map("category")
-  paidBy     String?  @map("paid_by")
-  receivedBy String?  @map("received_by")
-  pMethod    String?  @map("p_method")
-  account    String?  @map("account")
-  createdAt  DateTime @default(now()) @map("created_at")
-
-  @@map("expenses")
-}
-
-model Receivable {
   id           String    @id @default(cuid())
   date         DateTime  @map("date")
   month        String    @map("month")
-  invoice      String?   @map("invoice")
-  customerName String?   @map("customer_name")
-  mobile       String?   @map("mobile")
-  sponsor      String?   @map("sponsor")
   amount       Decimal   @map("amount") @db.Decimal(12, 2)
-  balance      Decimal   @map("balance") @db.Decimal(12, 2)
-  deadline     DateTime? @map("deadline")
-  remaining    Int?      @map("remaining")
+  description  String?   @map("description")
+  category     String?   @map("category") // Employees, Utilities, Rent, etc.
+  employeeId   String?   @map("employee_id") // when category is Employees
+  paidBy       String?   @map("paid_by")
+  receivedBy   String?   @map("received_by")
+  pMethod      String?   @map("p_method")
+  account      String?   @map("account")
+  status       String    @default("pending") @map("status") // pending | approved | rejected
+  approvedAt   DateTime? @map("approved_at")
+  approvedById String?   @map("approved_by_id")
   createdAt    DateTime  @default(now()) @map("created_at")
 
-  @@map("receivables")
+  employee   Employee? @relation(fields: [employeeId], references: [id], onDelete: SetNull)
+  approvedBy User?     @relation(fields: [approvedById], references: [id], onDelete: SetNull)
+
+  @@index([employeeId])
+  @@index([category])
+  @@index([status])
+  @@map("expenses")
 }
 
 model Payable {
@@ -100,25 +238,143 @@ model Payable {
   balance     Decimal   @map("balance") @db.Decimal(12, 2)
   deadline    DateTime? @map("deadline")
   remaining   Int?      @map("remaining")
-  createdAt   DateTime  @default(now()) @map("created_at")
+  ticketId         String?   @map("ticket_id")
+  visaId           String?   @map("visa_id")
+  hajUmrahBookingId String?  @map("haj_umrah_booking_id")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  canceledAt       DateTime? @map("canceled_at")
 
+  ticket          Ticket?          @relation(fields: [ticketId], references: [id], onDelete: SetNull)
+  visa            Visa?            @relation(fields: [visaId], references: [id], onDelete: SetNull)
+  hajUmrahBooking HajUmrahBooking? @relation(fields: [hajUmrahBookingId], references: [id], onDelete: SetNull)
+
+  @@index([ticketId])
+  @@index([visaId])
+  @@index([hajUmrahBookingId])
   @@map("payables")
 }
 
 model Payment {
+  id           String    @id @default(cuid())
+  date         DateTime  @map("date")
+  month        String    @map("month")
+  status       String    @default("pending") @map("status") // pending | credit | partial | paid
+  expectedDate DateTime? @map("expected_date") // when credit: expected pay-by date
+  name         String?   @map("name")
+  description String?  @map("description")
+  amount      Decimal  @map("amount") @db.Decimal(12, 2)
+  ticketId          String?   @map("ticket_id")
+  visaId            String?   @map("visa_id")
+  hajUmrahBookingId String?   @map("haj_umrah_booking_id")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  canceledAt        DateTime? @map("canceled_at")
+
+  ticket          Ticket?          @relation(fields: [ticketId], references: [id], onDelete: SetNull)
+  visa            Visa?            @relation(fields: [visaId], references: [id], onDelete: SetNull)
+  hajUmrahBooking HajUmrahBooking? @relation(fields: [hajUmrahBookingId], references: [id], onDelete: SetNull)
+  receipts        Receipt[]
+
+  @@index([ticketId])
+  @@index([visaId])
+  @@index([hajUmrahBookingId])
+  @@map("payments")
+}
+
+model Receipt {
   id         String   @id @default(cuid())
   date       DateTime @map("date")
-  month      String   @map("month")
-  type       String   @map("type") // "Receivables" | "Payables"
-  name       String?  @map("name")
-  description String? @map("description")
   amount     Decimal  @map("amount") @db.Decimal(12, 2)
-  airline    String?  @map("airline")
-  reference  String?  @map("reference")
   pMethod    String?  @map("p_method")
   account    String?  @map("account")
-  confirmed  Boolean? @map("confirmed")
+  receivedBy String?  @map("received_by")
+  paymentId  String   @map("payment_id")
   createdAt  DateTime @default(now()) @map("created_at")
 
-  @@map("payments")
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  @@index([paymentId])
+  @@map("receipts")
+}
+
+// --- Haj & Umrah (campaigns → bookings → packages) ---
+// Campaign = departure date (e.g. 10/02/2026, 24/02/2026); multiple campaigns per month; each campaign has one or more customers (bookings).
+
+model HajUmrahCampaign {
+  id          String    @id @default(cuid())
+  date        DateTime  @map("date")   // departure date and time (e.g. 10 Feb 2026 14:00)
+  month       String    @map("month") // YYYY-MM for grouping
+  name        String?   @map("name")  // optional label e.g. "February Group 1"
+  type        String?   @map("type")  // haj | umrah optional
+  leaderId    String?   @map("leader_id") // user selected as leader (can have multiple campaigns per day)
+  createdAt   DateTime  @default(now()) @map("created_at")
+  canceledAt  DateTime? @map("canceled_at") // when set, campaign and all its bookings are treated as canceled
+
+  leader   User?   @relation(fields: [leaderId], references: [id], onDelete: SetNull)
+  bookings HajUmrahBooking[]
+
+  @@index([month])
+  @@index([date])
+  @@index([leaderId])
+  @@map("haj_umrah_campaigns")
+}
+
+model HajUmrahPackage {
+  id            String   @id @default(cuid())
+  name          String   @map("name")
+  type          String   @map("type")   // haj | umrah
+  description   String?  @map("description")
+  defaultPrice  Decimal  @map("default_price") @db.Decimal(12, 2)
+  durationDays  Int?     @map("duration_days")
+  isActive      Boolean  @default(true) @map("is_active")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  bookingPackages HajUmrahBookingPackage[]
+
+  @@index([type])
+  @@index([isActive])
+  @@map("haj_umrah_packages")
+}
+
+model HajUmrahBooking {
+  id          String    @id @default(cuid())
+  trackNumber Int?      @unique @map("track_number") // sequential: 1, 2, 999, 1000, ...
+  campaignId  String?   @map("campaign_id") // campaign (departure date) this booking belongs to
+  customerId  String    @map("customer_id")
+  date        DateTime  @map("date")  // booking date (campaign date used for display when set)
+  month       String    @map("month")
+  status      String    @default("draft") @map("status") // draft | confirmed | canceled
+  notes       String?   @map("notes")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  canceledAt  DateTime? @map("canceled_at")
+
+  campaign   HajUmrahCampaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  customer   Customer   @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  packages   HajUmrahBookingPackage[]
+  payments   Payment[]
+  payables   Payable[]
+
+  @@index([campaignId])
+  @@index([customerId])
+  @@index([month])
+  @@index([status])
+  @@map("haj_umrah_bookings")
+}
+
+model HajUmrahBookingPackage {
+  id        String   @id @default(cuid())
+  bookingId String   @map("booking_id")
+  packageId String   @map("package_id")
+  quantity  Int      @default(1) @map("quantity")
+  unitPrice Decimal  @map("unit_price") @db.Decimal(12, 2)
+  amount    Decimal  @map("amount") @db.Decimal(12, 2) // unitPrice * quantity
+  createdAt DateTime @default(now()) @map("created_at")
+
+  booking HajUmrahBooking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  package HajUmrahPackage @relation(fields: [packageId], references: [id], onDelete: Restrict)
+
+  @@unique([bookingId, packageId])
+  @@index([bookingId])
+  @@index([packageId])
+  @@map("haj_umrah_booking_packages")
 }

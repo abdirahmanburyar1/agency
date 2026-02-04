@@ -10,23 +10,38 @@
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "db:seed": "npx tsx prisma/seed.ts",
+    "seed": "npx tsx prisma/seed.ts",
+    "db:clear-transactions": "npx tsx prisma/clear-transaction-data.ts"
+  },
+  "prisma": {
+    "seed": "npx tsx prisma/seed.ts"
   },
   "dependencies": {
     "@prisma/client": "^6",
+    "bcryptjs": "^2",
+    "imagekit": "^6.0.0",
     "next": "16.1.6",
+    "next-auth": "4.24.13",
+    "pusher": "^5",
+    "pusher-js": "^8",
     "react": "19.2.3",
-    "react-dom": "19.2.3"
+    "react-dom": "19.2.3",
+    "recharts": "^3.7.0",
+    "sweetalert2": "^11.26.18"
   },
   "devDependencies": {
-    "prisma": "^6",
     "@tailwindcss/postcss": "^4",
+    "@types/bcryptjs": "^2",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
+    "prisma": "^6",
     "tailwindcss": "^4",
+    "tsx": "^4",
     "typescript": "^5"
   }
 }
