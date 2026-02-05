@@ -84,16 +84,23 @@ export async function PATCH(
     const body = await request.json();
 
     if (body.cancel === true) {
-      const campaign = await prisma.hajUmrahCampaign.findUnique({ where: { id }, select: { date: true } });
+      const campaign = await prisma.hajUmrahCampaign.findUnique({
+        where: { id },
+        select: { date: true },
+      });
       if (!campaign) return NextResponse.json({ error: "Campaign not found" }, { status: 404 });
-      const now = new Date();
-      if (campaign.date <= now) {
+      const canceledAt = new Date();
+      if (campaign.date <= canceledAt) {
         return NextResponse.json(
           { error: "Cannot cancel campaign after the departure date and time has passed." },
           { status: 400 }
         );
       }
-      const canceledAt = new Date();
+      const bookings = await prisma.hajUmrahBooking.findMany({
+        where: { campaignId: id },
+        select: { id: true },
+      });
+      const bookingIds = bookings.map((b) => b.id);
       await prisma.$transaction([
         prisma.hajUmrahCampaign.update({
           where: { id },
@@ -102,6 +109,14 @@ export async function PATCH(
         prisma.hajUmrahBooking.updateMany({
           where: { campaignId: id },
           data: { status: "canceled", canceledAt },
+        }),
+        prisma.payment.updateMany({
+          where: { hajUmrahBookingId: { in: bookingIds } },
+          data: { canceledAt },
+        }),
+        prisma.payable.updateMany({
+          where: { hajUmrahBookingId: { in: bookingIds } },
+          data: { canceledAt },
         }),
       ]);
       return NextResponse.json({ ok: true, canceled: true });

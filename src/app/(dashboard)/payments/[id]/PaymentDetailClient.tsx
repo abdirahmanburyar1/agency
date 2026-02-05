@@ -22,6 +22,7 @@ export default function PaymentDetailClient({
 }: PaymentDetailClientProps) {
   const router = useRouter();
   const [paymentMethods, setPaymentMethods] = useState<string[]>([]);
+  const [processing, setProcessing] = useState(false);
 
   useEffect(() => {
     fetch("/api/settings/ticket-options")
@@ -82,6 +83,7 @@ export default function PaymentDetailClient({
 
     if (!formValues) return;
 
+    setProcessing(true);
     try {
       const res = await fetch(`/api/payments/${paymentId}/receipts`, {
         method: "POST",
@@ -117,6 +119,8 @@ export default function PaymentDetailClient({
         title: "Error",
         text: "Failed to record receipt",
       });
+    } finally {
+      setProcessing(false);
     }
   }
 
@@ -196,9 +200,10 @@ export default function PaymentDetailClient({
           <button
             type="button"
             onClick={handleRecordReceipt}
-            className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-600"
+            disabled={processing}
+            className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-70 dark:bg-emerald-500 dark:hover:bg-emerald-600"
           >
-            Record payment received
+            {processing ? "Payment processing…" : "Record payment received"}
           </button>
         )}
         {canEditStatus && balance > 0 && (

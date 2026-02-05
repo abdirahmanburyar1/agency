@@ -165,6 +165,7 @@ export async function PATCH(
       }
     }
 
+    const canceledAt = status === "canceled" ? new Date() : undefined;
     const booking = await prisma.$transaction(
       async (tx) => {
         if (existing.trackNumber == null) {
@@ -187,6 +188,16 @@ export async function PATCH(
               data: { bookingId: id, packageId: pkgId, quantity, unitPrice, amount },
             });
           }
+        }
+        if (canceledAt) {
+          await tx.payment.updateMany({
+            where: { hajUmrahBookingId: id },
+            data: { canceledAt },
+          });
+          await tx.payable.updateMany({
+            where: { hajUmrahBookingId: id },
+            data: { canceledAt },
+          });
         }
         return tx.hajUmrahBooking.update({
           where: { id },

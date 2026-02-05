@@ -42,6 +42,7 @@ export default async function VisasPage() {
     customerRelation: v.customerRelation
       ? { name: v.customerRelation.name, phone: v.customerRelation.phone }
       : null,
+    canceledAt: v.canceledAt?.toISOString() ?? null,
   }));
 
   return (

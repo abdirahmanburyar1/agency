@@ -14,7 +14,6 @@ export default async function TicketsPage() {
 
   const ticketsQuery = () =>
     prisma.ticket.findMany({
-      where: { canceledAt: null },
       orderBy: { createdAt: "desc" },
       include: { customer: true },
     });
@@ -74,6 +73,7 @@ export default async function TicketsPage() {
     customer: t.customer
       ? { name: t.customer.name, phone: t.customer.phone }
       : null,
+    canceledAt: t.canceledAt?.toISOString() ?? null,
   }));
 
   return (

@@ -15,6 +15,7 @@ type SerializedVisa = {
   netSales: number;
   profit: number;
   customerRelation: { name: string; phone: string | null } | null;
+  canceledAt: string | null;
 };
 
 type VisasTableWithFiltersProps = {
@@ -48,6 +49,7 @@ export default function VisasTableWithFilters({
 }: VisasTableWithFiltersProps) {
   const [search, setSearch] = useState("");
   const [country, setCountry] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
   const [countrySearch, setCountrySearch] = useState("");
   const [countryOpen, setCountryOpen] = useState(false);
   const countryListRef = useRef<HTMLDivElement>(null);
@@ -75,6 +77,8 @@ export default function VisasTableWithFilters({
   const filteredVisas = useMemo(() => {
     return allVisas.filter((v) => {
       if (!matchSearch(v, search)) return false;
+      if (statusFilter === "active" && v.canceledAt) return false;
+      if (statusFilter === "canceled" && !v.canceledAt) return false;
       if (country && (v.country ?? "") !== country) return false;
       if (dateFrom) {
         const d = new Date(v.date);
@@ -89,13 +93,14 @@ export default function VisasTableWithFilters({
       }
       return true;
     });
-  }, [allVisas, search, country, dateFrom, dateTo]);
+  }, [allVisas, search, country, statusFilter, dateFrom, dateTo]);
 
-  const hasActiveFilters = search || country || dateFrom || dateTo;
+  const hasActiveFilters = search || country || statusFilter || dateFrom || dateTo;
 
   const clearFilters = () => {
     setSearch("");
     setCountry("");
+    setStatusFilter("");
     setCountrySearch("");
     setDateFrom("");
     setDateTo("");
@@ -107,7 +112,7 @@ export default function VisasTableWithFilters({
     setCountryOpen(false);
   };
 
-  const colSpan = canEdit ? 9 : 8;
+  const colSpan = canEdit ? 10 : 9;
 
   return (
     <>
@@ -187,6 +192,20 @@ export default function VisasTableWithFilters({
               </div>
             )}
           </div>
+          <div className="w-full min-w-0 sm:w-auto sm:min-w-[120px]">
+            <label className="mb-1 block text-xs font-medium text-zinc-500 dark:text-zinc-400">
+              Status
+            </label>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="w-full rounded-lg border border-zinc-300 px-3 py-2.5 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-white sm:w-40"
+            >
+              <option value="">All</option>
+              <option value="active">Active</option>
+              <option value="canceled">Canceled</option>
+            </select>
+          </div>
           <div className="w-full min-w-0 sm:w-auto sm:min-w-[140px]">
             <label className="mb-1 block text-xs font-medium text-zinc-500 dark:text-zinc-400">
               Date from
@@ -217,6 +236,7 @@ export default function VisasTableWithFilters({
           <thead>
             <tr className="border-b border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950">
               <th className="px-4 py-3 text-left font-medium text-zinc-900 dark:text-white">Visa No</th>
+              <th className="px-4 py-3 text-left font-medium text-zinc-900 dark:text-white">Status</th>
               <th className="px-4 py-3 text-left font-medium text-zinc-900 dark:text-white">Reference</th>
               <th className="px-4 py-3 text-left font-medium text-zinc-900 dark:text-white">Date</th>
               <th className="px-4 py-3 text-left font-medium text-zinc-900 dark:text-white">Customer</th>
@@ -238,7 +258,10 @@ export default function VisasTableWithFilters({
               </tr>
             ) : (
               filteredVisas.map((v) => (
-                <tr key={v.id} className="border-b border-zinc-100 dark:border-zinc-800">
+                <tr
+                  key={v.id}
+                  className={`border-b border-zinc-100 dark:border-zinc-800 ${v.canceledAt ? "bg-zinc-50/50 dark:bg-zinc-800/30" : ""}`}
+                >
                   <td className="px-4 py-3 text-zinc-700 dark:text-zinc-300">
                     <Link
                       href={`/visas/${v.id}`}
@@ -248,6 +271,17 @@ export default function VisasTableWithFilters({
                         ? String(v.visaNumber).padStart(3, "0")
                         : "—"}
                     </Link>
+                  </td>
+                  <td className="px-4 py-3">
+                    {v.canceledAt ? (
+                      <span className="inline-flex rounded-full px-2 py-0.5 text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-400">
+                        Canceled
+                      </span>
+                    ) : (
+                      <span className="inline-flex rounded-full px-2 py-0.5 text-xs font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-400">
+                        Active
+                      </span>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-zinc-700 dark:text-zinc-300">
                     {v.reference?.trim() || "—"}
@@ -272,12 +306,21 @@ export default function VisasTableWithFilters({
                   </td>
                   {canEdit && (
                     <td className="px-4 py-3">
-                      <Link
-                        href={`/visas/${v.id}/edit`}
-                        className="text-sm font-medium text-blue-600 hover:underline dark:text-blue-400"
-                      >
-                        Edit
-                      </Link>
+                      {!v.canceledAt ? (
+                        <Link
+                          href={`/visas/${v.id}/edit`}
+                          className="text-sm font-medium text-blue-600 hover:underline dark:text-blue-400"
+                        >
+                          Edit
+                        </Link>
+                      ) : (
+                        <Link
+                          href={`/visas/${v.id}`}
+                          className="text-sm font-medium text-blue-600 hover:underline dark:text-blue-400"
+                        >
+                          View
+                        </Link>
+                      )}
                     </td>
                   )}
                 </tr>

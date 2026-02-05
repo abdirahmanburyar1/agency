@@ -19,6 +19,7 @@ type BookingRow = {
   packageCount: number;
   packageSummary: string;
   totalAmount: number;
+  canceledAt: string | null;
 };
 
 type Props = {

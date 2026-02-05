@@ -40,7 +40,8 @@ type Booking = {
     amount: number;
   }[];
   totalAmount: number;
-  payments?: { id: string; date: string; amount: number; status: string }[];
+  payments?: { id: string; date: string; amount: number; status: string; canceledAt: string | null; amountReceived: number }[];
+  totalReceived?: number;
 };
 
 type PackageOption = { id: string; name: string; type: string; defaultPrice: number };
@@ -509,6 +510,17 @@ export default function HajUmrahBookingDetail({ booking, canEdit }: Props) {
         </p>
       </div>
 
+      {booking.canceledAt && booking.totalReceived != null && booking.totalReceived > 0 && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-800/50 dark:bg-amber-900/20">
+          <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+            Refund may be required — ${booking.totalReceived.toLocaleString()} was received before cancellation.
+          </p>
+          <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">
+            Process refund manually as needed. Payment records have been marked canceled and no longer show as outstanding.
+          </p>
+        </div>
+      )}
+
       {booking.payments && booking.payments.length > 0 && (
         <div className="rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
           <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold text-zinc-700 dark:text-zinc-300">
@@ -517,9 +529,20 @@ export default function HajUmrahBookingDetail({ booking, canEdit }: Props) {
           </h2>
           <ul className="space-y-2">
             {booking.payments.map((p) => (
-              <li key={p.id} className="flex items-center justify-between rounded-lg border border-zinc-100 py-2 px-3 dark:border-zinc-700/50">
+              <li
+                key={p.id}
+                className={`flex items-center justify-between rounded-lg border py-2 px-3 dark:border-zinc-700/50 ${
+                  p.canceledAt ? "border-zinc-100 bg-zinc-50/50 dark:bg-zinc-800/30" : "border-zinc-100 dark:border-zinc-700/50"
+                }`}
+              >
                 <span className="text-sm text-zinc-600 dark:text-zinc-400">
                   {new Date(p.date).toLocaleDateString()} · ${p.amount.toLocaleString()} · {p.status}
+                  {(p.amountReceived ?? 0) > 0 && ` · $${(p.amountReceived ?? 0).toLocaleString()} received`}
+                  {p.canceledAt && (
+                    <span className="ml-2 rounded bg-zinc-200 px-1.5 py-0.5 text-xs dark:bg-zinc-600 dark:text-zinc-300">
+                      Canceled
+                    </span>
+                  )}
                 </span>
                 <Link
                   href={`/payments/${p.id}`}

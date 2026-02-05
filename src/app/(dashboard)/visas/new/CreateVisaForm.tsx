@@ -176,17 +176,17 @@ export default function CreateVisaForm({
     <>
       <form
         onSubmit={handleSubmit}
-        className="rounded-lg border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900"
+        className="rounded-lg border border-zinc-200 bg-white p-4 sm:p-6 dark:border-zinc-800 dark:bg-zinc-900"
       >
         {error && (
           <div className="mb-4 rounded bg-red-50 p-3 text-sm text-red-700 dark:bg-red-900/20 dark:text-red-400">
             {error}
           </div>
         )}
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="sm:col-span-2 flex gap-4">
-            <div className="flex-1 flex gap-3">
-              <div className="w-[100px] shrink-0">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="flex flex-col gap-4 sm:col-span-2 sm:flex-row sm:gap-4">
+            <div className="flex flex-col gap-4 sm:flex-1 sm:flex-row sm:gap-3">
+              <div className="min-w-0 w-full sm:w-[100px] sm:shrink-0">
                 <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">Visa No</label>
                 <input
                   type="text"
@@ -207,7 +207,7 @@ export default function CreateVisaForm({
                 />
               </div>
             </div>
-            <div className="w-[140px] shrink-0">
+            <div className="min-w-0 w-full sm:w-[140px] sm:shrink-0">
               <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">Date *</label>
               <input
                 type="date"

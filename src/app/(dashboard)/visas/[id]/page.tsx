@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { requirePermission, canAccess } from "@/lib/permissions";
 import { PERMISSION } from "@/lib/permissions";
 import VisaDocuments from "./VisaDocuments";
+import VisaCancelButton from "./VisaCancelButton";
 
 function InfoRow({
   label,
@@ -44,8 +45,8 @@ export default async function VisaDetailPage({
     where: { id },
     include: {
       customerRelation: true,
-      payments: { where: { canceledAt: null }, orderBy: { createdAt: "desc" } },
-      payables: { where: { canceledAt: null }, orderBy: { createdAt: "desc" } },
+      payments: { orderBy: { createdAt: "desc" }, include: { receipts: { select: { amount: true } } } },
+      payables: { orderBy: { createdAt: "desc" } },
     },
   });
 
@@ -72,21 +73,31 @@ export default async function VisaDetailPage({
 
   return (
     <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
-      <div className="mb-8 flex items-center justify-between">
+      <div className="mb-8 flex flex-wrap items-center justify-between gap-3">
         <Link
           href="/visas"
           className="text-sm font-medium text-zinc-500 transition hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
         >
           ← Back to Visas
         </Link>
-        {canEdit && (
-          <Link
-            href={`/visas/${id}/edit`}
-            className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
-          >
-            Edit Visa
-          </Link>
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          {visa.canceledAt && (
+            <span className="rounded-full bg-red-100 px-3 py-1.5 text-sm font-medium text-red-800 dark:bg-red-900/40 dark:text-red-400">
+              Canceled
+            </span>
+          )}
+          {canEdit && !visa.canceledAt && (
+            <>
+              <Link
+                href={`/visas/${id}/edit`}
+                className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+              >
+                Edit Visa
+              </Link>
+              <VisaCancelButton visaId={id} reference={visa.reference ?? ""} />
+            </>
+          )}
+        </div>
       </div>
 
       <div className="space-y-6">
@@ -171,6 +182,23 @@ export default async function VisaDetailPage({
           </div>
         </section>
 
+        {visa.canceledAt && (() => {
+          const totalReceived = visa.payments.reduce(
+            (sum, p) => sum + p.receipts.reduce((s, r) => s + Number(r.amount), 0),
+            0
+          );
+          return totalReceived > 0 ? (
+            <section className="rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-800/50 dark:bg-amber-900/20">
+              <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                Refund may be required — ${totalReceived.toLocaleString()} was received before cancellation.
+              </p>
+              <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">
+                Process refund manually as needed. Payment records have been marked canceled and no longer show as outstanding.
+              </p>
+            </section>
+          ) : null;
+        })()}
+
         {/* Payments */}
         {canViewPayments && (
           <section className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
@@ -200,15 +228,25 @@ export default async function VisaDetailPage({
                   </thead>
                   <tbody>
                     {visa.payments.map((p) => (
-                      <tr key={p.id} className="border-b border-zinc-100 dark:border-zinc-800">
+                      <tr
+                        key={p.id}
+                        className={`border-b border-zinc-100 dark:border-zinc-800 ${p.canceledAt ? "bg-zinc-50/50 dark:bg-zinc-800/30" : ""}`}
+                      >
                         <td className="py-3 pr-4 text-zinc-700 dark:text-zinc-300">
                           {new Date(p.date).toLocaleDateString()}
                         </td>
                         <td className="py-3 pr-4">
-                          <span
-                            className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${PAYMENT_STATUS_STYLE[p.status] ?? "bg-zinc-100 text-zinc-700"}`}
-                          >
-                            {p.status}
+                          <span className="flex flex-wrap items-center gap-1.5">
+                            <span
+                              className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${PAYMENT_STATUS_STYLE[p.status] ?? "bg-zinc-100 text-zinc-700"}`}
+                            >
+                              {p.status}
+                            </span>
+                            {p.canceledAt && (
+                              <span className="rounded bg-zinc-200 px-1.5 py-0.5 text-xs dark:bg-zinc-600 dark:text-zinc-300">
+                                Canceled
+                              </span>
+                            )}
                           </span>
                         </td>
                         <td className="py-3 pr-4 text-right font-medium text-zinc-900 dark:text-white">

@@ -20,6 +20,29 @@ export default async function EditVisaPage({
 
   if (!visa) notFound();
 
+  if (visa.canceledAt) {
+    return (
+      <main className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6">
+        <div className="mb-6">
+          <Link
+            href={`/visas/${id}`}
+            className="text-sm text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+          >
+            ← Back to Visa
+          </Link>
+        </div>
+        <div className="rounded-xl border border-red-200 bg-red-50 p-6 dark:border-red-800/50 dark:bg-red-900/20">
+          <h2 className="text-lg font-semibold text-red-800 dark:text-red-200">
+            Cannot edit canceled visa
+          </h2>
+          <p className="mt-2 text-sm text-red-700 dark:text-red-300">
+            This visa has been canceled and cannot be modified.
+          </p>
+        </div>
+      </main>
+    );
+  }
+
   const visaNumberDisplay =
     visa.visaNumber != null
       ? visa.visaNumber < 1000

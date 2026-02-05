@@ -21,7 +21,6 @@ export default async function HajUmrahPage({
 
   const bookingsQuery = () =>
     prisma.hajUmrahBooking.findMany({
-      where: { canceledAt: null },
       orderBy: { createdAt: "desc" },
       include: { customer: true, campaign: { include: { leader: true } }, packages: { include: { package: true } } },
     });
@@ -77,6 +76,7 @@ export default async function HajUmrahPage({
       packageCount,
       packageSummary,
       totalAmount: b.packages.reduce((sum, bp) => sum + Number(bp.amount), 0),
+      canceledAt: b.canceledAt?.toISOString() ?? null,
     };
   });
 

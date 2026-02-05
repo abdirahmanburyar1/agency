@@ -15,6 +15,7 @@ type SerializedTicket = {
   netSales: number;
   profit: number;
   customer: { name: string; phone: string | null } | null;
+  canceledAt: string | null;
 };
 
 type TicketsTableWithFiltersProps = {
@@ -48,12 +49,15 @@ export default function TicketsTableWithFilters({
 }: TicketsTableWithFiltersProps) {
   const [search, setSearch] = useState("");
   const [airline, setAirline] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
 
   const filteredTickets = useMemo(() => {
     return allTickets.filter((t) => {
       if (!matchSearch(t, search)) return false;
+      if (statusFilter === "active" && t.canceledAt) return false;
+      if (statusFilter === "canceled" && !t.canceledAt) return false;
       if (airline && (t.airline ?? "") !== airline) return false;
       if (dateFrom) {
         const d = new Date(t.date);
@@ -68,14 +72,15 @@ export default function TicketsTableWithFilters({
       }
       return true;
     });
-  }, [allTickets, search, airline, dateFrom, dateTo]);
+  }, [allTickets, search, airline, statusFilter, dateFrom, dateTo]);
 
   const hasActiveFilters =
-    search || airline || dateFrom || dateTo;
+    search || airline || statusFilter || dateFrom || dateTo;
 
   const clearFilters = () => {
     setSearch("");
     setAirline("");
+    setStatusFilter("");
     setDateFrom("");
     setDateTo("");
   };
@@ -109,6 +114,20 @@ export default function TicketsTableWithFilters({
               placeholder="Customer, phone, ticket no, reference..."
               className="w-full min-w-0 rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
             />
+          </div>
+          <div className="w-full min-w-0 sm:w-auto sm:min-w-[120px]">
+            <label className="mb-1 block text-xs font-medium text-zinc-500 dark:text-zinc-400">
+              Status
+            </label>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-white sm:w-40"
+            >
+              <option value="">All</option>
+              <option value="active">Active</option>
+              <option value="canceled">Canceled</option>
+            </select>
           </div>
           <div className="w-full min-w-0 sm:w-auto sm:min-w-[140px]">
             <label className="mb-1 block text-xs font-medium text-zinc-500 dark:text-zinc-400">
@@ -160,6 +179,9 @@ export default function TicketsTableWithFilters({
                 Ticket no
               </th>
               <th className="px-4 py-3 text-left font-medium text-zinc-900 dark:text-white">
+                Status
+              </th>
+              <th className="px-4 py-3 text-left font-medium text-zinc-900 dark:text-white">
                 Reference
               </th>
               <th className="px-4 py-3 text-left font-medium text-zinc-900 dark:text-white">
@@ -186,7 +208,7 @@ export default function TicketsTableWithFilters({
             {filteredTickets.length === 0 ? (
               <tr>
                 <td
-                  colSpan={8}
+                  colSpan={9}
                   className="px-4 py-8 text-center text-zinc-500"
                 >
                   No tickets found
@@ -208,7 +230,7 @@ export default function TicketsTableWithFilters({
                 return (
                   <tr
                     key={t.id}
-                    className="border-b border-zinc-100 dark:border-zinc-800"
+                    className={`border-b border-zinc-100 dark:border-zinc-800 ${t.canceledAt ? "bg-zinc-50/50 dark:bg-zinc-800/30" : ""}`}
                   >
                     <td className="px-4 py-3 font-mono text-zinc-700 dark:text-zinc-300">
                       <Link
@@ -217,6 +239,17 @@ export default function TicketsTableWithFilters({
                       >
                         {ticketNo}
                       </Link>
+                    </td>
+                    <td className="px-4 py-3">
+                      {t.canceledAt ? (
+                        <span className="inline-flex rounded-full px-2 py-0.5 text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-400">
+                          Canceled
+                        </span>
+                      ) : (
+                        <span className="inline-flex rounded-full px-2 py-0.5 text-xs font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-400">
+                          Active
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-zinc-700 dark:text-zinc-300">
                       {t.reference ?? "—"}

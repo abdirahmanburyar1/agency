@@ -193,6 +193,7 @@ model Visa {
   netSales     Decimal   @map("net_sales") @db.Decimal(12, 2)
   profit       Decimal   @map("profit") @db.Decimal(12, 2)
   createdAt    DateTime  @default(now()) @map("created_at")
+  canceledAt   DateTime? @map("canceled_at")
 
   customerRelation Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
   payments         Payment[]

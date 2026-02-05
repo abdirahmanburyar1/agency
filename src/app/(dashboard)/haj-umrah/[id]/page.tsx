@@ -20,7 +20,10 @@ export default async function HajUmrahBookingPage({
       customer: true,
       campaign: { include: { leader: { select: { id: true, name: true, email: true } } } },
       packages: { include: { package: true } },
-      payments: { where: { canceledAt: null }, orderBy: { date: "desc" } },
+      payments: {
+        orderBy: { date: "desc" },
+        include: { receipts: { select: { amount: true } } },
+      },
     },
   });
   if (!booking) notFound();
@@ -74,6 +77,20 @@ export default async function HajUmrahBookingPage({
     notes: booking.notes,
     createdAt: booking.createdAt.toISOString(),
     canceledAt: booking.canceledAt?.toISOString() ?? null,
+    payments: booking.payments.map((p) => {
+      const amountReceived = p.receipts.reduce((sum, r) => sum + Number(r.amount), 0);
+      return {
+        id: p.id,
+        date: p.date.toISOString(),
+        amount: Number(p.amount),
+        status: p.status,
+        canceledAt: p.canceledAt?.toISOString() ?? null,
+        amountReceived,
+      };
+    }),
+    totalReceived: booking.payments.reduce((sum, p) => {
+      return sum + p.receipts.reduce((s, r) => s + Number(r.amount), 0);
+    }, 0),
     packages: booking.packages.map((bp) => ({
       id: bp.id,
       packageId: bp.packageId,
