@@ -45,6 +45,7 @@ const STATUS_OPTIONS = [
   { value: "paid", label: "Paid" },
   { value: "credit", label: "Credit" },
   { value: "refund", label: "Refund" },
+  { value: "refunded", label: "Refunded" },
 ];
 
 const SOURCE_OPTIONS = [
@@ -240,12 +241,18 @@ export default function PaymentsTableWithFilters({ payments: allPayments }: Paym
                   <td className="px-4 py-3 text-zinc-700 dark:text-zinc-300">{p.customerName}</td>
                   <td className="px-4 py-3 text-zinc-700 dark:text-zinc-300">{p.name ?? "—"}</td>
                   <td className="px-4 py-3 text-right font-medium text-zinc-900 dark:text-white">
-                    <Link
-                      href={`/payments/${p.id}`}
-                      className="text-blue-600 hover:underline dark:text-blue-400"
-                    >
-                      ${p.amount.toLocaleString()}
-                    </Link>
+                    {p.status === "refunded" ? (
+                      <span className="cursor-not-allowed text-zinc-500 dark:text-zinc-400">
+                        ${p.amount.toLocaleString()}
+                      </span>
+                    ) : (
+                      <Link
+                        href={`/payments/${p.id}`}
+                        className="text-blue-600 hover:underline dark:text-blue-400"
+                      >
+                        ${p.amount.toLocaleString()}
+                      </Link>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-right text-zinc-700 dark:text-zinc-300">
                     ${p.totalReceived.toLocaleString()}
@@ -268,9 +275,9 @@ export default function PaymentsTableWithFilters({ payments: allPayments }: Paym
                             ? "rounded bg-amber-100 px-2 py-0.5 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400"
                             : p.status === "pending"
                               ? "rounded bg-zinc-100 px-2 py-0.5 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
-                              : p.status === "credit"
+                                : p.status === "credit"
                                 ? "rounded bg-red-100 px-2 py-0.5 text-red-800 dark:bg-red-900/30 dark:text-red-400"
-                                : p.status === "refund"
+                                : p.status === "refund" || p.status === "refunded"
                                   ? "rounded bg-blue-100 px-2 py-0.5 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
                                   : "rounded bg-zinc-100 px-2 py-0.5 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
                       }
