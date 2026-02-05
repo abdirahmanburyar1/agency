@@ -91,9 +91,20 @@ export default function ReportsView({ initialData }: Props) {
   const data = initialData;
   const { summary, rows, dateRangeLabel, periodLabel } = data;
 
-  const fromStr = new Date(data.fromDate).toISOString().slice(0, 10);
-  const toStr = new Date(data.toDate).toISOString().slice(0, 10);
-  const exportFileBase = `report-${fromStr}-to-${toStr}`;
+  const fromDate = new Date(data.fromDate);
+  const toDate = new Date(data.toDate);
+  const fromStr = fromDate.toISOString().slice(0, 10);
+  const toStr = toDate.toISOString().slice(0, 10);
+  const year = fromDate.getFullYear();
+  const month = String(fromDate.getMonth() + 1).padStart(2, "0");
+  const exportFileBase =
+    data.period === "today"
+      ? `report-today-${fromStr}`
+      : data.period === "daily"
+        ? `report-daily-${fromStr}-to-${toStr}`
+        : data.period === "yearly"
+          ? `report-yearly-${year}`
+          : `report-monthly-${year}-${month}`;
 
   const applyFilters = useCallback(() => {
     const params = new URLSearchParams();

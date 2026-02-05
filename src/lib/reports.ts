@@ -444,9 +444,13 @@ export async function getReportData(filter?: ReportFilters): Promise<ReportData>
   const dateRangeLabel =
     period === "today"
       ? `Today (${from.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })})`
-      : fromDate.getTime() === defaultRange.from.getTime() && toDate.getTime() === defaultRange.to.getTime()
-        ? "Current month"
-        : `From ${fromDate.toLocaleDateString()} to ${toDate.toLocaleDateString()}`;
+      : period === "yearly"
+        ? (from.getFullYear() === to.getFullYear()
+            ? String(from.getFullYear())
+            : `${from.getFullYear()} – ${to.getFullYear()}`)
+        : period === "monthly"
+          ? from.toLocaleDateString("en-US", { month: "long", year: "numeric" })
+          : `From ${fromDate.toLocaleDateString()} to ${toDate.toLocaleDateString()}`;
 
   return {
     summary,
