@@ -82,7 +82,7 @@ export default function PaymentsTableWithFilters({ payments: allPayments }: Paym
   }, [allPayments, search, source, status, dateFrom, dateTo]);
 
   const totalBalance = useMemo(
-    () => filteredPayments.reduce((sum, p) => sum + p.balance, 0),
+    () => filteredPayments.filter((p) => p.status !== "refunded").reduce((sum, p) => sum + p.balance, 0),
     [filteredPayments]
   );
 
@@ -292,7 +292,7 @@ export default function PaymentsTableWithFilters({ payments: allPayments }: Paym
           <tfoot>
             <tr className="border-t-2 border-zinc-200 bg-zinc-50 font-medium dark:border-zinc-700 dark:bg-zinc-800/50">
               <td colSpan={6} className="px-4 py-3 text-right text-zinc-900 dark:text-white">
-                Total balance (visible rows)
+                Total balance (excl. refunded)
               </td>
               <td className="px-4 py-3 text-right font-semibold text-zinc-900 dark:text-white">
                 {totalBalance < 0 ? (
