@@ -204,16 +204,16 @@ export default function CreateTicketForm({
     <>
     <form
       onSubmit={handleSubmit}
-      className="rounded-lg border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900"
+      className="rounded-lg border border-zinc-200 bg-white p-4 sm:p-6 dark:border-zinc-800 dark:bg-zinc-900"
     >
       {errors.form && (
         <div className="mb-4 rounded bg-red-50 p-3 text-sm text-red-700 dark:bg-red-900/20 dark:text-red-400">
           {errors.form}
         </div>
       )}
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="flex gap-4 sm:col-span-2">
-          <div className="flex-[3] flex gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="flex flex-col gap-4 sm:col-span-2 sm:flex-row sm:gap-4">
+          <div className="flex flex-col gap-4 sm:flex-[3] sm:flex-row sm:gap-4">
             <div className="min-w-0 flex-1">
               <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
                 Ticket no
@@ -247,7 +247,7 @@ export default function CreateTicketForm({
               )}
             </div>
           </div>
-          <div className="flex-1 min-w-0">
+          <div className="w-full min-w-0 sm:flex-1">
             <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
               Date *
             </label>
