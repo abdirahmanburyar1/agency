@@ -12,7 +12,7 @@ export default async function PaymentsPage() {
   const paymentsQuery = () =>
     prisma.payment.findMany({
       where: { canceledAt: null },
-      orderBy: { createdAt: "desc" },
+      orderBy: { paymentDate: "desc" },
       include: {
         ticket: { include: { customer: true } },
         visa: { include: { customerRelation: true } },
@@ -56,6 +56,7 @@ export default async function PaymentsPage() {
     return {
       id: p.id,
       date: p.date.toISOString(),
+      paymentDate: p.paymentDate.toISOString(),
       status: p.status,
       name: p.name,
       description: p.description,
@@ -73,7 +74,7 @@ export default async function PaymentsPage() {
 
   return (
     <main className="w-full py-6 sm:py-8">
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <Link href="/" className="text-sm text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300">
           ← Back
         </Link>

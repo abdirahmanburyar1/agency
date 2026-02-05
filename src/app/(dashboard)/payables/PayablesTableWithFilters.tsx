@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import * as XLSX from "xlsx";
+import { getLogoDataUrl } from "@/lib/pdf-logo";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -110,10 +111,20 @@ export default function PayablesTableWithFilters({ payables: allPayables }: Paya
     XLSX.writeFile(wb, `payables-${new Date().toISOString().slice(0, 10)}.xlsx`);
   };
 
-  const exportToPdf = () => {
+  const exportToPdf = async () => {
     const doc = new jsPDF({ orientation: "landscape" });
+    const pageW = doc.getPageWidth();
+    const logoW = 48;
+    const logoH = 18;
+    const margin = 14;
+    try {
+      const logoDataUrl = await getLogoDataUrl();
+      doc.addImage(logoDataUrl, "PNG", pageW - margin - logoW, 6, logoW, logoH);
+    } catch {
+      // logo optional
+    }
     doc.setFontSize(14);
-    doc.text("Payables", 14, 12);
+    doc.text("Daybah Travel Agency — Payables", margin, 14);
     const headers = [["Date", "Source", "Name", "Description", "Amount", "Balance", "Deadline", "Remaining"]];
     const body = filteredPayables.map((p) => [
       formatDate(p.date),
@@ -128,10 +139,10 @@ export default function PayablesTableWithFilters({ payables: allPayables }: Paya
     autoTable(doc, {
       head: headers,
       body,
-      startY: 18,
+      startY: 22,
       styles: { fontSize: 8 },
     });
-    const finalY = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY ?? 18;
+    const finalY = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY ?? 22;
     doc.setFontSize(10);
     doc.text(`Total balance (visible rows): $${totalBalance.toLocaleString()}`, 14, finalY + 8);
     doc.save(`payables-${new Date().toISOString().slice(0, 10)}.pdf`);
@@ -152,8 +163,8 @@ export default function PayablesTableWithFilters({ payables: allPayables }: Paya
             </button>
           )}
         </div>
-        <div className="flex flex-wrap items-end gap-3">
-          <div className="min-w-0 flex-1">
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:gap-3">
+          <div className="min-w-0 w-full sm:flex-1">
             <label className="mb-1 block text-xs font-medium text-zinc-500 dark:text-zinc-400">
               Search
             </label>
@@ -162,17 +173,17 @@ export default function PayablesTableWithFilters({ payables: allPayables }: Paya
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Name, description..."
-              className="w-full min-w-[200px] rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
+              className="w-full min-w-0 rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
             />
           </div>
-          <div>
+          <div className="w-full min-w-0 sm:w-36">
             <label className="mb-1 block text-xs font-medium text-zinc-500 dark:text-zinc-400">
               Source
             </label>
             <select
               value={source}
               onChange={(e) => setSource(e.target.value)}
-              className="w-36 rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
+              className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-white sm:w-36"
             >
               {SOURCE_OPTIONS.map((opt) => (
                 <option key={opt.value || "all"} value={opt.value}>
@@ -181,7 +192,7 @@ export default function PayablesTableWithFilters({ payables: allPayables }: Paya
               ))}
             </select>
           </div>
-          <div>
+          <div className="w-full min-w-0 sm:w-auto sm:min-w-[140px]">
             <label className="mb-1 block text-xs font-medium text-zinc-500 dark:text-zinc-400">
               Date from
             </label>
@@ -189,10 +200,10 @@ export default function PayablesTableWithFilters({ payables: allPayables }: Paya
               type="date"
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
-              className="rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
+              className="w-full min-w-0 rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
             />
           </div>
-          <div>
+          <div className="w-full min-w-0 sm:w-auto sm:min-w-[140px]">
             <label className="mb-1 block text-xs font-medium text-zinc-500 dark:text-zinc-400">
               Date to
             </label>
@@ -200,7 +211,7 @@ export default function PayablesTableWithFilters({ payables: allPayables }: Paya
               type="date"
               value={dateTo}
               onChange={(e) => setDateTo(e.target.value)}
-              className="rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
+              className="w-full min-w-0 rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
             />
           </div>
         </div>
@@ -209,7 +220,7 @@ export default function PayablesTableWithFilters({ payables: allPayables }: Paya
             Showing {filteredPayables.length} of {allPayables.length} payable(s)
           </p>
         )}
-        <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-zinc-200 pt-4 dark:border-zinc-700">
+        <div className="mt-4 flex flex-col gap-2 border-t border-zinc-200 pt-4 dark:border-zinc-700 sm:flex-row sm:flex-wrap sm:items-center sm:gap-2">
           <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Export (visible rows):</span>
           <button
             type="button"

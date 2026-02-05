@@ -78,8 +78,8 @@ export default async function TicketsPage() {
 
   return (
     <main className="w-full py-6 sm:py-8">
-      <div className="mb-6 flex items-center justify-between">
-        <div className="flex items-center gap-4">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3 sm:gap-4">
           <Link
             href="/"
             className="text-sm text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"

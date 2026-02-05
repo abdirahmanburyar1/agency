@@ -124,9 +124,28 @@ export async function PATCH(
 
     const existing = await prisma.hajUmrahBooking.findUnique({
       where: { id },
-      select: { trackNumber: true, canceledAt: true, campaignId: true, campaign: { select: { date: true } } },
+      select: { trackNumber: true, canceledAt: true, campaignId: true, customerId: true, campaign: { select: { date: true } } },
     });
     if (!existing) return NextResponse.json({ error: "Booking not found" }, { status: 404 });
+
+    const effectiveCustomerId = customerId !== undefined ? customerId : existing.customerId;
+    const effectiveCampaignId = campaignId !== undefined ? (campaignId || null) : existing.campaignId;
+    if (effectiveCustomerId && effectiveCampaignId) {
+      const duplicate = await prisma.hajUmrahBooking.findFirst({
+        where: {
+          customerId: effectiveCustomerId,
+          campaignId: effectiveCampaignId,
+          canceledAt: null,
+          id: { not: id },
+        },
+      });
+      if (duplicate) {
+        return NextResponse.json(
+          { error: "This customer already has a booking in this campaign. A customer cannot be added twice to the same campaign." },
+          { status: 400 }
+        );
+      }
+    }
 
     const now = new Date();
     const campaignDatePassed = existing.campaign?.date ? existing.campaign.date <= now : false;

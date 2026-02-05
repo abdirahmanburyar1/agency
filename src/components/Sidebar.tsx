@@ -18,6 +18,22 @@ type SidebarProps = {
   onClose: () => void;
 };
 
+const ICON_COLORS: Record<string, string> = {
+  dashboard: "bg-emerald-500/15 text-emerald-600 dark:bg-emerald-400/20 dark:text-emerald-400",
+  reports: "bg-blue-500/15 text-blue-600 dark:bg-blue-400/20 dark:text-blue-400",
+  tickets: "bg-sky-500/15 text-sky-600 dark:bg-sky-400/20 dark:text-sky-400",
+  visas: "bg-teal-500/15 text-teal-600 dark:bg-teal-400/20 dark:text-teal-400",
+  haj_umrah: "bg-amber-500/15 text-amber-600 dark:bg-amber-400/20 dark:text-amber-400",
+  customers: "bg-violet-500/15 text-violet-600 dark:bg-violet-400/20 dark:text-violet-400",
+  expenses: "bg-orange-500/15 text-orange-600 dark:bg-orange-400/20 dark:text-orange-400",
+  receivables: "bg-green-500/15 text-green-600 dark:bg-green-400/20 dark:text-green-400",
+  payables: "bg-rose-500/15 text-rose-600 dark:bg-rose-400/20 dark:text-rose-400",
+  payments: "bg-indigo-500/15 text-indigo-600 dark:bg-indigo-400/20 dark:text-indigo-400",
+  settings: "bg-slate-500/15 text-slate-600 dark:bg-slate-400/20 dark:text-slate-400",
+  users: "bg-cyan-500/15 text-cyan-600 dark:bg-cyan-400/20 dark:text-cyan-400",
+  roles: "bg-fuchsia-500/15 text-fuchsia-600 dark:bg-fuchsia-400/20 dark:text-fuchsia-400",
+};
+
 const ICONS: Record<string, React.ReactNode> = {
   dashboard: (
     <svg className="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -83,7 +99,48 @@ const ICONS: Record<string, React.ReactNode> = {
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
     </svg>
   ),
+  reports: (
+    <svg className="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+    </svg>
+  ),
 };
+
+function NavLink({
+  href,
+  label,
+  iconKey,
+  isActive,
+  onClick,
+}: {
+  href: string;
+  label: string;
+  iconKey: string;
+  isActive: boolean;
+  onClick: () => void;
+}) {
+  const colorClass = ICON_COLORS[iconKey] ?? ICON_COLORS.dashboard;
+  return (
+    <Link
+      href={href}
+      onClick={onClick}
+      className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
+        isActive
+          ? "border-l-4 border-emerald-500 bg-emerald-500/10 text-emerald-800 dark:border-emerald-400 dark:bg-emerald-500/15 dark:text-emerald-100"
+          : "border-l-4 border-transparent text-slate-700 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
+      }`}
+    >
+      <span
+        className={`flex size-9 shrink-0 items-center justify-center rounded-lg transition-colors ${
+          isActive ? "bg-emerald-500/20 text-emerald-600 dark:bg-emerald-400/25 dark:text-emerald-300" : colorClass
+        }`}
+      >
+        {ICONS[iconKey] ?? ICONS.dashboard}
+      </span>
+      <span className="truncate">{label}</span>
+    </Link>
+  );
+}
 
 export default function Sidebar({ navItems, adminItems, isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
@@ -93,65 +150,58 @@ export default function Sidebar({ navItems, adminItems, isOpen, onClose }: Sideb
     <>
       {isOpen && (
         <div
-          className="fixed inset-0 z-40 bg-slate-900/20 backdrop-blur-sm lg:hidden"
+          className="fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-sm lg:hidden"
           onClick={onClose}
           aria-hidden="true"
         />
       )}
 
       <aside
-        className={`fixed left-0 top-0 z-50 h-full w-72 transform bg-white shadow-2xl transition-all duration-300 ease-out print:hidden dark:bg-slate-900/95 dark:shadow-slate-950/50 lg:translate-x-0 ${
+        className={`fixed left-0 top-0 z-50 h-full w-72 transform bg-white shadow-xl transition-all duration-300 ease-out print:hidden dark:bg-slate-900 lg:translate-x-0 ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
         <div className="flex h-full flex-col">
-          {/* Logo area */}
-          <div className="border-b border-slate-100 px-4 py-4 dark:border-slate-800">
-            <Link href="/" className="block w-full" onClick={onClose}>
-              <img src="/logo.png" alt="Daybah Travel Agency" className="w-full object-contain" />
+          {/* Brand */}
+          <div className="border-b border-slate-200 px-5 py-5 dark:border-slate-700/80">
+            <Link href="/" className="flex items-center justify-center" onClick={onClose}>
+              <img
+                src="/logo.png"
+                alt=""
+                className="h-10 w-auto max-w-[160px] object-contain"
+              />
             </Link>
           </div>
 
           {/* Nav */}
           <nav className="flex-1 overflow-y-auto px-4 py-5">
-            <p className="mb-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-              Menu
+            <p className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+              Main
             </p>
-            <ul className="space-y-0.5">
+            <ul className="space-y-1">
               <li>
-                <Link
-                  href="/"
-                  className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${
-                    pathname === "/"
-                      ? "bg-emerald-500/10 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400"
-                      : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white"
-                  }`}
-                  onClick={onClose}
-                >
-                  <span className={pathname === "/" ? "text-emerald-600 dark:text-emerald-400" : "text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300"}>
-                    {ICONS.dashboard}
-                  </span>
-                  Dashboard
-                </Link>
+                <NavLink href="/" label="Dashboard" iconKey="dashboard" isActive={pathname === "/"} onClick={onClose} />
               </li>
+              <li>
+                <NavLink href="/reports" label="Reports" iconKey="reports" isActive={pathname === "/reports"} onClick={onClose} />
+              </li>
+            </ul>
+
+            <p className="mb-2 mt-6 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+              Operations
+            </p>
+            <ul className="space-y-1">
               {navItems.map((item) => {
                 const isActive = pathname.startsWith(item.href) && item.href !== "/";
                 return (
                   <li key={item.href}>
-                    <Link
+                    <NavLink
                       href={item.href}
-                      className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${
-                        isActive
-                          ? "bg-emerald-500/10 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400"
-                          : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white"
-                      }`}
+                      label={item.label}
+                      iconKey={item.icon}
+                      isActive={!!isActive}
                       onClick={onClose}
-                    >
-                      <span className={isActive ? "text-emerald-600 dark:text-emerald-400" : "text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300"}>
-                        {ICONS[item.icon] ?? ICONS.dashboard}
-                      </span>
-                      {item.label}
-                    </Link>
+                    />
                   </li>
                 );
               })}
@@ -159,22 +209,24 @@ export default function Sidebar({ navItems, adminItems, isOpen, onClose }: Sideb
 
             {adminItems.length > 0 && (
               <>
-                <p className="mb-3 mt-8 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                <p className="mb-2 mt-6 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
                   Administration
                 </p>
-                <ul className="space-y-0.5">
+                <ul className="space-y-1">
                   <li>
                     <button
                       type="button"
                       onClick={() => setAdminExpanded(!adminExpanded)}
-                      className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium text-slate-600 transition-all hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white"
+                      className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition-all hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
                     >
                       <span className="flex items-center gap-3">
-                        <span className="text-slate-400">{ICONS.settings}</span>
-                        Administration
+                        <span className={`flex size-9 shrink-0 items-center justify-center rounded-lg ${ICON_COLORS.settings}`}>
+                          {ICONS.settings}
+                        </span>
+                        <span>Settings &amp; Users</span>
                       </span>
                       <svg
-                        className={`size-4 text-slate-400 transition-transform ${adminExpanded ? "rotate-180" : ""}`}
+                        className={`size-4 text-slate-400 transition-transform duration-200 ${adminExpanded ? "rotate-180" : ""}`}
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -183,20 +235,24 @@ export default function Sidebar({ navItems, adminItems, isOpen, onClose }: Sideb
                       </svg>
                     </button>
                     {adminExpanded && (
-                      <ul className="mt-1 space-y-0.5 pl-4">
+                      <ul className="mt-1 space-y-1 border-l-2 border-slate-200 pl-4 dark:border-slate-700">
                         {adminItems.map((item) => {
                           const isActive = pathname.startsWith(item.href);
+                          const iconKey = item.label === "Settings" ? "settings" : item.label === "Users" ? "users" : "roles";
                           return (
                             <li key={item.href}>
                               <Link
                                 href={item.href}
-                                className={`block rounded-lg px-3 py-2 text-sm transition ${
+                                className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition ${
                                   isActive
                                     ? "font-medium text-emerald-600 dark:text-emerald-400"
-                                    : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white"
+                                    : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
                                 }`}
                                 onClick={onClose}
                               >
+                                <span className={`flex size-7 shrink-0 items-center justify-center rounded-md ${ICON_COLORS[iconKey] ?? ICON_COLORS.settings}`}>
+                                  {ICONS[iconKey] ?? ICONS.settings}
+                                </span>
                                 {item.label}
                               </Link>
                             </li>

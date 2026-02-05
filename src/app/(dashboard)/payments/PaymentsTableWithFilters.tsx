@@ -6,6 +6,7 @@ import { useMemo, useState } from "react";
 export type SerializedPayment = {
   id: string;
   date: string;
+  paymentDate: string;
   status: string;
   name: string | null;
   description: string | null;
@@ -66,12 +67,12 @@ export default function PaymentsTableWithFilters({ payments: allPayments }: Paym
       if (source && p.source !== source) return false;
       if (status && p.status !== status) return false;
       if (dateFrom) {
-        const d = new Date(p.date);
+        const d = new Date(p.paymentDate);
         const from = new Date(dateFrom);
         if (d < from) return false;
       }
       if (dateTo) {
-        const d = new Date(p.date);
+        const d = new Date(p.paymentDate);
         const to = new Date(dateTo);
         to.setHours(23, 59, 59, 999);
         if (d > to) return false;
@@ -110,8 +111,8 @@ export default function PaymentsTableWithFilters({ payments: allPayments }: Paym
             </button>
           )}
         </div>
-        <div className="flex flex-wrap items-end gap-3">
-          <div className="min-w-0 flex-1">
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:gap-3">
+          <div className="min-w-0 w-full sm:flex-1">
             <label className="mb-1 block text-xs font-medium text-zinc-500 dark:text-zinc-400">
               Search
             </label>
@@ -120,17 +121,17 @@ export default function PaymentsTableWithFilters({ payments: allPayments }: Paym
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Customer, payment name..."
-              className="w-full min-w-[200px] rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
+              className="w-full min-w-0 rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
             />
           </div>
-          <div>
+          <div className="w-full min-w-0 sm:w-36">
             <label className="mb-1 block text-xs font-medium text-zinc-500 dark:text-zinc-400">
               Source
             </label>
             <select
               value={source}
               onChange={(e) => setSource(e.target.value)}
-              className="w-36 rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
+              className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-white sm:w-36"
             >
               {SOURCE_OPTIONS.map((opt) => (
                 <option key={opt.value || "all"} value={opt.value}>
@@ -139,14 +140,14 @@ export default function PaymentsTableWithFilters({ payments: allPayments }: Paym
               ))}
             </select>
           </div>
-          <div>
+          <div className="w-full min-w-0 sm:w-32">
             <label className="mb-1 block text-xs font-medium text-zinc-500 dark:text-zinc-400">
               Status
             </label>
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value)}
-              className="w-32 rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
+              className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-white sm:w-32"
             >
               {STATUS_OPTIONS.map((opt) => (
                 <option key={opt.value || "all"} value={opt.value}>
@@ -155,7 +156,7 @@ export default function PaymentsTableWithFilters({ payments: allPayments }: Paym
               ))}
             </select>
           </div>
-          <div>
+          <div className="w-full min-w-0 sm:w-auto sm:min-w-[140px]">
             <label className="mb-1 block text-xs font-medium text-zinc-500 dark:text-zinc-400">
               Date from
             </label>
@@ -163,10 +164,10 @@ export default function PaymentsTableWithFilters({ payments: allPayments }: Paym
               type="date"
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
-              className="rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
+              className="w-full min-w-0 rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
             />
           </div>
-          <div>
+          <div className="w-full min-w-0 sm:w-auto sm:min-w-[140px]">
             <label className="mb-1 block text-xs font-medium text-zinc-500 dark:text-zinc-400">
               Date to
             </label>
@@ -174,7 +175,7 @@ export default function PaymentsTableWithFilters({ payments: allPayments }: Paym
               type="date"
               value={dateTo}
               onChange={(e) => setDateTo(e.target.value)}
-              className="rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
+              className="w-full min-w-0 rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
             />
           </div>
         </div>
@@ -189,7 +190,7 @@ export default function PaymentsTableWithFilters({ payments: allPayments }: Paym
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950">
-              <th className="px-4 py-3 text-left font-medium text-zinc-900 dark:text-white">Date</th>
+              <th className="px-4 py-3 text-left font-medium text-zinc-900 dark:text-white">Payment date</th>
               <th className="px-4 py-3 text-left font-medium text-zinc-900 dark:text-white">Source</th>
               <th className="px-4 py-3 text-left font-medium text-zinc-900 dark:text-white">Customer</th>
               <th className="px-4 py-3 text-left font-medium text-zinc-900 dark:text-white">Name</th>
@@ -211,7 +212,7 @@ export default function PaymentsTableWithFilters({ payments: allPayments }: Paym
               filteredPayments.map((p) => (
                 <tr key={p.id} className="border-b border-zinc-100 dark:border-zinc-800">
                   <td className="px-4 py-3 text-zinc-700 dark:text-zinc-300">
-                    {new Date(p.date).toLocaleDateString()}
+                    {new Date(p.paymentDate).toLocaleDateString()}
                   </td>
                   <td className="px-4 py-3 text-zinc-700 dark:text-zinc-300">
                     {p.source === "ticket" && p.ticketId ? (

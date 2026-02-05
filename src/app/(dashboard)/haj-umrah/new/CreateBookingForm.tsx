@@ -51,6 +51,10 @@ export default function CreateBookingForm({ nextTrackNumberDisplay, initialCusto
     initialBooking?.packages?.map((p) => ({ packageId: p.packageId, packageName: p.packageName, quantity: p.quantity, unitPrice: p.unitPrice })) ?? []
   );
   const [showAddPackage, setShowAddPackage] = useState(false);
+  const [showAddCustomerModal, setShowAddCustomerModal] = useState(false);
+  const [newCustomerName, setNewCustomerName] = useState("");
+  const [newCustomerEmail, setNewCustomerEmail] = useState("");
+  const [newCustomerPhone, setNewCustomerPhone] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -108,6 +112,38 @@ export default function CreateBookingForm({ nextTrackNumberDisplay, initialCusto
     setLines((prev) =>
       prev.map((l, i) => (i === index ? { ...l, ...updates } : l))
     );
+  }
+
+  async function addNewCustomer() {
+    const name = newCustomerName.trim();
+    if (!name) return;
+    setError("");
+    try {
+      const res = await fetch("/api/customers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          email: newCustomerEmail.trim() || null,
+          phone: newCustomerPhone.trim() || null,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? "Failed to create customer");
+        return;
+      }
+      const listRes = await fetch("/api/customers/for-select");
+      const list = await listRes.json();
+      setCustomers(Array.isArray(list) ? list : []);
+      setCustomerId(data.id);
+      setNewCustomerName("");
+      setNewCustomerEmail("");
+      setNewCustomerPhone("");
+      setShowAddCustomerModal(false);
+    } catch {
+      setError("Failed to create customer");
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -191,7 +227,7 @@ export default function CreateBookingForm({ nextTrackNumberDisplay, initialCusto
             customers={customers}
             value={customerId}
             onChange={setCustomerId}
-            onAddNew={() => {}}
+            onAddNew={() => setShowAddCustomerModal(true)}
             placeholder="Search or select customer..."
           />
         </div>
@@ -354,6 +390,88 @@ export default function CreateBookingForm({ nextTrackNumberDisplay, initialCusto
           Cancel
         </Link>
       </div>
+
+      {showAddCustomerModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={() => {
+            setShowAddCustomerModal(false);
+            setNewCustomerName("");
+            setNewCustomerEmail("");
+            setNewCustomerPhone("");
+            setError("");
+          }}
+        >
+          <div
+            className="w-full max-w-sm rounded-lg border border-zinc-200 bg-white p-6 shadow-xl dark:border-zinc-700 dark:bg-zinc-900"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="mb-4 text-lg font-medium text-zinc-900 dark:text-white">
+              Add new customer
+            </h3>
+            <div className="space-y-3">
+              <input
+                type="text"
+                value={newCustomerName}
+                onChange={(e) => setNewCustomerName(e.target.value)}
+                placeholder="Name *"
+                className="w-full rounded border border-zinc-300 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    addNewCustomer();
+                  }
+                  if (e.key === "Escape") {
+                    setShowAddCustomerModal(false);
+                    setNewCustomerName("");
+                    setNewCustomerEmail("");
+                    setNewCustomerPhone("");
+                    setError("");
+                  }
+                }}
+              />
+              <input
+                type="email"
+                value={newCustomerEmail}
+                onChange={(e) => setNewCustomerEmail(e.target.value)}
+                placeholder="Email"
+                className="w-full rounded border border-zinc-300 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
+              />
+              <input
+                type="text"
+                value={newCustomerPhone}
+                onChange={(e) => setNewCustomerPhone(e.target.value)}
+                placeholder="Phone"
+                className="w-full rounded border border-zinc-300 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
+              />
+            </div>
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAddCustomerModal(false);
+                  setNewCustomerName("");
+                  setNewCustomerEmail("");
+                  setNewCustomerPhone("");
+                  setError("");
+                }}
+                className="rounded border border-zinc-300 px-4 py-2 text-sm font-medium hover:bg-zinc-50 dark:border-zinc-600 dark:hover:bg-zinc-800"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={addNewCustomer}
+                disabled={!newCustomerName.trim()}
+                className="rounded bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50 dark:bg-teal-500 dark:hover:bg-teal-600"
+              >
+                Add
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </form>
   );
 }

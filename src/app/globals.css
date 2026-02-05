@@ -27,6 +27,17 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Global loading indicator animation */
+@keyframes global-loading {
+  0%,
+  100% {
+    transform: translateX(-100%);
+  }
+  50% {
+    transform: translateX(200%);
+  }
+}
+
 /* Print: hide sidebar/header */
 @media print {
   .print\:hidden {

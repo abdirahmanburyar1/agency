@@ -97,8 +97,8 @@ export default function TicketsTableWithFilters({
             </button>
           )}
         </div>
-        <div className="flex flex-wrap items-end gap-3">
-          <div className="min-w-0 flex-1">
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:gap-3">
+          <div className="min-w-0 w-full sm:flex-1">
             <label className="mb-1 block text-xs font-medium text-zinc-500 dark:text-zinc-400">
               Search
             </label>
@@ -107,17 +107,17 @@ export default function TicketsTableWithFilters({
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Customer, phone, ticket no, reference..."
-              className="w-full min-w-[200px] rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
+              className="w-full min-w-0 rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
             />
           </div>
-          <div>
+          <div className="w-full min-w-0 sm:w-auto sm:min-w-[140px]">
             <label className="mb-1 block text-xs font-medium text-zinc-500 dark:text-zinc-400">
               Airline
             </label>
             <select
               value={airline}
               onChange={(e) => setAirline(e.target.value)}
-              className="w-40 rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
+              className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-white sm:w-40"
             >
               <option value="">All</option>
               {airlines.map((a) => (
@@ -127,7 +127,7 @@ export default function TicketsTableWithFilters({
               ))}
             </select>
           </div>
-          <div>
+          <div className="w-full min-w-0 sm:w-auto sm:min-w-[140px]">
             <label className="mb-1 block text-xs font-medium text-zinc-500 dark:text-zinc-400">
               Date from
             </label>
@@ -135,10 +135,10 @@ export default function TicketsTableWithFilters({
               type="date"
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
-              className="rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
+              className="w-full min-w-0 rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
             />
           </div>
-          <div>
+          <div className="w-full min-w-0 sm:w-auto sm:min-w-[140px]">
             <label className="mb-1 block text-xs font-medium text-zinc-500 dark:text-zinc-400">
               Date to
             </label>
@@ -146,7 +146,7 @@ export default function TicketsTableWithFilters({
               type="date"
               value={dateTo}
               onChange={(e) => setDateTo(e.target.value)}
-              className="rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
+              className="w-full min-w-0 rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
             />
           </div>
         </div>

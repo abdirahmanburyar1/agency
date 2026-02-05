@@ -127,8 +127,8 @@ export default async function PaymentReceiptPage({
               </h2>
               <dl className="grid gap-3 sm:grid-cols-2">
                 <div>
-                  <dt className="text-xs text-zinc-500">Date</dt>
-                  <dd className="text-sm font-medium">{new Date(payment.date).toLocaleDateString()}</dd>
+                  <dt className="text-xs text-zinc-500">Payment date</dt>
+                  <dd className="text-sm font-medium">{new Date(payment.paymentDate).toLocaleDateString()}</dd>
                 </div>
                 {payment.ticket?.ticketNumber != null && (
                   <div>

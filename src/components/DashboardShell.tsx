@@ -53,7 +53,7 @@ export default function DashboardShell({
           roleName={roleName}
           adminLinks={adminItems}
         />
-        <main className="min-h-[calc(100vh-4rem)] px-2 py-4 sm:px-4 lg:px-6">{children}</main>
+        <main className="min-h-[calc(100vh-3.5rem)] min-w-0 px-3 py-4 sm:px-4 lg:px-6">{children}</main>
       </div>
     </div>
   );

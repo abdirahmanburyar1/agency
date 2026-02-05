@@ -18,6 +18,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Daybah Travel Agency",
   description: "Travel agency management - tickets, visas, receivables & payables",
+  icons: { icon: "/favicon.png" },
 };
 
 export default async function RootLayout({

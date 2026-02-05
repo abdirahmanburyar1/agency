@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef, useEffect } from "react";
 
 type SerializedVisa = {
   id: string;
@@ -48,6 +48,27 @@ export default function VisasTableWithFilters({
 }: VisasTableWithFiltersProps) {
   const [search, setSearch] = useState("");
   const [country, setCountry] = useState("");
+  const [countrySearch, setCountrySearch] = useState("");
+  const [countryOpen, setCountryOpen] = useState(false);
+  const countryListRef = useRef<HTMLDivElement>(null);
+
+  const filteredCountries = useMemo(() => {
+    const q = countrySearch.trim().toLowerCase();
+    if (!q) return countries;
+    return countries.filter((c) => c.toLowerCase().includes(q));
+  }, [countries, countrySearch]);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (countryListRef.current && !countryListRef.current.contains(e.target as Node)) {
+        setCountryOpen(false);
+        if (country) setCountrySearch(country);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [country]);
+
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
 
@@ -75,8 +96,15 @@ export default function VisasTableWithFilters({
   const clearFilters = () => {
     setSearch("");
     setCountry("");
+    setCountrySearch("");
     setDateFrom("");
     setDateTo("");
+  };
+
+  const selectCountry = (c: string) => {
+    setCountry(c);
+    setCountrySearch(c);
+    setCountryOpen(false);
   };
 
   const colSpan = canEdit ? 9 : 8;
@@ -98,8 +126,8 @@ export default function VisasTableWithFilters({
             </button>
           )}
         </div>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:flex-row sm:flex-wrap sm:items-end sm:gap-3 lg:flex">
-          <div className="min-w-0 sm:min-w-[200px] sm:flex-1">
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:gap-3">
+          <div className="min-w-0 w-full sm:flex-1">
             <label className="mb-1 block text-xs font-medium text-zinc-500 dark:text-zinc-400">
               Search
             </label>
@@ -111,24 +139,55 @@ export default function VisasTableWithFilters({
               className="w-full rounded-lg border border-zinc-300 px-3 py-2.5 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
             />
           </div>
-          <div className="min-w-0 w-full sm:w-40">
+          <div className="relative w-full min-w-0 sm:w-48" ref={countryListRef}>
             <label className="mb-1 block text-xs font-medium text-zinc-500 dark:text-zinc-400">
               Country
             </label>
-            <select
-              value={country}
-              onChange={(e) => setCountry(e.target.value)}
+            <input
+              type="text"
+              value={countrySearch}
+              onChange={(e) => {
+                setCountrySearch(e.target.value);
+                setCountryOpen(true);
+                if (!e.target.value) setCountry("");
+              }}
+              onFocus={() => setCountryOpen(true)}
+              placeholder="Search or select country..."
               className="w-full rounded-lg border border-zinc-300 px-3 py-2.5 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
-            >
-              <option value="">All</option>
-              {countries.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
+            />
+            {countryOpen && (
+              <div className="absolute top-full left-0 z-20 mt-1 max-h-48 w-full overflow-auto rounded-lg border border-zinc-200 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-800">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCountry("");
+                    setCountrySearch("");
+                    setCountryOpen(false);
+                  }}
+                  className="block w-full px-3 py-2 text-left text-sm text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-700 dark:text-zinc-400"
+                >
+                  All countries
+                </button>
+                {filteredCountries.length === 0 ? (
+                  <div className="px-3 py-2 text-sm text-zinc-500 dark:text-zinc-400">No match</div>
+                ) : (
+                  filteredCountries.map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => selectCountry(c)}
+                      className={`block w-full px-3 py-2 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-700 ${
+                        country === c ? "bg-emerald-50 font-medium text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300" : "text-zinc-900 dark:text-white"
+                      }`}
+                    >
+                      {c}
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
           </div>
-          <div className="min-w-0 w-full sm:w-auto sm:min-w-[140px]">
+          <div className="w-full min-w-0 sm:w-auto sm:min-w-[140px]">
             <label className="mb-1 block text-xs font-medium text-zinc-500 dark:text-zinc-400">
               Date from
             </label>
@@ -139,7 +198,7 @@ export default function VisasTableWithFilters({
               className="w-full min-w-0 rounded-lg border border-zinc-300 px-3 py-2.5 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
             />
           </div>
-          <div className="min-w-0 w-full sm:w-auto sm:min-w-[140px]">
+          <div className="w-full min-w-0 sm:w-auto sm:min-w-[140px]">
             <label className="mb-1 block text-xs font-medium text-zinc-500 dark:text-zinc-400">
               Date to
             </label>

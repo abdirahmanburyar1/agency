@@ -94,7 +94,7 @@ export default function CustomersTable({
 
   return (
     <div>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-4">
         <input
           type="search"
           value={query}
@@ -103,9 +103,9 @@ export default function CustomersTable({
             setPage(1);
           }}
           placeholder="Search by name, email, or phone..."
-          className="w-full max-w-md rounded border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
+          className="w-full min-w-0 max-w-full rounded border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-white sm:max-w-md"
         />
-        <div className="ml-auto flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2 sm:ml-auto">
           <label className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Per page</label>
           <select
             value={perPage}

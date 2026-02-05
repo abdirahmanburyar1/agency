@@ -79,8 +79,8 @@ export default async function PaymentDetailPage({
             Payment Details
           </h1>
           <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-            {payment.name ?? "Payment"} ·{" "}
-            {new Date(payment.date).toLocaleDateString()}
+            {payment.name ?? "Payment"} · Payment date:{" "}
+            {new Date(payment.paymentDate).toLocaleDateString()}
           </p>
         </div>
 
@@ -124,6 +124,10 @@ export default async function PaymentDetailPage({
               </h2>
             </div>
             <dl className="divide-y divide-zinc-100 dark:divide-zinc-800">
+              <InfoRow
+                label="Payment date"
+                value={new Date(payment.paymentDate).toLocaleDateString()}
+              />
               <InfoRow
                 label="Status"
                 value={

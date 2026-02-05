@@ -100,21 +100,21 @@ export default function HajUmrahBookingsTable({ bookings, canEdit, initialCampai
             </button>
           )}
         </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="relative min-w-0 flex-1">
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+          <div className="relative min-w-0 w-full sm:flex-1">
             <SearchIcon className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-zinc-400" />
             <input
               type="search"
               placeholder="Search customer, track #, packages..."
             value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full rounded border border-zinc-300 bg-white py-2 pl-9 pr-3 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
+              className="w-full min-w-0 rounded border border-zinc-300 bg-white py-2 pl-9 pr-3 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
             />
           </div>
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="rounded border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
+            className="w-full min-w-0 rounded border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-white sm:w-auto"
           >
             <option value="">All statuses</option>
             <option value="draft">Draft</option>
@@ -124,29 +124,33 @@ export default function HajUmrahBookingsTable({ bookings, canEdit, initialCampai
           <select
             value={campaignFilter}
             onChange={(e) => setCampaignFilter(e.target.value)}
-            className="min-w-[180px] rounded border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
+            className="w-full min-w-0 rounded border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-white sm:min-w-[180px]"
           >
             <option value="">All campaigns</option>
             {campaignOptions.map(([id, label]) => (
               <option key={id} value={id}>{label}</option>
             ))}
           </select>
-          <input
-            type="date"
-            placeholder="From"
-            value={dateFrom}
-            onChange={(e) => setDateFrom(e.target.value)}
-            className="rounded border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
-            title="Date from"
-          />
-          <input
-            type="date"
-            placeholder="To"
-            value={dateTo}
-            onChange={(e) => setDateTo(e.target.value)}
-            className="rounded border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
-            title="Date to"
-          />
+          <div className="w-full min-w-0 sm:w-auto sm:min-w-[140px]">
+            <input
+              type="date"
+              placeholder="From"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="w-full min-w-0 rounded border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
+              title="Date from"
+            />
+          </div>
+          <div className="w-full min-w-0 sm:w-auto sm:min-w-[140px]">
+            <input
+              type="date"
+              placeholder="To"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="w-full min-w-0 rounded border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
+              title="Date to"
+            />
+          </div>
         </div>
       </div>
 

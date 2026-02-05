@@ -89,6 +89,15 @@ export async function POST(request: Request) {
       if (campaign.canceledAt) return NextResponse.json({ error: "Campaign is canceled and cannot be selected." }, { status: 400 });
       const now = new Date();
       if (campaign.date <= now) return NextResponse.json({ error: "Campaign is past due (departure date and time have passed) and cannot be selected." }, { status: 400 });
+      const duplicate = await prisma.hajUmrahBooking.findFirst({
+        where: { customerId, campaignId, canceledAt: null },
+      });
+      if (duplicate) {
+        return NextResponse.json(
+          { error: "This customer already has a booking in this campaign. A customer cannot be added twice to the same campaign." },
+          { status: 400 }
+        );
+      }
       date = campaign.date;
       month = campaign.month;
     } else {
