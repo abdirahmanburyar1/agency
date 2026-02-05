@@ -11,7 +11,7 @@ export async function GET(request: Request) {
 
     const monthWhere = month ? { month } : {};
     const ticketWhere = { ...monthWhere, canceledAt: null };
-    const paymentWhere = { ...monthWhere, canceledAt: null };
+    const paymentWhere = { ...monthWhere, canceledAt: null, status: { not: "refunded" } };
     const payableWhere = { ...monthWhere, canceledAt: null };
     const expenseWhere = { ...monthWhere, status: "approved" };
 

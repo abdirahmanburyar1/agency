@@ -10,7 +10,7 @@ export default async function ReceivablesPage() {
 
   const paymentsQuery = () =>
     prisma.payment.findMany({
-      where: { canceledAt: null },
+      where: { canceledAt: null, status: { not: "refunded" } },
       orderBy: { date: "desc" },
       include: {
         ticket: { include: { customer: true } },

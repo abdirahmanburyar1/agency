@@ -112,7 +112,7 @@ export async function PATCH(
         }),
         prisma.payment.updateMany({
           where: { hajUmrahBookingId: { in: bookingIds } },
-          data: { canceledAt, status: "refunded" },
+          data: { status: "refunded" },
         }),
         prisma.payable.updateMany({
           where: { hajUmrahBookingId: { in: bookingIds } },

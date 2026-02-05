@@ -53,10 +53,10 @@ export async function getDashboard(filter?: DashboardDateFilter) {
   };
 
   const ticketWhere = { ...dateRange, canceledAt: null };
-  const paymentWhere = { ...dateRange, canceledAt: null };
+  const paymentWhere = { ...dateRange, canceledAt: null, status: { not: "refunded" } };
   const payableWhere = { ...dateRange };
   const expenseWhere = { ...dateRange, status: "approved" };
-  const hajUmrahPaymentWhere = { ...paymentWhere, hajUmrahBookingId: { not: null }, canceledAt: null };
+  const hajUmrahPaymentWhere = { ...paymentWhere, hajUmrahBookingId: { not: null }, status: { not: "refunded" } };
 
   const [tickets, visas, expenses, payments, payables, hajUmrahRevenueAgg] = await Promise.all([
     prisma.ticket.aggregate({ where: ticketWhere, _sum: { netSales: true, profit: true } }),
@@ -102,7 +102,7 @@ export async function getDashboard(filter?: DashboardDateFilter) {
     }),
     prisma.payment.groupBy({
       by: ["month"],
-      where: { ...chartDateWhere, hajUmrahBookingId: { not: null }, canceledAt: null },
+      where: { ...chartDateWhere, hajUmrahBookingId: { not: null }, status: { not: "refunded" } },
       _sum: { amount: true },
     }),
   ]);

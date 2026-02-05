@@ -159,10 +159,10 @@ export async function getReportData(filter?: ReportFilters): Promise<ReportData>
   const ticketWhere = { ...dateRange, canceledAt: null };
   const visaWhere = { ...dateRange };
   const expenseWhere = { ...dateRange, status: "approved" };
-  const paymentWhere = { ...paymentDateRange, canceledAt: null };
+  const paymentWhere = { ...paymentDateRange, canceledAt: null, status: { not: "refunded" } };
   const payableWhere = { ...dateRange, canceledAt: null };
-  const hajPaymentWhere = { ...paymentWhere, hajUmrahBookingId: { not: null } };
-  const receiptWhere = { date: { gte: from, lte: to } };
+  const hajPaymentWhere = { ...paymentWhere, hajUmrahBookingId: { not: null }, status: { not: "refunded" } };
+  const receiptWhere = { date: { gte: from, lte: to }, payment: { status: { not: "refunded" } } };
 
   const [
     ticketsAgg,
