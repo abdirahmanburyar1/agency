@@ -113,7 +113,7 @@ export default function PayablesTableWithFilters({ payables: allPayables }: Paya
 
   const exportToPdf = async () => {
     const doc = new jsPDF({ orientation: "landscape" });
-    const pageW = doc.getPageWidth();
+    const pageW = 297; // A4 landscape width (mm)
     const logoW = 48;
     const logoH = 18;
     const margin = 14;

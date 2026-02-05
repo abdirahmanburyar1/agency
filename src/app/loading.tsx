@@ -9,7 +9,6 @@ export default function GlobalLoading() {
       <div
         className="h-1.5 w-32 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800"
         role="progressbar"
-        aria-valuenow={null}
         aria-label="Loading"
       >
         <div

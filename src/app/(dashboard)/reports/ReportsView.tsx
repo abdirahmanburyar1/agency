@@ -139,7 +139,7 @@ export default function ReportsView({ initialData }: Props) {
 
   const exportPdf = useCallback(async () => {
     const doc = new jsPDF({ orientation: "portrait" });
-    const pageW = doc.getPageWidth();
+    const pageW = 210; // A4 portrait width (mm)
     const logoW = 48;
     const logoH = 18;
     const margin = 14;
@@ -283,7 +283,7 @@ export default function ReportsView({ initialData }: Props) {
               <CartesianGrid strokeDasharray="3 3" className="stroke-slate-200 dark:stroke-slate-700" />
               <XAxis dataKey="month" tick={{ fill: "currentColor", fontSize: 11 }} />
               <YAxis tick={{ fill: "currentColor", fontSize: 11 }} tickFormatter={(v) => `$${v}`} />
-              <Tooltip formatter={(v: number) => `$${Number(v).toLocaleString()}`} contentStyle={{ borderRadius: "12px" }} />
+              <Tooltip formatter={(v: number | undefined) => `$${Number(v ?? 0).toLocaleString()}`} contentStyle={{ borderRadius: "12px" }} />
               <Legend />
               <Bar dataKey="Tickets" fill="#3b82f6" radius={[4, 4, 0, 0]} />
               <Bar dataKey="Visas" fill="#10b981" radius={[4, 4, 0, 0]} />
