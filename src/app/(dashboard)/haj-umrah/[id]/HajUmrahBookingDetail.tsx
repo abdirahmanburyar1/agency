@@ -516,7 +516,7 @@ export default function HajUmrahBookingDetail({ booking, canEdit }: Props) {
             Refund may be required — ${booking.totalReceived.toLocaleString()} was received before cancellation.
           </p>
           <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">
-            Process refund manually as needed. Payment records have been marked canceled and no longer show as outstanding.
+            Process refund manually as needed. Payment records have been marked refunded and no longer show as outstanding.
           </p>
         </div>
       )}
@@ -538,9 +538,9 @@ export default function HajUmrahBookingDetail({ booking, canEdit }: Props) {
                 <span className="text-sm text-zinc-600 dark:text-zinc-400">
                   {new Date(p.date).toLocaleDateString()} · ${p.amount.toLocaleString()} · {p.status}
                   {(p.amountReceived ?? 0) > 0 && ` · $${(p.amountReceived ?? 0).toLocaleString()} received`}
-                  {p.canceledAt && (
-                    <span className="ml-2 rounded bg-zinc-200 px-1.5 py-0.5 text-xs dark:bg-zinc-600 dark:text-zinc-300">
-                      Canceled
+                  {(p.status === "refunded" || p.canceledAt) && (
+                    <span className="ml-2 rounded bg-blue-100 px-1.5 py-0.5 text-xs text-blue-800 dark:bg-blue-900/40 dark:text-blue-300">
+                      Refunded
                     </span>
                   )}
                 </span>

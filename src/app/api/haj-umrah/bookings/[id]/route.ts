@@ -192,7 +192,7 @@ export async function PATCH(
         if (canceledAt) {
           await tx.payment.updateMany({
             where: { hajUmrahBookingId: id },
-            data: { canceledAt },
+            data: { canceledAt, status: "refunded" },
           });
           await tx.payable.updateMany({
             where: { hajUmrahBookingId: id },
@@ -213,12 +213,12 @@ export async function PATCH(
     );
     const totalAmount = booking.packages.reduce((sum, bp) => sum + Number(bp.amount), 0);
 
-    // When booking is confirmed, create payment automatically if none exists
+    // When booking is confirmed, create payment automatically if none exists (or previous was refunded/reinitiated)
     if (status === "confirmed" && totalAmount > 0 && booking.customer) {
-      const existingPayment = await prisma.payment.findFirst({
-        where: { hajUmrahBookingId: booking.id },
+      const existingActivePayment = await prisma.payment.findFirst({
+        where: { hajUmrahBookingId: booking.id, canceledAt: null },
       });
-      if (!existingPayment) {
+      if (!existingActivePayment) {
         const trackDisplay =
           booking.trackNumber != null
             ? booking.trackNumber < 1000
