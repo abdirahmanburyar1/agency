@@ -264,6 +264,9 @@ export default function ReportsView({ initialData }: Props) {
           </button>
         </div>
         <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">{dateRangeLabel}</p>
+        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+          All amounts in USD. Expenses in other currencies are converted using rates from Admin → Settings → Currency rates.
+        </p>
       </div>
 
       {/* Summary cards */}

@@ -70,6 +70,15 @@ model RolePermission {
 
 // --- Settings (preconfigured options for tickets) ---
 
+model CurrencyRate {
+  id        String   @id @default(cuid())
+  currency  String   @unique @map("currency") // KES, EUR, etc. USD is implicit 1.0
+  rateToUsd Decimal  @map("rate_to_usd") @db.Decimal(12, 6) // 1 unit of currency = X USD
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("currency_rates")
+}
+
 model Setting {
   id        String   @id @default(cuid())
   type      String   @map("type")   // airline | payment_method | flight | payment_status

@@ -1,4 +1,5 @@
 import { prisma } from "./db";
+import { getCurrencyRates, toUsd } from "./currency-rates";
 
 function startOfDay(d: Date): Date {
   const x = new Date(d);
@@ -169,23 +170,22 @@ export async function getReportData(filter?: ReportFilters): Promise<ReportData>
   const [
     ticketsAgg,
     visasAgg,
-    expensesAgg,
+    expensesRaw,
     payments,
     payablesAgg,
     hajPaymentsAgg,
     receiptsAgg,
     ticketsForGrouping,
     visasForGrouping,
-    expensesForGrouping,
     hajPaymentsForGrouping,
     ticketsDaily,
     visasDaily,
-    expensesDaily,
     hajPaymentsDaily,
+    currencyRates,
   ] = await Promise.all([
     prisma.ticket.aggregate({ where: ticketWhere, _sum: { netSales: true, profit: true } }),
     prisma.visa.aggregate({ where: visaWhere, _sum: { netSales: true, profit: true } }),
-    prisma.expense.aggregate({ where: expenseWhere, _sum: { amount: true } }),
+    prisma.expense.findMany({ where: expenseWhere, select: { date: true, amount: true, currency: true } }),
     prisma.payment.findMany({ where: paymentWhere, include: { receipts: true } }),
     prisma.payable.aggregate({ where: payableWhere, _sum: { balance: true } }),
     prisma.payment.aggregate({ where: hajPaymentWhere, _sum: { amount: true } }),
@@ -196,9 +196,6 @@ export async function getReportData(filter?: ReportFilters): Promise<ReportData>
     period === "monthly" || period === "yearly"
       ? prisma.visa.findMany({ where: visaWhere, select: { date: true, netSales: true } })
       : [],
-    period === "monthly" || period === "yearly"
-      ? prisma.expense.findMany({ where: expenseWhere, select: { date: true, amount: true } })
-      : [],
     prisma.payment.findMany({ where: hajPaymentWhere, select: { paymentDate: true, amount: true } }),
     period === "today" || period === "daily"
       ? prisma.ticket.findMany({ where: ticketWhere, select: { date: true, netSales: true } })
@@ -207,12 +204,16 @@ export async function getReportData(filter?: ReportFilters): Promise<ReportData>
       ? prisma.visa.findMany({ where: visaWhere, select: { date: true, netSales: true } })
       : [],
     period === "today" || period === "daily"
-      ? prisma.expense.findMany({ where: expenseWhere, select: { date: true, amount: true } })
-      : [],
-    period === "today" || period === "daily"
       ? prisma.payment.findMany({ where: hajPaymentWhere, select: { paymentDate: true, amount: true } })
       : [],
+    getCurrencyRates(),
   ]);
+
+  const expenseRows = expensesRaw as { date: Date; amount: unknown; currency: string }[];
+  const totalExpensesUsd = expenseRows.reduce(
+    (sum, e) => sum + toUsd(Number(e.amount ?? 0), e.currency || "USD", currencyRates),
+    0
+  );
 
   const totalReceivables = payments.reduce((sum, p) => {
     const received = p.receipts.reduce((s, r) => s + Number(r.amount), 0);
@@ -224,7 +225,7 @@ export async function getReportData(filter?: ReportFilters): Promise<ReportData>
   const visaRevenue = Number(visasAgg._sum.netSales ?? 0);
   const hajUmrahRevenue = Number(hajPaymentsAgg._sum.amount ?? 0);
   const totalRevenue = ticketRevenue + visaRevenue + hajUmrahRevenue;
-  const totalExpenses = Number(expensesAgg._sum.amount ?? 0);
+  const totalExpenses = totalExpensesUsd;
   const totalPayables = Number(payablesAgg._sum.balance ?? 0);
   const incomeReceived = Number(receiptsAgg._sum.amount ?? 0);
   const netIncome = totalRevenue - totalExpenses;
@@ -276,10 +277,10 @@ export async function getReportData(filter?: ReportFilters): Promise<ReportData>
       const m = rowMap.get(key);
       if (m) m.hajUmrahRevenue += Number(h.amount ?? 0);
     }
-    for (const e of (expensesDaily ?? []) as { date: Date; amount: unknown }[]) {
+    for (const e of expenseRows) {
       const key = toDayKey(e.date);
       const m = rowMap.get(key);
-      if (m) m.expenses += Number(e.amount ?? 0);
+      if (m) m.expenses += toUsd(Number(e.amount ?? 0), e.currency || "USD", currencyRates);
     }
     rows = dayBuckets.map(({ periodKey, label }) => {
       const m = rowMap.get(periodKey) ?? { ticketRevenue: 0, visaRevenue: 0, hajUmrahRevenue: 0, expenses: 0, incomeReceived: 0 };
@@ -329,14 +330,14 @@ export async function getReportData(filter?: ReportFilters): Promise<ReportData>
       }
       m.hajUmrahRevenue += Number(h.amount ?? 0);
     }
-    for (const e of (expensesForGrouping ?? []) as { date: Date; amount: unknown }[]) {
+    for (const e of expenseRows) {
       const y = String(new Date(e.date).getFullYear());
       let m = rowMap.get(y);
       if (!m) {
         m = { ticketRevenue: 0, visaRevenue: 0, hajUmrahRevenue: 0, expenses: 0, incomeReceived: 0 };
         rowMap.set(y, m);
       }
-      m.expenses += Number(e.amount ?? 0);
+      m.expenses += toUsd(Number(e.amount ?? 0), e.currency || "USD", currencyRates);
     }
     const yearBuckets = yearsInRange(from, to);
     rows = yearBuckets.map(({ periodKey, label }) => {
@@ -378,10 +379,10 @@ export async function getReportData(filter?: ReportFilters): Promise<ReportData>
       const m = rowMap.get(monthKey);
       if (m) m.hajUmrahRevenue += Number(h.amount ?? 0);
     }
-    for (const e of (expensesForGrouping ?? []) as { date: Date; amount: unknown }[]) {
+    for (const e of expenseRows) {
       const monthKey = toMonthKey(e.date);
       const m = rowMap.get(monthKey);
-      if (m) m.expenses += Number(e.amount ?? 0);
+      if (m) m.expenses += toUsd(Number(e.amount ?? 0), e.currency || "USD", currencyRates);
     }
     rows = chartMonths.map(({ periodKey, label }) => {
       const m = rowMap.get(periodKey) ?? { ticketRevenue: 0, visaRevenue: 0, hajUmrahRevenue: 0, expenses: 0, incomeReceived: 0 };

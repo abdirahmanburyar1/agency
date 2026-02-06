@@ -1,4 +1,5 @@
 import { prisma } from "./db";
+import { getCurrencyRates, toUsd } from "./currency-rates";
 
 function startOfDay(d: Date): Date {
   const x = new Date(d);
@@ -58,10 +59,10 @@ export async function getDashboard(filter?: DashboardDateFilter) {
   const expenseWhere = { ...dateRange, status: "approved" };
   const hajUmrahPaymentWhere = { ...paymentWhere, hajUmrahBookingId: { not: null }, status: { not: "refunded" } };
 
-  const [tickets, visas, expenses, payments, payables, hajUmrahRevenueAgg] = await Promise.all([
+  const [tickets, visas, expensesRaw, payments, payables, hajUmrahRevenueAgg, currencyRates] = await Promise.all([
     prisma.ticket.aggregate({ where: ticketWhere, _sum: { netSales: true, profit: true } }),
     prisma.visa.aggregate({ where: dateRange, _sum: { netSales: true, profit: true } }),
-    prisma.expense.aggregate({ where: expenseWhere, _sum: { amount: true } }),
+    prisma.expense.findMany({ where: expenseWhere, select: { date: true, month: true, amount: true, currency: true } }),
     prisma.payment.findMany({
       where: paymentWhere,
       include: { receipts: true },
@@ -71,6 +72,7 @@ export async function getDashboard(filter?: DashboardDateFilter) {
       where: hajUmrahPaymentWhere,
       _sum: { amount: true },
     }),
+    getCurrencyRates(),
   ]);
 
   const totalReceivables = payments.reduce((sum, p) => {
@@ -84,7 +86,7 @@ export async function getDashboard(filter?: DashboardDateFilter) {
   const chartMonths = monthsInRange(fromForChart, toForChart);
   const chartDateWhere = { date: { gte: fromForChart, lte: toForChart } };
 
-  const [ticketByMonth, visaByMonth, expenseByMonth, hajUmrahByMonth] = await Promise.all([
+  const [ticketByMonth, visaByMonth, hajUmrahByMonth] = await Promise.all([
     prisma.ticket.groupBy({
       by: ["month"],
       where: { ...chartDateWhere, canceledAt: null },
@@ -95,17 +97,23 @@ export async function getDashboard(filter?: DashboardDateFilter) {
       where: chartDateWhere,
       _sum: { netSales: true },
     }),
-    prisma.expense.groupBy({
-      by: ["month"],
-      where: { ...chartDateWhere, status: "approved" },
-      _sum: { amount: true },
-    }),
     prisma.payment.groupBy({
       by: ["month"],
       where: { ...chartDateWhere, hajUmrahBookingId: { not: null }, status: { not: "refunded" } },
       _sum: { amount: true },
     }),
   ]);
+
+  function toMonthStr(d: Date): string {
+    const x = new Date(d);
+    return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}`;
+  }
+  const expenseByMonthMap = new Map<string, number>();
+  for (const e of expensesRaw) {
+    const amt = toUsd(Number(e.amount ?? 0), (e as { currency?: string }).currency || "USD", currencyRates);
+    const monthStr = toMonthStr(e.date);
+    expenseByMonthMap.set(monthStr, (expenseByMonthMap.get(monthStr) ?? 0) + amt);
+  }
 
   const monthMap = new Map<string, { month: string; ticketRevenue: number; visaRevenue: number; hajUmrahRevenue: number; expenses: number }>();
   for (const { monthStr, label } of chartMonths) {
@@ -124,9 +132,9 @@ export async function getDashboard(filter?: DashboardDateFilter) {
     const m = monthMap.get(h.month);
     if (m) m.hajUmrahRevenue = Number(h._sum.amount ?? 0);
   }
-  for (const e of expenseByMonth) {
-    const m = monthMap.get(e.month);
-    if (m) m.expenses = Number(e._sum.amount ?? 0);
+  for (const [month, amount] of expenseByMonthMap) {
+    const m = monthMap.get(month);
+    if (m) m.expenses = amount;
   }
 
   const chartData = Array.from(monthMap.values());
@@ -135,7 +143,10 @@ export async function getDashboard(filter?: DashboardDateFilter) {
   const visaRevenue = Number(visas._sum.netSales ?? 0);
   const hajUmrahRevenue = Number(hajUmrahRevenueAgg._sum.amount ?? 0);
   const totalRevenue = ticketRevenue + visaRevenue + hajUmrahRevenue;
-  const totalExpensesNum = Number(expenses._sum.amount ?? 0);
+  const totalExpensesNum = expensesRaw.reduce(
+    (sum, e) => sum + toUsd(Number(e.amount ?? 0), (e as { currency?: string }).currency || "USD", currencyRates),
+    0
+  );
 
   return {
     ticketRevenue,

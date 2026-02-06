@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { requirePermission } from "@/lib/permissions";
 import { PERMISSION } from "@/lib/permissions";
 import SettingsForm from "./SettingsForm";
+import CurrencyRatesForm from "./CurrencyRatesForm";
 
 const TYPES = [
   { type: "airline", label: "Airlines" },
@@ -40,9 +41,10 @@ export default async function SettingsPage() {
         </div>
       </div>
       <p className="mb-6 text-sm text-zinc-500 dark:text-zinc-400">
-        Configure airlines, payment methods, flights, payment statuses, countries, and expense categories (e.g. Employees, Utilities). Countries appear in Create Visa; expense categories in Create Expense.
+        Configure airlines, payment methods, flights, payment statuses, countries, expense categories, and currency rates. Currency rates are used in reports and dashboard to convert multi-currency expenses to USD.
       </p>
       <div className="space-y-8">
+        <CurrencyRatesForm canEdit={canEdit} />
         {grouped.map(({ type, label, values }) => (
           <SettingsForm
             key={type}
