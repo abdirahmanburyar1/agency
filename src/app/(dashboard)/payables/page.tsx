@@ -47,6 +47,9 @@ export default async function PayablesPage() {
     ticketId: p.ticketId,
     visaId: p.visaId,
     hajUmrahBookingId: p.hajUmrahBookingId,
+    airline: p.ticket?.airline ?? null,
+    ticketReference: p.ticket?.reference ?? null,
+    visaReference: p.visa?.reference ?? null,
   }));
 
   return (

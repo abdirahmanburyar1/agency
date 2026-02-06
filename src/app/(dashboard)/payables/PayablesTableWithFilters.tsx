@@ -20,6 +20,9 @@ export type SerializedPayable = {
   ticketId: string | null;
   visaId: string | null;
   hajUmrahBookingId: string | null;
+  airline?: string | null;
+  ticketReference?: string | null;
+  visaReference?: string | null;
 };
 
 type PayablesTableWithFiltersProps = {
@@ -41,6 +44,15 @@ const SOURCE_OPTIONS = [
   { value: "haj_umrah", label: "Haj & Umrah" },
 ];
 
+const GROUP_BY_OPTIONS = [
+  { value: "", label: "No grouping" },
+  { value: "airline", label: "By airline" },
+  { value: "ticket", label: "By ticket" },
+  { value: "visa", label: "By visa" },
+];
+
+type GroupedRow = { key: string; label: string; count: number; amount: number; balance: number; link?: string };
+
 function sourceLabel(p: SerializedPayable): string {
   if (p.source === "ticket") return "Ticket";
   if (p.source === "visa") return "Visa";
@@ -58,6 +70,7 @@ export default function PayablesTableWithFilters({ payables: allPayables }: Paya
   const [source, setSource] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [groupBy, setGroupBy] = useState("");
 
   const filteredPayables = useMemo(() => {
     return allPayables.filter((p) => {
@@ -78,18 +91,57 @@ export default function PayablesTableWithFilters({ payables: allPayables }: Paya
     });
   }, [allPayables, search, source, dateFrom, dateTo]);
 
+  const groupedRows = useMemo((): GroupedRow[] => {
+    if (!groupBy) return [];
+    const map = new Map<string, GroupedRow>();
+    for (const p of filteredPayables) {
+      let key: string;
+      let label: string;
+      let link: string | undefined;
+      if (groupBy === "airline") {
+        key = p.source === "ticket" ? (p.airline?.trim() || "—") : "_other";
+        label = key === "_other" ? "Other (visa / Haj & Umrah)" : key;
+        link = undefined;
+      } else if (groupBy === "ticket" && p.ticketId) {
+        key = p.ticketId;
+        label = p.ticketReference || p.name || `Ticket ${p.ticketId.slice(0, 8)}`;
+        link = `/tickets/${p.ticketId}`;
+      } else if (groupBy === "visa" && p.visaId) {
+        key = p.visaId;
+        label = p.visaReference || p.name || `Visa ${p.visaId.slice(0, 8)}`;
+        link = `/visas/${p.visaId}`;
+      } else if (groupBy === "ticket" || groupBy === "visa") {
+        key = "_other";
+        label = "Other";
+        link = undefined;
+      } else {
+        continue;
+      }
+      const existing = map.get(key);
+      if (existing) {
+        existing.count += 1;
+        existing.amount += p.amount;
+        existing.balance += p.balance;
+      } else {
+        map.set(key, { key, label, count: 1, amount: p.amount, balance: p.balance, link });
+      }
+    }
+    return Array.from(map.values()).sort((a, b) => b.balance - a.balance);
+  }, [filteredPayables, groupBy]);
+
   const totalBalance = useMemo(
     () => filteredPayables.reduce((sum, p) => sum + p.balance, 0),
     [filteredPayables]
   );
 
-  const hasActiveFilters = !!(search || source || dateFrom || dateTo);
+  const hasActiveFilters = !!(search || source || dateFrom || dateTo || groupBy);
 
   const clearFilters = () => {
     setSearch("");
     setSource("");
     setDateFrom("");
     setDateTo("");
+    setGroupBy("");
   };
 
   const exportToExcel = () => {
@@ -214,10 +266,27 @@ export default function PayablesTableWithFilters({ payables: allPayables }: Paya
               className="w-full min-w-0 rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
             />
           </div>
+          <div className="w-full min-w-0 sm:w-auto sm:min-w-[160px]">
+            <label className="mb-1 block text-xs font-medium text-zinc-500 dark:text-zinc-400">
+              Group by
+            </label>
+            <select
+              value={groupBy}
+              onChange={(e) => setGroupBy(e.target.value)}
+              className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-white sm:w-40"
+            >
+              {GROUP_BY_OPTIONS.map((opt) => (
+                <option key={opt.value || "none"} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
         {hasActiveFilters && (
           <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
             Showing {filteredPayables.length} of {allPayables.length} payable(s)
+            {groupBy && " • grouped by " + GROUP_BY_OPTIONS.find((o) => o.value === groupBy)?.label.toLowerCase()}
           </p>
         )}
         <div className="mt-4 flex flex-col gap-2 border-t border-zinc-200 pt-4 dark:border-zinc-700 sm:flex-row sm:flex-wrap sm:items-center sm:gap-2">
@@ -240,6 +309,62 @@ export default function PayablesTableWithFilters({ payables: allPayables }: Paya
           </button>
         </div>
       </div>
+
+      {groupBy && groupedRows.length > 0 && (
+        <div className="mb-6 overflow-x-auto rounded-lg border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
+          <div className="border-b border-zinc-200 bg-zinc-50 px-4 py-2 dark:border-zinc-800 dark:bg-zinc-950">
+            <h3 className="text-sm font-semibold text-zinc-900 dark:text-white">
+              Payables by {GROUP_BY_OPTIONS.find((o) => o.value === groupBy)?.label.replace("By ", "")} (date range applied)
+            </h3>
+          </div>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950">
+                <th className="px-4 py-3 text-left font-medium text-zinc-900 dark:text-white">
+                  {groupBy === "airline" ? "Airline" : groupBy === "ticket" ? "Ticket" : "Visa"}
+                </th>
+                <th className="px-4 py-3 text-right font-medium text-zinc-900 dark:text-white">Count</th>
+                <th className="px-4 py-3 text-right font-medium text-zinc-900 dark:text-white">Amount</th>
+                <th className="px-4 py-3 text-right font-medium text-zinc-900 dark:text-white">Balance</th>
+              </tr>
+            </thead>
+            <tbody>
+              {groupedRows.map((row) => (
+                <tr key={row.key} className="border-b border-zinc-100 dark:border-zinc-800">
+                  <td className="px-4 py-3 text-zinc-700 dark:text-zinc-300">
+                    {row.link ? (
+                      <Link href={row.link} className="text-blue-600 hover:underline dark:text-blue-400">
+                        {row.label}
+                      </Link>
+                    ) : (
+                      row.label
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-right text-zinc-700 dark:text-zinc-300">{row.count}</td>
+                  <td className="px-4 py-3 text-right text-zinc-700 dark:text-zinc-300">
+                    ${row.amount.toLocaleString()}
+                  </td>
+                  <td className="px-4 py-3 text-right font-medium text-red-600 dark:text-red-400">
+                    ${row.balance.toLocaleString()}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr className="border-t-2 border-zinc-200 bg-zinc-50 font-medium dark:border-zinc-700 dark:bg-zinc-800/50">
+                <td className="px-4 py-3 text-right text-zinc-900 dark:text-white">Total</td>
+                <td className="px-4 py-3 text-right text-zinc-900 dark:text-white">{groupedRows.reduce((s, r) => s + r.count, 0)}</td>
+                <td className="px-4 py-3 text-right text-zinc-900 dark:text-white">
+                  ${groupedRows.reduce((s, r) => s + r.amount, 0).toLocaleString()}
+                </td>
+                <td className="px-4 py-3 text-right font-semibold text-red-600 dark:text-red-400">
+                  ${groupedRows.reduce((s, r) => s + r.balance, 0).toLocaleString()}
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      )}
 
       <div className="overflow-x-auto rounded-lg border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
         <table className="w-full text-sm">
