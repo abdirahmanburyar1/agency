@@ -78,7 +78,7 @@ export default async function HajUmrahBookingPage({
     status: booking.status,
     notes: booking.notes,
     profit: booking.profit != null ? Number(booking.profit) : null,
-    paymentDate: booking.paymentDate?.toISOString().slice(0, 10) ?? null,
+    passportCountry: booking.passportCountry ?? null,
     createdAt: booking.createdAt.toISOString(),
     canceledAt: booking.canceledAt?.toISOString() ?? null,
     payments: booking.payments.map((p) => {

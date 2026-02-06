@@ -53,7 +53,7 @@ export async function GET(
       status: booking.status,
       notes: booking.notes,
       profit: booking.profit != null ? Number(booking.profit) : null,
-      paymentDate: booking.paymentDate?.toISOString().slice(0, 10) ?? null,
+      passportCountry: booking.passportCountry ?? null,
       createdAt: booking.createdAt.toISOString(),
       canceledAt: booking.canceledAt?.toISOString() ?? null,
       packages: booking.packages.map((bp) => ({
@@ -101,7 +101,7 @@ export async function PATCH(
       month?: string;
       trackNumber?: number;
       profit?: number | null;
-      paymentDate?: Date | null;
+      passportCountry?: string | null;
     } = {};
     if (status !== undefined) updateData.status = status;
     if (status === "canceled") updateData.canceledAt = new Date();
@@ -111,8 +111,8 @@ export async function PATCH(
       const p = Number(body.profit);
       updateData.profit = !Number.isNaN(p) && p >= 0 ? p : null;
     }
-    if (body.paymentDate !== undefined) {
-      updateData.paymentDate = body.paymentDate ? new Date(String(body.paymentDate)) : null;
+    if (body.passportCountry !== undefined) {
+      updateData.passportCountry = body.passportCountry ? String(body.passportCountry).trim() || null : null;
     }
 
     const customerId = body.customerId != null ? String(body.customerId).trim() : undefined;
@@ -240,12 +240,11 @@ export async function PATCH(
               ? String(booking.trackNumber).padStart(3, "0")
               : String(booking.trackNumber)
             : "";
-        const effectivePaymentDate = booking.paymentDate ?? booking.date;
         const payment = await prisma.payment.create({
           data: {
             date: booking.date,
             month: booking.month,
-            paymentDate: effectivePaymentDate,
+            paymentDate: new Date(), // current date when booking is confirmed
             status: "pending",
             name: trackDisplay ? `Haj & Umrah #${trackDisplay}` : "Haj & Umrah",
             description: booking.customer.name ? `Customer: ${booking.customer.name}` : null,

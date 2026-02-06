@@ -10,7 +10,6 @@ type PackageOption = {
   id: string;
   name: string;
   type: string;
-  defaultPrice: number | null;
   visaPrices?: { country: string; price: number }[];
 };
 
@@ -32,7 +31,7 @@ type InitialBooking = {
   status: string;
   notes: string | null;
   profit?: number;
-  paymentDate?: string;
+  passportCountry?: string | null;
   packages: { packageId: string; packageName: string; quantity: number; unitPrice: number }[];
 };
 
@@ -56,9 +55,7 @@ export default function CreateBookingForm({ nextTrackNumberDisplay, initialCusto
   const [status, setStatus] = useState<"draft" | "confirmed">((initialBooking?.status as "draft" | "confirmed") ?? "draft");
   const [notes, setNotes] = useState(initialBooking?.notes ?? "");
   const [profit, setProfit] = useState(initialBooking?.profit ?? 0);
-  const [paymentDate, setPaymentDate] = useState(
-    initialBooking?.paymentDate ?? ""
-  );
+  const [passportCountry, setPassportCountry] = useState(initialBooking?.passportCountry ?? "");
   const [lines, setLines] = useState<PackageLine[]>(
     initialBooking?.packages?.map((p) => ({ packageId: p.packageId, packageName: p.packageName, quantity: p.quantity, unitPrice: p.unitPrice })) ?? []
   );
@@ -91,23 +88,22 @@ export default function CreateBookingForm({ nextTrackNumberDisplay, initialCusto
       setStatus((initialBooking.status as "draft" | "confirmed") || "draft");
       setNotes(initialBooking.notes ?? "");
       setProfit(initialBooking.profit ?? 0);
-      setPaymentDate(initialBooking.paymentDate ?? "");
+      setPassportCountry(initialBooking.passportCountry ?? "");
       setLines(
         initialBooking.packages?.map((p) => ({ packageId: p.packageId, packageName: p.packageName, quantity: p.quantity, unitPrice: p.unitPrice })) ?? []
       );
     }
   }, [initialBooking?.id]);
 
-  // Default payment date when campaign changes (new bookings)
+  // Default passport country from customer when customer changes
   useEffect(() => {
-    if (!isEdit && campaignId && campaigns.length > 0) {
-      const c = campaigns.find((x) => x.id === campaignId);
-      if (c) {
-        const d = c.date.slice(0, 10);
-        setPaymentDate((prev) => (prev ? prev : d));
+    if (customerId && customers.length > 0) {
+      const c = customers.find((x) => x.id === customerId);
+      if (c?.country?.trim()) {
+        setPassportCountry((prev) => (prev ? prev : c.country!.trim()));
       }
     }
-  }, [campaignId, campaigns, isEdit]);
+  }, [customerId, customers]);
   useEffect(() => {
     fetch("/api/haj-umrah/packages?active=true")
       .then((r) => r.json())
@@ -123,14 +119,11 @@ export default function CreateBookingForm({ nextTrackNumberDisplay, initialCusto
 
   function addPackage(pkg: PackageOption) {
     if (lines.some((l) => l.packageId === pkg.id)) return;
-    const customer = customers.find((c) => c.id === customerId);
-    const customerCountry = customer?.country?.trim() ?? null;
-    const visaPriceForCountry =
-      customerCountry && pkg.visaPrices?.length
-        ? pkg.visaPrices.find((v) => v.country.trim().toLowerCase() === customerCountry.toLowerCase())?.price
-        : undefined;
-    const defaultPrice = pkg.defaultPrice ?? 0;
-    const unitPrice = visaPriceForCountry ?? defaultPrice;
+    const countryForVisa = passportCountry.trim() || customers.find((c) => c.id === customerId)?.country?.trim() || null;
+    const unitPrice =
+      countryForVisa && pkg.visaPrices?.length
+        ? pkg.visaPrices.find((v) => v.country.trim().toLowerCase() === countryForVisa.toLowerCase())?.price ?? 0
+        : 0;
     setLines((prev) => [
       ...prev,
       { packageId: pkg.id, packageName: pkg.name, quantity: 1, unitPrice },
@@ -210,7 +203,7 @@ export default function CreateBookingForm({ nextTrackNumberDisplay, initialCusto
             notes: notes.trim() || null,
             packages: lines.map((l) => ({ packageId: l.packageId, quantity: l.quantity, unitPrice: l.unitPrice })),
             profit: Number(profit) || 0,
-            paymentDate: paymentDate || null,
+            passportCountry: passportCountry.trim() || null,
           }),
         });
         const data = await res.json();
@@ -232,7 +225,7 @@ export default function CreateBookingForm({ nextTrackNumberDisplay, initialCusto
             notes: notes.trim() || undefined,
             packages: lines.map((l) => ({ packageId: l.packageId, quantity: l.quantity, unitPrice: l.unitPrice })),
             profit: Number(profit) || 0,
-            paymentDate: paymentDate || null,
+            passportCountry: passportCountry.trim() || null,
           }),
         });
         const data = await res.json();
@@ -351,11 +344,9 @@ export default function CreateBookingForm({ nextTrackNumberDisplay, initialCusto
                         className="block w-full px-4 py-2 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-700"
                       >
                         {p.name} ({p.type}){" "}
-                        {p.defaultPrice != null
-                          ? `— $${p.defaultPrice.toLocaleString()}`
-                          : p.visaPrices?.length
-                            ? `— by country (${p.visaPrices.length} prices)`
-                            : "—"}
+                        {p.visaPrices?.length
+                          ? `— by passport country (${p.visaPrices.length} countries)`
+                          : "—"}
                       </button>
                     ))}
                   {packages.every((p) => lines.some((l) => l.packageId === p.id)) && (
@@ -425,19 +416,15 @@ export default function CreateBookingForm({ nextTrackNumberDisplay, initialCusto
         )}
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div>
-          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">Payment date</label>
-          <input
-            type="date"
-            value={paymentDate}
-            onChange={(e) => setPaymentDate(e.target.value)}
-            className="mt-1 w-full rounded border border-zinc-300 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
-          />
-          <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
-            When payment is due/expected (for reports). Defaults to campaign date.
-          </p>
-        </div>
+      <div>
+        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">Passport country (for visa price)</label>
+        <input
+          type="text"
+          value={passportCountry}
+          onChange={(e) => setPassportCountry(e.target.value)}
+          placeholder="e.g. Sudan, Saudi Arabia — used for country-based visa pricing"
+          className="mt-1 w-full rounded border border-zinc-300 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
+        />
       </div>
 
       <div>

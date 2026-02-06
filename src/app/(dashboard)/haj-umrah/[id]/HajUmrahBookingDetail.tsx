@@ -29,7 +29,7 @@ type Booking = {
   status: string;
   notes: string | null;
   profit?: number | null;
-  paymentDate?: string | null;
+  passportCountry?: string | null;
   createdAt: string;
   canceledAt: string | null;
   packages: {
@@ -46,7 +46,7 @@ type Booking = {
   totalReceived?: number;
 };
 
-type PackageOption = { id: string; name: string; type: string; defaultPrice: number };
+type PackageOption = { id: string; name: string; type: string; visaPrices?: { country: string; price: number }[] };
 
 type Props = {
   booking: Booking;
@@ -113,7 +113,12 @@ export default function HajUmrahBookingDetail({ booking, canEdit }: Props) {
 
   function addPackage(pkg: PackageOption) {
     if (packageLines.some((l) => l.packageId === pkg.id)) return;
-    setPackageLines((prev) => [...prev, { packageId: pkg.id, packageName: pkg.name, packageType: pkg.type, quantity: 1, unitPrice: pkg.defaultPrice }]);
+    const country = booking.passportCountry?.trim();
+    const unitPrice =
+      country && pkg.visaPrices?.length
+        ? pkg.visaPrices.find((v) => v.country.trim().toLowerCase() === country.toLowerCase())?.price ?? 0
+        : 0;
+    setPackageLines((prev) => [...prev, { packageId: pkg.id, packageName: pkg.name, packageType: pkg.type, quantity: 1, unitPrice }]);
     setShowAddPackage(false);
   }
 
@@ -409,7 +414,7 @@ export default function HajUmrahBookingDetail({ booking, canEdit }: Props) {
                           onClick={() => addPackage(p)}
                           className="block w-full px-4 py-2 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-700"
                         >
-                          {p.name} ({p.type}) — ${p.defaultPrice.toLocaleString()}
+                          {p.name} ({p.type}){p.visaPrices?.length ? ` — ${p.visaPrices.length} countries` : ""}
                         </button>
                       ))}
                     {availablePackages.every((p) => packageLines.some((l) => l.packageId === p.id)) && availablePackages.length > 0 && (

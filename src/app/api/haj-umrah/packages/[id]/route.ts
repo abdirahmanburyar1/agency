@@ -27,7 +27,6 @@ export async function GET(
       name: pkg.name,
       type: pkg.type,
       description: pkg.description,
-      defaultPrice: pkg.defaultPrice != null ? Number(pkg.defaultPrice) : null,
       durationDays: pkg.durationDays,
       isActive: pkg.isActive,
       createdAt: pkg.createdAt.toISOString(),
@@ -62,29 +61,21 @@ export async function PATCH(
     if (type !== undefined && type !== "haj" && type !== "umrah") {
       return NextResponse.json({ error: "Type must be haj or umrah" }, { status: 400 });
     }
-    const defaultPrice =
-      body.defaultPrice === "" || body.defaultPrice === null
-        ? null
-        : body.defaultPrice != null
-          ? Number(body.defaultPrice)
-          : undefined;
-    const defaultPriceExplicit = body.defaultPrice !== undefined;
-    if (defaultPrice !== undefined && defaultPrice !== null && (Number.isNaN(defaultPrice) || defaultPrice < 0)) {
-      return NextResponse.json({ error: "Invalid default price" }, { status: 400 });
-    }
     const visaPrices = Array.isArray(body.visaPrices)
       ? body.visaPrices
           .filter((v: unknown) => v && typeof v === "object" && typeof (v as { country?: unknown }).country === "string" && typeof (v as { price?: unknown }).price === "number")
           .map((v: { country: string; price: number }) => ({ country: String(v.country).trim(), price: v.price }))
           .filter((v: { country: string; price: number }) => v.country && v.price >= 0)
       : undefined;
+    if (visaPrices !== undefined && visaPrices.length === 0) {
+      return NextResponse.json({ error: "Add at least one visa price by country" }, { status: 400 });
+    }
     const pkg = await prisma.hajUmrahPackage.update({
       where: { id },
       data: {
         ...(name !== undefined && { name }),
         ...(type !== undefined && { type }),
         ...(body.description !== undefined && { description: body.description ? String(body.description).trim() || null : null }),
-        ...(defaultPriceExplicit && { defaultPrice }),
         ...(body.durationDays !== undefined && { durationDays: body.durationDays != null ? Number(body.durationDays) || null : null }),
         ...(body.isActive !== undefined && { isActive: Boolean(body.isActive) }),
         ...(visaPrices !== undefined && {
@@ -101,7 +92,6 @@ export async function PATCH(
       name: pkg.name,
       type: pkg.type,
       description: pkg.description,
-      defaultPrice: pkg.defaultPrice != null ? Number(pkg.defaultPrice) : null,
       durationDays: pkg.durationDays,
       isActive: pkg.isActive,
       updatedAt: pkg.updatedAt.toISOString(),

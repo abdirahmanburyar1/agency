@@ -63,7 +63,7 @@ export default async function EditHajUmrahBookingPage({
     status: booking.status,
     notes: booking.notes,
     profit: booking.profit != null ? Number(booking.profit) : 0,
-    paymentDate: booking.paymentDate ? booking.paymentDate.toISOString().slice(0, 10) : "",
+    passportCountry: booking.passportCountry ?? "",
     packages: booking.packages.map((bp) => ({
       packageId: bp.packageId,
       packageName: bp.package.name,

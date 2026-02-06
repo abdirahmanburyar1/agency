@@ -26,7 +26,6 @@ export async function GET(request: Request) {
         name: p.name,
         type: p.type,
         description: p.description,
-        defaultPrice: p.defaultPrice != null ? Number(p.defaultPrice) : null,
         durationDays: p.durationDays,
         isActive: p.isActive,
         createdAt: p.createdAt.toISOString(),
@@ -55,23 +54,15 @@ export async function POST(request: Request) {
     if (type !== "haj" && type !== "umrah") {
       return NextResponse.json({ error: "Type must be haj or umrah" }, { status: 400 });
     }
-    const defaultPriceRaw = body.defaultPrice;
-    const defaultPrice =
-      defaultPriceRaw != null && defaultPriceRaw !== ""
-        ? Number(defaultPriceRaw)
-        : null;
-    if (defaultPrice != null && (Number.isNaN(defaultPrice) || defaultPrice < 0)) {
-      return NextResponse.json({ error: "Invalid default price" }, { status: 400 });
-    }
     const visaPrices = Array.isArray(body.visaPrices)
       ? body.visaPrices
           .filter((v: unknown) => v && typeof v === "object" && typeof (v as { country?: unknown }).country === "string" && typeof (v as { price?: unknown }).price === "number")
           .map((v: { country: string; price: number }) => ({ country: String(v.country).trim(), price: v.price }))
           .filter((v: { country: string; price: number }) => v.country && v.price >= 0)
       : [];
-    if ((defaultPrice == null || Number.isNaN(defaultPrice)) && visaPrices.length === 0) {
+    if (visaPrices.length === 0) {
       return NextResponse.json(
-        { error: "Enter a default price or add at least one visa price by country" },
+        { error: "Add at least one visa price by country" },
         { status: 400 }
       );
     }
@@ -80,7 +71,6 @@ export async function POST(request: Request) {
         name,
         type,
         description: body.description ? String(body.description).trim() || null : null,
-        defaultPrice: defaultPrice != null && !Number.isNaN(defaultPrice) ? defaultPrice : null,
         durationDays: body.durationDays != null ? Number(body.durationDays) || null : null,
         isActive: body.isActive !== false,
         visaPrices: visaPrices.length > 0 ? { create: visaPrices } : undefined,
@@ -95,7 +85,6 @@ export async function POST(request: Request) {
       name: pkg.name,
       type: pkg.type,
       description: pkg.description,
-      defaultPrice: pkg.defaultPrice != null ? Number(pkg.defaultPrice) : null,
       durationDays: pkg.durationDays,
       isActive: pkg.isActive,
       createdAt: pkg.createdAt.toISOString(),

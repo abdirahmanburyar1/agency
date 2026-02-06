@@ -110,8 +110,7 @@ export async function POST(request: Request) {
     }
     const notes = body.notes ? String(body.notes).trim() || null : null;
     const profit = body.profit != null ? Number(body.profit) : null;
-    const paymentDateInput = body.paymentDate ? String(body.paymentDate).trim() || null : null;
-    const paymentDateValue = paymentDateInput ? new Date(paymentDateInput) : null;
+    const passportCountry = body.passportCountry ? String(body.passportCountry).trim() || null : null;
 
     const booking = await prisma.$transaction(async (tx) => {
       const lastBooking = await tx.hajUmrahBooking.findFirst({
@@ -130,7 +129,7 @@ export async function POST(request: Request) {
           status,
           notes,
           profit: profit != null && !Number.isNaN(profit) && profit >= 0 ? profit : null,
-          paymentDate: paymentDateValue,
+          passportCountry,
         },
       });
       for (const line of packageLines) {
@@ -162,12 +161,11 @@ export async function POST(request: Request) {
             ? String(booking.trackNumber).padStart(3, "0")
             : String(booking.trackNumber)
           : "";
-      const effectivePaymentDate = booking.paymentDate ?? booking.date;
       await prisma.payment.create({
         data: {
           date: booking.date,
           month: booking.month,
-          paymentDate: effectivePaymentDate,
+          paymentDate: new Date(), // current date when booking is confirmed
           status: "pending",
           name: trackDisplay ? `Haj & Umrah #${trackDisplay}` : "Haj & Umrah",
           description: customerName ? `Customer: ${customerName}` : null,

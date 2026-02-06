@@ -67,12 +67,11 @@ export async function POST(request: Request) {
               ? String(booking.trackNumber).padStart(3, "0")
               : String(booking.trackNumber)
             : "";
-        const effectivePaymentDate = booking.paymentDate ?? booking.date;
         const payment = await prisma.payment.create({
           data: {
             date: booking.date,
             month: booking.month,
-            paymentDate: effectivePaymentDate,
+            paymentDate: new Date(), // current date when booking is confirmed
             status: "pending",
             name: trackDisplay ? `Haj & Umrah #${trackDisplay}` : "Haj & Umrah",
             description: booking.customer.name ? `Customer: ${booking.customer.name}` : null,

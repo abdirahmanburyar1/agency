@@ -14,6 +14,7 @@ export default async function HajUmrahPackagesPage() {
   const packagesQuery = () =>
     prisma.hajUmrahPackage.findMany({
       orderBy: [{ type: "asc" }, { name: "asc" }],
+      include: { visaPrices: true },
     });
   let packages: Awaited<ReturnType<typeof packagesQuery>> = [];
   try {
@@ -67,7 +68,7 @@ export default async function HajUmrahPackagesPage() {
                 <th className="px-4 py-3 text-left font-medium text-zinc-700 dark:text-zinc-300">Name</th>
                 <th className="px-4 py-3 text-left font-medium text-zinc-700 dark:text-zinc-300">Type</th>
                 <th className="px-4 py-3 text-left font-medium text-zinc-700 dark:text-zinc-300">Description</th>
-                <th className="px-4 py-3 text-right font-medium text-zinc-700 dark:text-zinc-300">Default Price</th>
+                <th className="px-4 py-3 text-right font-medium text-zinc-700 dark:text-zinc-300">Countries</th>
                 <th className="px-4 py-3 text-center font-medium text-zinc-700 dark:text-zinc-300">Duration</th>
                 <th className="px-4 py-3 text-center font-medium text-zinc-700 dark:text-zinc-300">Active</th>
                 {canEdit && (
@@ -93,8 +94,8 @@ export default async function HajUmrahPackagesPage() {
                     <td className="max-w-xs truncate px-4 py-3 text-zinc-600 dark:text-zinc-400" title={p.description ?? undefined}>
                       {p.description || "—"}
                     </td>
-                    <td className="px-4 py-3 text-right font-medium text-zinc-900 dark:text-white">
-                      {p.defaultPrice != null ? `$${Number(p.defaultPrice).toLocaleString()}` : "—"}
+                    <td className="px-4 py-3 text-right text-zinc-600 dark:text-zinc-400">
+                      {p.visaPrices?.length ? `${p.visaPrices.length} countries` : "—"}
                     </td>
                     <td className="px-4 py-3 text-center text-zinc-600 dark:text-zinc-400">
                       {p.durationDays != null ? `${p.durationDays} days` : "—"}

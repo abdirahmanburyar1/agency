@@ -351,7 +351,6 @@ model HajUmrahPackage {
   name          String   @map("name")
   type          String   @map("type")   // haj | umrah
   description   String?  @map("description")
-  defaultPrice  Decimal? @map("default_price") @db.Decimal(12, 2) // optional when using country-specific visa prices
   durationDays  Int?     @map("duration_days")
   isActive      Boolean  @default(true) @map("is_active")
   createdAt     DateTime @default(now()) @map("created_at")
@@ -387,10 +386,10 @@ model HajUmrahBooking {
   date        DateTime  @map("date")  // booking date (campaign date used for display when set)
   month       String    @map("month")
   status      String    @default("draft") @map("status") // draft | confirmed | canceled
-  notes       String?   @map("notes")
-  profit      Decimal?  @map("profit") @db.Decimal(12, 2) // extra profit added to total
-  paymentDate DateTime? @map("payment_date") // when payment is due/expected (for reports); defaults to date
-  createdAt   DateTime  @default(now()) @map("created_at")
+  notes          String?   @map("notes")
+  profit         Decimal?  @map("profit") @db.Decimal(12, 2) // extra profit added to total
+  passportCountry String?  @map("passport_country") // for visa price lookup when packages have country-based visa prices
+  createdAt      DateTime  @default(now()) @map("created_at")
   canceledAt  DateTime? @map("canceled_at")
 
   campaign   HajUmrahCampaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
