@@ -157,7 +157,7 @@ export async function getReportData(filter?: ReportFilters): Promise<ReportData>
   const paymentDateRange = { paymentDate: { gte: from, lte: to } };
 
   const ticketWhere = { ...dateRange, canceledAt: null };
-  const visaWhere = { ...dateRange };
+  const visaWhere = { ...dateRange, canceledAt: null };
   const expenseWhere = { ...dateRange, status: "approved" };
   const paymentWhere = { ...paymentDateRange, canceledAt: null, status: { not: "refunded" } };
   const payableWhere = { ...dateRange, canceledAt: null };
@@ -195,7 +195,7 @@ export async function getReportData(filter?: ReportFilters): Promise<ReportData>
       where: { ...dateRange, canceledAt: null },
       _sum: { netSales: true },
     }),
-    prisma.visa.groupBy({ by: ["month"], where: dateRange, _sum: { netSales: true } }),
+    prisma.visa.groupBy({ by: ["month"], where: visaWhere, _sum: { netSales: true } }),
     prisma.expense.groupBy({
       by: ["month"],
       where: { ...dateRange, status: "approved" },
