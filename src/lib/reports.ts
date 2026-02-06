@@ -166,47 +166,53 @@ export async function getReportData(filter?: ReportFilters): Promise<ReportData>
   const payableWhere = { ...dateRange, canceledAt: null };
   const receiptWhere = { date: { gte: from, lte: to }, payment: { status: { not: "refunded" } } };
 
-  /** Receipts with payment source for attributing received amounts to ticket/visa/haj */
-  type ReceiptWithSource = { date: Date; amount: unknown; payment: { ticketId: string | null; visaId: string | null; hajUmrahBookingId: string | null } };
-
   const [
     ticketsAgg,
     visasAgg,
     expensesAgg,
     payments,
     payablesAgg,
+    hajPaymentsAgg,
     receiptsAgg,
-    receiptsWithSource,
+    ticketsForGrouping,
+    visasForGrouping,
     expensesForGrouping,
+    hajPaymentsForGrouping,
+    ticketsDaily,
+    visasDaily,
     expensesDaily,
+    hajPaymentsDaily,
   ] = await Promise.all([
     prisma.ticket.aggregate({ where: ticketWhere, _sum: { netSales: true, profit: true } }),
     prisma.visa.aggregate({ where: visaWhere, _sum: { netSales: true, profit: true } }),
     prisma.expense.aggregate({ where: expenseWhere, _sum: { amount: true } }),
     prisma.payment.findMany({ where: paymentWhere, include: { receipts: true } }),
     prisma.payable.aggregate({ where: payableWhere, _sum: { balance: true } }),
+    prisma.payment.aggregate({ where: hajPaymentWhere, _sum: { amount: true } }),
     prisma.receipt.aggregate({ where: receiptWhere, _sum: { amount: true } }),
-    prisma.receipt.findMany({
-      where: receiptWhere,
-      select: { date: true, amount: true, payment: { select: { ticketId: true, visaId: true, hajUmrahBookingId: true } } },
-    }),
+    period === "monthly" || period === "yearly"
+      ? prisma.ticket.findMany({ where: ticketWhere, select: { date: true, netSales: true } })
+      : [],
+    period === "monthly" || period === "yearly"
+      ? prisma.visa.findMany({ where: visaWhere, select: { date: true, netSales: true } })
+      : [],
     period === "monthly" || period === "yearly"
       ? prisma.expense.findMany({ where: expenseWhere, select: { date: true, amount: true } })
+      : [],
+    prisma.payment.findMany({ where: hajPaymentWhere, select: { paymentDate: true, amount: true } }),
+    period === "today" || period === "daily"
+      ? prisma.ticket.findMany({ where: ticketWhere, select: { date: true, netSales: true } })
+      : [],
+    period === "today" || period === "daily"
+      ? prisma.visa.findMany({ where: visaWhere, select: { date: true, netSales: true } })
       : [],
     period === "today" || period === "daily"
       ? prisma.expense.findMany({ where: expenseWhere, select: { date: true, amount: true } })
       : [],
+    period === "today" || period === "daily"
+      ? prisma.payment.findMany({ where: hajPaymentWhere, select: { paymentDate: true, amount: true } })
+      : [],
   ]);
-
-  const allReceiptsWithSource = receiptsWithSource as ReceiptWithSource[];
-
-  function attributeReceipt(r: ReceiptWithSource): { ticket: number; visa: number; haj: number } {
-    const amt = Number(r.amount ?? 0);
-    if (r.payment.ticketId) return { ticket: amt, visa: 0, haj: 0 };
-    if (r.payment.visaId) return { ticket: 0, visa: amt, haj: 0 };
-    if (r.payment.hajUmrahBookingId) return { ticket: 0, visa: 0, haj: amt };
-    return { ticket: 0, visa: 0, haj: 0 };
-  }
 
   const totalReceivables = payments.reduce((sum, p) => {
     const received = p.receipts.reduce((s, r) => s + Number(r.amount), 0);
@@ -214,19 +220,14 @@ export async function getReportData(filter?: ReportFilters): Promise<ReportData>
     return sum + (balance > 0 ? balance : 0);
   }, 0);
 
-  let ticketRevenue = 0;
-  let visaRevenue = 0;
-  let hajUmrahRevenue = 0;
-  for (const r of allReceiptsWithSource) {
-    const attr = attributeReceipt(r);
-    ticketRevenue += attr.ticket;
-    visaRevenue += attr.visa;
-    hajUmrahRevenue += attr.haj;
-  }
+  const ticketRevenue = Number(ticketsAgg._sum.netSales ?? 0);
+  const visaRevenue = Number(visasAgg._sum.netSales ?? 0);
+  const hajUmrahRevenue = Number(hajPaymentsAgg._sum.amount ?? 0);
   const totalRevenue = ticketRevenue + visaRevenue + hajUmrahRevenue;
   const totalExpenses = Number(expensesAgg._sum.amount ?? 0);
   const totalPayables = Number(payablesAgg._sum.balance ?? 0);
   const incomeReceived = Number(receiptsAgg._sum.amount ?? 0);
+  const netIncome = totalRevenue - totalExpenses;
 
   const summary: ReportSummary = {
     ticketRevenue,
@@ -234,7 +235,7 @@ export async function getReportData(filter?: ReportFilters): Promise<ReportData>
     hajUmrahRevenue,
     totalRevenue,
     totalExpenses,
-    netIncome: incomeReceived,
+    netIncome,
     incomeReceived,
     totalReceivables,
     totalPayables,
@@ -260,16 +261,20 @@ export async function getReportData(filter?: ReportFilters): Promise<ReportData>
     for (const { periodKey } of dayBuckets) {
       rowMap.set(periodKey, { ticketRevenue: 0, visaRevenue: 0, hajUmrahRevenue: 0, expenses: 0, incomeReceived: 0 });
     }
-    for (const r of allReceiptsWithSource) {
-      const key = toDayKey(r.date);
+    for (const t of (ticketsDaily ?? []) as { date: Date; netSales: unknown }[]) {
+      const key = toDayKey(t.date);
       const m = rowMap.get(key);
-      if (m) {
-        const attr = attributeReceipt(r);
-        m.ticketRevenue += attr.ticket;
-        m.visaRevenue += attr.visa;
-        m.hajUmrahRevenue += attr.haj;
-        m.incomeReceived += Number(r.amount ?? 0);
-      }
+      if (m) m.ticketRevenue += Number(t.netSales ?? 0);
+    }
+    for (const v of (visasDaily ?? []) as { date: Date; netSales: unknown }[]) {
+      const key = toDayKey(v.date);
+      const m = rowMap.get(key);
+      if (m) m.visaRevenue += Number(v.netSales ?? 0);
+    }
+    for (const h of (hajPaymentsDaily ?? []) as { paymentDate: Date; amount: unknown }[]) {
+      const key = toDayKey(h.paymentDate);
+      const m = rowMap.get(key);
+      if (m) m.hajUmrahRevenue += Number(h.amount ?? 0);
     }
     for (const e of (expensesDaily ?? []) as { date: Date; amount: unknown }[]) {
       const key = toDayKey(e.date);
@@ -279,6 +284,7 @@ export async function getReportData(filter?: ReportFilters): Promise<ReportData>
     rows = dayBuckets.map(({ periodKey, label }) => {
       const m = rowMap.get(periodKey) ?? { ticketRevenue: 0, visaRevenue: 0, hajUmrahRevenue: 0, expenses: 0, incomeReceived: 0 };
       const totalRevenue = m.ticketRevenue + m.visaRevenue + m.hajUmrahRevenue;
+      const netIncome = totalRevenue - m.expenses;
       return {
         month: periodKey,
         monthLabel: label,
@@ -287,7 +293,7 @@ export async function getReportData(filter?: ReportFilters): Promise<ReportData>
         hajUmrahRevenue: m.hajUmrahRevenue,
         totalRevenue,
         expenses: m.expenses,
-        netIncome: m.incomeReceived,
+        netIncome,
       };
     });
   } else if (period === "yearly") {
@@ -296,20 +302,34 @@ export async function getReportData(filter?: ReportFilters): Promise<ReportData>
       string,
       { ticketRevenue: number; visaRevenue: number; hajUmrahRevenue: number; expenses: number; incomeReceived: number }
     >();
-    for (const r of allReceiptsWithSource) {
-      const y = String(new Date(r.date).getFullYear());
+    for (const t of (ticketsForGrouping ?? []) as { date: Date; netSales: unknown }[]) {
+      const y = String(new Date(t.date).getFullYear());
       let m = rowMap.get(y);
       if (!m) {
         m = { ticketRevenue: 0, visaRevenue: 0, hajUmrahRevenue: 0, expenses: 0, incomeReceived: 0 };
         rowMap.set(y, m);
       }
-      const attr = attributeReceipt(r);
-      m.ticketRevenue += attr.ticket;
-      m.visaRevenue += attr.visa;
-      m.hajUmrahRevenue += attr.haj;
-      m.incomeReceived += Number(r.amount ?? 0);
+      m.ticketRevenue += Number(t.netSales ?? 0);
     }
-    for (const e of expensesForGrouping as { date: Date; amount: unknown }[]) {
+    for (const v of (visasForGrouping ?? []) as { date: Date; netSales: unknown }[]) {
+      const y = String(new Date(v.date).getFullYear());
+      let m = rowMap.get(y);
+      if (!m) {
+        m = { ticketRevenue: 0, visaRevenue: 0, hajUmrahRevenue: 0, expenses: 0, incomeReceived: 0 };
+        rowMap.set(y, m);
+      }
+      m.visaRevenue += Number(v.netSales ?? 0);
+    }
+    for (const h of (hajPaymentsForGrouping ?? []) as { paymentDate: Date; amount: unknown }[]) {
+      const y = String(new Date(h.paymentDate).getFullYear());
+      let m = rowMap.get(y);
+      if (!m) {
+        m = { ticketRevenue: 0, visaRevenue: 0, hajUmrahRevenue: 0, expenses: 0, incomeReceived: 0 };
+        rowMap.set(y, m);
+      }
+      m.hajUmrahRevenue += Number(h.amount ?? 0);
+    }
+    for (const e of (expensesForGrouping ?? []) as { date: Date; amount: unknown }[]) {
       const y = String(new Date(e.date).getFullYear());
       let m = rowMap.get(y);
       if (!m) {
@@ -322,6 +342,7 @@ export async function getReportData(filter?: ReportFilters): Promise<ReportData>
     rows = yearBuckets.map(({ periodKey, label }) => {
       const m = rowMap.get(periodKey) ?? { ticketRevenue: 0, visaRevenue: 0, hajUmrahRevenue: 0, expenses: 0, incomeReceived: 0 };
       const totalRevenue = m.ticketRevenue + m.visaRevenue + m.hajUmrahRevenue;
+      const netIncome = totalRevenue - m.expenses;
       return {
         month: periodKey,
         monthLabel: label,
@@ -330,7 +351,7 @@ export async function getReportData(filter?: ReportFilters): Promise<ReportData>
         hajUmrahRevenue: m.hajUmrahRevenue,
         totalRevenue,
         expenses: m.expenses,
-        netIncome: m.incomeReceived,
+        netIncome,
       };
     });
   } else {
@@ -342,18 +363,22 @@ export async function getReportData(filter?: ReportFilters): Promise<ReportData>
     for (const { periodKey } of chartMonths) {
       rowMap.set(periodKey, { ticketRevenue: 0, visaRevenue: 0, hajUmrahRevenue: 0, expenses: 0, incomeReceived: 0 });
     }
-    for (const r of allReceiptsWithSource) {
-      const monthKey = toMonthKey(r.date);
+    for (const t of (ticketsForGrouping ?? []) as { date: Date; netSales: unknown }[]) {
+      const monthKey = toMonthKey(t.date);
       const m = rowMap.get(monthKey);
-      if (m) {
-        const attr = attributeReceipt(r);
-        m.ticketRevenue += attr.ticket;
-        m.visaRevenue += attr.visa;
-        m.hajUmrahRevenue += attr.haj;
-        m.incomeReceived += Number(r.amount ?? 0);
-      }
+      if (m) m.ticketRevenue += Number(t.netSales ?? 0);
     }
-    for (const e of expensesForGrouping as { date: Date; amount: unknown }[]) {
+    for (const v of (visasForGrouping ?? []) as { date: Date; netSales: unknown }[]) {
+      const monthKey = toMonthKey(v.date);
+      const m = rowMap.get(monthKey);
+      if (m) m.visaRevenue += Number(v.netSales ?? 0);
+    }
+    for (const h of (hajPaymentsForGrouping ?? []) as { paymentDate: Date; amount: unknown }[]) {
+      const monthKey = toMonthKey(h.paymentDate);
+      const m = rowMap.get(monthKey);
+      if (m) m.hajUmrahRevenue += Number(h.amount ?? 0);
+    }
+    for (const e of (expensesForGrouping ?? []) as { date: Date; amount: unknown }[]) {
       const monthKey = toMonthKey(e.date);
       const m = rowMap.get(monthKey);
       if (m) m.expenses += Number(e.amount ?? 0);
@@ -361,6 +386,7 @@ export async function getReportData(filter?: ReportFilters): Promise<ReportData>
     rows = chartMonths.map(({ periodKey, label }) => {
       const m = rowMap.get(periodKey) ?? { ticketRevenue: 0, visaRevenue: 0, hajUmrahRevenue: 0, expenses: 0, incomeReceived: 0 };
       const totalRevenue = m.ticketRevenue + m.visaRevenue + m.hajUmrahRevenue;
+      const netIncome = totalRevenue - m.expenses;
       return {
         month: periodKey,
         monthLabel: label,
@@ -369,7 +395,7 @@ export async function getReportData(filter?: ReportFilters): Promise<ReportData>
         hajUmrahRevenue: m.hajUmrahRevenue,
         totalRevenue,
         expenses: m.expenses,
-        netIncome: m.incomeReceived,
+        netIncome,
       };
     });
   }
