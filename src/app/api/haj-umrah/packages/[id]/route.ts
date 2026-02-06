@@ -103,7 +103,7 @@ export async function PATCH(
         await tx.hajUmrahPackageVisaPrice.deleteMany({ where: { packageId: id } });
         if (visaPrices.length > 0) {
           await tx.hajUmrahPackageVisaPrice.createMany({
-            data: visaPrices.map((v) => ({ packageId: id, country: v.country, price: v.price })),
+            data: visaPrices.map((v: { country: string; price: number }) => ({ packageId: id, country: v.country, price: v.price })),
           });
         }
       }

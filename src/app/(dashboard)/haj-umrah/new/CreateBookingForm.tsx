@@ -19,7 +19,7 @@ type PackageOption = {
 };
 
 type PackageLine = {
-  packageId: string;
+  packageId: string | null;
   packageName: string;
   amount: number;
 };
@@ -36,7 +36,7 @@ type InitialBooking = {
   notes: string | null;
   profit?: number;
   passportCountry?: string | null;
-  packages: { packageId: string; packageName: string; amount: number }[];
+  packages: { packageId: string | null; packageName: string; amount: number }[];
 };
 
 type Props = {
@@ -470,7 +470,7 @@ export default function CreateBookingForm({ nextTrackNumberDisplay, initialCusto
                 <tbody>
                   {lines.map((line, index) => (
                     <tr
-                      key={line.packageId}
+                      key={line.packageId ?? `line-${index}`}
                       className="border-b border-zinc-100 last:border-0 dark:border-zinc-800"
                     >
                       <td className="px-4 py-3 font-medium text-zinc-900 dark:text-white">{line.packageName}</td>

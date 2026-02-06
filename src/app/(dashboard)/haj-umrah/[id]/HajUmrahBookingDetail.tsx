@@ -8,7 +8,7 @@ import "sweetalert2/dist/sweetalert2.min.css";
 import { UserIcon, ReceiptIcon, CalendarIcon, PackageIcon, ExternalLinkIcon, PlusIcon, PencilIcon } from "../icons";
 
 type PackageLine = {
-  packageId: string;
+  packageId: string | null;
   packageName: string;
   packageType: string;
   amount: number;
@@ -33,7 +33,7 @@ type Booking = {
   canceledAt: string | null;
   packages: {
     id: string;
-    packageId: string;
+    packageId: string | null;
     packageName: string;
     packageType: string;
     quantity: number;
