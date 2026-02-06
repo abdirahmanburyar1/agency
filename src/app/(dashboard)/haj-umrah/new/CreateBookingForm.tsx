@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import SearchableCustomerSelect from "@/components/SearchableCustomerSelect";
+import SearchableCountrySelect from "@/components/SearchableCountrySelect";
 
 type Customer = { id: string; name: string; phone?: string | null; country?: string | null };
 type PackageOption = {
@@ -50,6 +51,7 @@ export default function CreateBookingForm({ nextTrackNumberDisplay, initialCusto
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [packages, setPackages] = useState<PackageOption[]>([]);
   const [campaigns, setCampaigns] = useState<CampaignOption[]>([]);
+  const [countries, setCountries] = useState<string[]>([]);
   const [campaignId, setCampaignId] = useState(initialBooking?.campaignId ?? "");
   const [customerId, setCustomerId] = useState(initialCustomerId ?? initialBooking?.customerId ?? "");
   const [status, setStatus] = useState<"draft" | "confirmed">((initialBooking?.status as "draft" | "confirmed") ?? "draft");
@@ -114,6 +116,12 @@ export default function CreateBookingForm({ nextTrackNumberDisplay, initialCusto
     fetch("/api/haj-umrah/campaigns?available=true")
       .then((r) => r.json())
       .then((data) => setCampaigns(Array.isArray(data) ? data : []))
+      .catch(() => {});
+  }, []);
+  useEffect(() => {
+    fetch("/api/settings/ticket-options")
+      .then((r) => r.json())
+      .then((data) => setCountries(Array.isArray(data?.country) ? data.country : []))
       .catch(() => {});
   }, []);
 
@@ -321,83 +329,144 @@ export default function CreateBookingForm({ nextTrackNumberDisplay, initialCusto
       </div>
 
       <div>
-        <div className="mb-2 flex items-center justify-between">
-          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">Packages *</label>
+        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">Passport country (for visa price)</label>
+        <div className="mt-1">
+          <SearchableCountrySelect
+            options={countries}
+            value={passportCountry}
+            onChange={setPassportCountry}
+            showAddNew={false}
+            placeholder="Search or select country..."
+          />
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+        <div className="mb-3 flex items-start justify-between gap-4">
+          <div>
+            <h3 className="text-sm font-semibold text-zinc-900 dark:text-white">Packages</h3>
+            <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+              Each package is served per person. Quantity = number of persons.
+            </p>
+          </div>
           {packages.length > 0 && (
-            <div className="relative">
+            <div className="relative shrink-0">
               <button
                 type="button"
                 onClick={() => setShowAddPackage((v) => !v)}
-                className="rounded border border-zinc-300 px-3 py-1.5 text-sm text-zinc-700 hover:bg-zinc-50 dark:border-zinc-600 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-teal-700 dark:bg-teal-500 dark:hover:bg-teal-600"
               >
-                + Add package
+                <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                Add package
               </button>
               {showAddPackage && (
-                <div className="absolute right-0 top-full z-10 mt-1 max-h-48 w-64 overflow-auto rounded border border-zinc-200 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-800">
-                  {packages
-                    .filter((p) => !lines.some((l) => l.packageId === p.id))
-                    .map((p) => (
-                      <button
-                        key={p.id}
-                        type="button"
-                        onClick={() => addPackage(p)}
-                        className="block w-full px-4 py-2 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-700"
-                      >
-                        {p.name} ({p.type}){" "}
-                        {p.visaPrices?.length
-                          ? `— by passport country (${p.visaPrices.length} countries)`
-                          : "—"}
-                      </button>
-                    ))}
-                  {packages.every((p) => lines.some((l) => l.packageId === p.id)) && (
-                    <p className="px-4 py-2 text-sm text-zinc-500">All packages added</p>
-                  )}
+                <div className="absolute right-0 top-full z-20 mt-2 w-72 overflow-hidden rounded-lg border border-zinc-200 bg-white py-1 shadow-xl dark:border-zinc-700 dark:bg-zinc-900">
+                  <div className="max-h-64 overflow-y-auto">
+                    {packages
+                      .filter((p) => !lines.some((l) => l.packageId === p.id))
+                      .map((p) => (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => addPackage(p)}
+                          className="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-teal-50 dark:hover:bg-teal-900/20"
+                        >
+                          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-teal-100 text-teal-600 dark:bg-teal-900/40 dark:text-teal-400">
+                            <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8 4-8-4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                            </svg>
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate font-medium text-zinc-900 dark:text-white">{p.name}</p>
+                            <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                              {p.type} · {p.visaPrices?.length ? "Price by passport country" : "—"}
+                            </p>
+                          </div>
+                        </button>
+                      ))}
+                    {packages.every((p) => lines.some((l) => l.packageId === p.id)) && (
+                      <p className="px-4 py-6 text-center text-sm text-zinc-500 dark:text-zinc-400">
+                        All packages added
+                      </p>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
           )}
         </div>
+
         {packages.length === 0 && (
-          <p className="text-sm text-amber-600 dark:text-amber-400">
-            No active packages. <Link href="/haj-umrah/packages/new" className="underline">Add packages</Link> first.
+          <p className="rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:bg-amber-900/20 dark:text-amber-200">
+            No active packages. <Link href="/haj-umrah/packages/new" className="font-medium underline">Create packages</Link> first.
           </p>
         )}
+
         {lines.length > 0 && (
-          <div className="space-y-2 rounded-xl border border-zinc-200 bg-zinc-50/50 p-4 dark:border-zinc-700 dark:bg-zinc-800/30">
-            {lines.map((line, index) => (
-              <div key={line.packageId} className="flex flex-wrap items-center gap-2 rounded-lg border border-zinc-200 bg-white p-3 dark:border-zinc-700 dark:bg-zinc-900">
-                <span className="w-40 truncate font-medium text-zinc-900 dark:text-white">{line.packageName}</span>
-                <input
-                  type="number"
-                  min={1}
-                  value={line.quantity}
-                  onChange={(e) => updateLine(index, { quantity: Math.max(1, Number(e.target.value) || 1) })}
-                  className="w-16 rounded border border-zinc-300 px-2 py-1 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
-                />
-                <span className="text-zinc-500">×</span>
-                <input
-                  type="number"
-                  min={0}
-                  step={0.01}
-                  value={line.unitPrice}
-                  onChange={(e) => updateLine(index, { unitPrice: Number(e.target.value) || 0 })}
-                  className="w-24 rounded border border-zinc-300 px-2 py-1 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
-                />
-                <span className="text-zinc-600 dark:text-zinc-400">
-                  = ${(line.quantity * line.unitPrice).toLocaleString()}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => removeLine(index)}
-                  className="ml-auto text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
-                >
-                  Remove
-                </button>
-              </div>
-            ))}
-            <div className="mt-2 flex flex-wrap items-center gap-4 border-t border-zinc-200 pt-2 dark:border-zinc-600">
+          <div className="space-y-3">
+            <div className="overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-700">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800/50">
+                    <th className="px-4 py-3 text-left font-medium text-zinc-700 dark:text-zinc-300">Package</th>
+                    <th className="px-4 py-3 text-center font-medium text-zinc-700 dark:text-zinc-300">Persons</th>
+                    <th className="px-4 py-3 text-right font-medium text-zinc-700 dark:text-zinc-300">Price / person</th>
+                    <th className="px-4 py-3 text-right font-medium text-zinc-700 dark:text-zinc-300">Amount</th>
+                    <th className="w-16 px-2 py-3" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {lines.map((line, index) => (
+                    <tr
+                      key={line.packageId}
+                      className="border-b border-zinc-100 last:border-0 dark:border-zinc-800"
+                    >
+                      <td className="px-4 py-3 font-medium text-zinc-900 dark:text-white">{line.packageName}</td>
+                      <td className="px-4 py-3 text-center">
+                        <input
+                          type="number"
+                          min={1}
+                          value={line.quantity}
+                          onChange={(e) => updateLine(index, { quantity: Math.max(1, Number(e.target.value) || 1) })}
+                          className="w-16 rounded-md border border-zinc-300 px-2 py-1.5 text-center text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
+                        />
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <input
+                          type="number"
+                          min={0}
+                          step={0.01}
+                          value={line.unitPrice}
+                          onChange={(e) => updateLine(index, { unitPrice: Number(e.target.value) || 0 })}
+                          className="w-24 rounded-md border border-zinc-300 px-2 py-1.5 text-right text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
+                        />
+                      </td>
+                      <td className="px-4 py-3 text-right font-medium text-zinc-900 dark:text-white">
+                        ${(line.quantity * line.unitPrice).toLocaleString()}
+                      </td>
+                      <td className="px-2 py-3">
+                        <button
+                          type="button"
+                          onClick={() => removeLine(index)}
+                          className="rounded p-1.5 text-zinc-400 transition hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:text-red-400"
+                          title="Remove"
+                        >
+                          <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-4 rounded-lg bg-zinc-50 px-4 py-3 dark:bg-zinc-800/50">
               <div className="flex items-center gap-2">
-                <label className="text-sm text-zinc-600 dark:text-zinc-400">Profit</label>
+                <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Extra profit</label>
                 <input
                   type="number"
                   min={0}
@@ -405,26 +474,15 @@ export default function CreateBookingForm({ nextTrackNumberDisplay, initialCusto
                   value={profit || ""}
                   onChange={(e) => setProfit(Number(e.target.value) || 0)}
                   placeholder="0"
-                  className="w-24 rounded border border-zinc-300 px-2 py-1 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
+                  className="w-24 rounded-md border border-zinc-300 px-2 py-1.5 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
                 />
               </div>
-              <p className="text-right font-medium text-zinc-900 dark:text-white">
+              <p className="text-lg font-semibold text-zinc-900 dark:text-white">
                 Total: ${totalAmount.toLocaleString()}
               </p>
             </div>
           </div>
         )}
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">Passport country (for visa price)</label>
-        <input
-          type="text"
-          value={passportCountry}
-          onChange={(e) => setPassportCountry(e.target.value)}
-          placeholder="e.g. Sudan, Saudi Arabia — used for country-based visa pricing"
-          className="mt-1 w-full rounded border border-zinc-300 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
-        />
       </div>
 
       <div>

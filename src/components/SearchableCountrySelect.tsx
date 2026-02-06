@@ -6,10 +6,12 @@ type Props = {
   options: string[];
   value: string;
   onChange: (value: string) => void;
-  onAddNew: () => void;
+  onAddNew?: () => void;
   placeholder?: string;
   disabled?: boolean;
   className?: string;
+  /** When false, hides the "+ Add new country" option */
+  showAddNew?: boolean;
 };
 
 export default function SearchableCountrySelect({
@@ -20,6 +22,7 @@ export default function SearchableCountrySelect({
   placeholder = "Search or select country...",
   disabled = false,
   className = "",
+  showAddNew = true,
 }: Props) {
   const [query, setQuery] = useState("");
   const [isOpen, setIsOpen] = useState(false);
@@ -51,7 +54,7 @@ export default function SearchableCountrySelect({
   function handleAddNew() {
     setIsOpen(false);
     setQuery("");
-    onAddNew();
+    onAddNew?.();
   }
 
   return (
@@ -103,20 +106,22 @@ export default function SearchableCountrySelect({
               </li>
             ))
           )}
-          <li
-            role="option"
-            tabIndex={0}
-            onClick={handleAddNew}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                handleAddNew();
-              }
-            }}
-            className="cursor-pointer border-t border-zinc-100 px-3 py-2 text-sm font-medium text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800"
-          >
-            + Add new country
-          </li>
+          {showAddNew && (
+            <li
+              role="option"
+              tabIndex={0}
+              onClick={handleAddNew}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  handleAddNew();
+                }
+              }}
+              className="cursor-pointer border-t border-zinc-100 px-3 py-2 text-sm font-medium text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800"
+            >
+              + Add new country
+            </li>
+          )}
         </ul>
       )}
     </div>
