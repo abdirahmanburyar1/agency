@@ -11,8 +11,7 @@ type PackageLine = {
   packageId: string;
   packageName: string;
   packageType: string;
-  quantity: number;
-  unitPrice: number;
+  amount: number;
 };
 
 type Booking = {
@@ -66,7 +65,7 @@ export default function HajUmrahBookingDetail({ booking, canEdit }: Props) {
   const [status, setStatus] = useState(booking.status);
   const [notes, setNotes] = useState(booking.notes ?? "");
   const [packageLines, setPackageLines] = useState<PackageLine[]>(
-    booking.packages.map((p) => ({ packageId: p.packageId, packageName: p.packageName, packageType: p.packageType, quantity: p.quantity, unitPrice: p.unitPrice }))
+    booking.packages.map((p) => ({ packageId: p.packageId, packageName: p.packageName, packageType: p.packageType, amount: p.amount }))
   );
   const [availablePackages, setAvailablePackages] = useState<PackageOption[]>([]);
   const [showAddPackage, setShowAddPackage] = useState(false);
@@ -78,7 +77,7 @@ export default function HajUmrahBookingDetail({ booking, canEdit }: Props) {
     setStatus(booking.status);
     setNotes(booking.notes ?? "");
     setPackageLines(
-      booking.packages.map((p) => ({ packageId: p.packageId, packageName: p.packageName, packageType: p.packageType, quantity: p.quantity, unitPrice: p.unitPrice }))
+      booking.packages.map((p) => ({ packageId: p.packageId, packageName: p.packageName, packageType: p.packageType, amount: p.amount }))
     );
   }, [booking.status, booking.notes, booking.packages]);
 
@@ -114,11 +113,10 @@ export default function HajUmrahBookingDetail({ booking, canEdit }: Props) {
   function addPackage(pkg: PackageOption) {
     if (packageLines.some((l) => l.packageId === pkg.id)) return;
     const country = booking.passportCountry?.trim();
-    const unitPrice =
-      country && pkg.visaPrices?.length
-        ? pkg.visaPrices.find((v) => v.country.trim().toLowerCase() === country.toLowerCase())?.price ?? 0
-        : 0;
-    setPackageLines((prev) => [...prev, { packageId: pkg.id, packageName: pkg.name, packageType: pkg.type, quantity: 1, unitPrice }]);
+    const matchedPrice = pkg.visaPrices?.find((v) => v.country.trim().toLowerCase() === (country ?? "").toLowerCase())?.price;
+    const fallbackPrice = pkg.visaPrices?.[0]?.price;
+    const amount = matchedPrice ?? fallbackPrice ?? 0;
+    setPackageLines((prev) => [...prev, { packageId: pkg.id, packageName: pkg.name, packageType: pkg.type, amount }]);
     setShowAddPackage(false);
   }
 
@@ -142,7 +140,7 @@ export default function HajUmrahBookingDetail({ booking, canEdit }: Props) {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          packages: packageLines.map((l) => ({ packageId: l.packageId, quantity: l.quantity, unitPrice: l.unitPrice })),
+          packages: packageLines.map((l) => ({ packageId: l.packageId, quantity: 1, unitPrice: l.amount })),
         }),
       });
       if (!res.ok) {
@@ -442,8 +440,6 @@ export default function HajUmrahBookingDetail({ booking, canEdit }: Props) {
             <thead>
               <tr className="border-b border-zinc-200 text-left text-zinc-600 dark:border-zinc-700 dark:text-zinc-400">
                 <th className="pb-2 pr-4 font-medium">Package</th>
-                <th className="pb-2 pr-4 font-medium text-center">Qty</th>
-                <th className="pb-2 pr-4 font-medium text-right">Unit price</th>
                 <th className="pb-2 font-medium text-right">Amount</th>
                 {canEditBooking && <th className="w-10 pb-2" />}
               </tr>
@@ -455,41 +451,19 @@ export default function HajUmrahBookingDetail({ booking, canEdit }: Props) {
                     <span className="font-medium text-zinc-900 dark:text-white">{"packageName" in bp ? bp.packageName : (bp as { packageName: string }).packageName}</span>
                     <span className="ml-1 text-zinc-500">({"packageType" in bp ? bp.packageType : (bp as { packageType: string }).packageType})</span>
                   </td>
-                  <td className="py-3 pr-4 text-center">
-                    {canEditBooking ? (
-                      <input
-                        type="number"
-                        min={1}
-                        value={packageLines[index]?.quantity ?? 1}
-                        onChange={(e) => updatePackageLine(index, { quantity: Math.max(1, Number(e.target.value) || 1) })}
-                        className="w-14 rounded border border-zinc-300 px-1 py-0.5 text-center text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
-                      />
-                    ) : (
-                      "quantity" in bp ? bp.quantity : (bp as { quantity: number }).quantity
-                    )}
-                  </td>
-                  <td className="py-3 pr-4 text-right">
+                  <td className="py-3 text-right font-medium">
                     {canEditBooking ? (
                       <input
                         type="number"
                         min={0}
                         step={0.01}
-                        value={packageLines[index]?.unitPrice ?? 0}
-                        onChange={(e) => updatePackageLine(index, { unitPrice: Number(e.target.value) || 0 })}
+                        value={packageLines[index]?.amount ?? 0}
+                        onChange={(e) => updatePackageLine(index, { amount: Number(e.target.value) || 0 })}
                         className="w-24 rounded border border-zinc-300 px-1 py-0.5 text-right text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
                       />
                     ) : (
-                      `$${("unitPrice" in bp ? bp.unitPrice : (bp as { unitPrice: number }).unitPrice).toLocaleString()}`
+                      `$${("amount" in bp ? (bp as { amount: number }).amount : (bp as { quantity: number; unitPrice: number }).quantity * (bp as { unitPrice: number }).unitPrice).toLocaleString()}`
                     )}
-                  </td>
-                  <td className="py-3 text-right font-medium">
-                    $
-                    {(canEditBooking
-                      ? (packageLines[index]?.quantity ?? 1) * (packageLines[index]?.unitPrice ?? 0)
-                      : "amount" in bp
-                        ? (bp as { amount: number }).amount
-                        : (bp as { quantity: number; unitPrice: number }).quantity * (bp as { unitPrice: number }).unitPrice
-                    ).toLocaleString()}
                   </td>
                   {canEditBooking && (
                     <td className="py-3">
@@ -511,7 +485,7 @@ export default function HajUmrahBookingDetail({ booking, canEdit }: Props) {
         <p className="mt-4 text-right text-lg font-semibold text-zinc-900 dark:text-white">
           Total: $
           {(canEditBooking
-            ? packageLines.reduce((sum, l) => sum + l.quantity * l.unitPrice, 0)
+            ? packageLines.reduce((sum, l) => sum + l.amount, 0)
             : booking.totalAmount
           ).toLocaleString()}
         </p>

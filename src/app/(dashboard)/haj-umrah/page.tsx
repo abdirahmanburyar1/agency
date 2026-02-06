@@ -47,8 +47,8 @@ export default async function HajUmrahPage({
     n == null ? "—" : n < 1000 ? String(n).padStart(3, "0") : String(n);
 
   const serialized = bookings.map((b) => {
-    const packageSummary = b.packages.map((bp) => `${bp.package.name} (×${bp.quantity})`).join(", ");
-    const packageCount = b.packages.reduce((sum, bp) => sum + bp.quantity, 0);
+    const packageSummary = b.packages.map((bp) => bp.package.name).join(", ");
+    const packageCount = b.packages.length;
     const campaignDisplay = b.campaign
       ? (() => {
           const d = new Date(b.campaign.date);

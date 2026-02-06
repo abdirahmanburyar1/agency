@@ -67,8 +67,7 @@ export default async function EditHajUmrahBookingPage({
     packages: booking.packages.map((bp) => ({
       packageId: bp.packageId,
       packageName: bp.package.name,
-      quantity: bp.quantity,
-      unitPrice: Number(bp.unitPrice),
+      amount: Number(bp.amount),
     })),
   };
 

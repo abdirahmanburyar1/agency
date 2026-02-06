@@ -26,7 +26,7 @@ export default async function NewHajUmrahBookingPage({ searchParams }: Props) {
   const nextTrackNumberDisplay = formatTrackNumber(nextTrackNumber);
 
   return (
-    <main className="w-full py-6 sm:py-8">
+    <main className="w-full py-6 sm:py-8 -mx-3 sm:-mx-4 lg:-mx-6 px-4 lg:px-6">
       <div className="mb-6">
         <Link href="/haj-umrah" className="text-sm text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300">
           ← Back to Haj & Umrah

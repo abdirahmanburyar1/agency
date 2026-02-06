@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Swal from "sweetalert2";
+import "sweetalert2/dist/sweetalert2.min.css";
 import SearchableCustomerSelect from "@/components/SearchableCustomerSelect";
 import SearchableCountrySelect from "@/components/SearchableCountrySelect";
 
@@ -17,8 +19,7 @@ type PackageOption = {
 type PackageLine = {
   packageId: string;
   packageName: string;
-  quantity: number;
-  unitPrice: number;
+  amount: number;
 };
 
 type CampaignOption = { id: string; date: string; month: string; name: string | null; type: string | null };
@@ -33,7 +34,7 @@ type InitialBooking = {
   notes: string | null;
   profit?: number;
   passportCountry?: string | null;
-  packages: { packageId: string; packageName: string; quantity: number; unitPrice: number }[];
+  packages: { packageId: string; packageName: string; amount: number }[];
 };
 
 type Props = {
@@ -59,7 +60,11 @@ export default function CreateBookingForm({ nextTrackNumberDisplay, initialCusto
   const [profit, setProfit] = useState(initialBooking?.profit ?? 0);
   const [passportCountry, setPassportCountry] = useState(initialBooking?.passportCountry ?? "");
   const [lines, setLines] = useState<PackageLine[]>(
-    initialBooking?.packages?.map((p) => ({ packageId: p.packageId, packageName: p.packageName, quantity: p.quantity, unitPrice: p.unitPrice })) ?? []
+    initialBooking?.packages?.map((p) => ({
+      packageId: p.packageId,
+      packageName: p.packageName,
+      amount: p.quantity * p.unitPrice,
+    })) ?? []
   );
   const [showAddPackage, setShowAddPackage] = useState(false);
   const [showAddCustomerModal, setShowAddCustomerModal] = useState(false);
@@ -92,7 +97,11 @@ export default function CreateBookingForm({ nextTrackNumberDisplay, initialCusto
       setProfit(initialBooking.profit ?? 0);
       setPassportCountry(initialBooking.passportCountry ?? "");
       setLines(
-        initialBooking.packages?.map((p) => ({ packageId: p.packageId, packageName: p.packageName, quantity: p.quantity, unitPrice: p.unitPrice })) ?? []
+        initialBooking.packages?.map((p) => ({
+          packageId: p.packageId,
+          packageName: p.packageName,
+          amount: p.quantity * p.unitPrice,
+        })) ?? []
       );
     }
   }, [initialBooking?.id]);
@@ -125,17 +134,24 @@ export default function CreateBookingForm({ nextTrackNumberDisplay, initialCusto
       .catch(() => {});
   }, []);
 
-  function addPackage(pkg: PackageOption) {
+  async function addPackage(pkg: PackageOption) {
     if (lines.some((l) => l.packageId === pkg.id)) return;
     const countryForVisa = passportCountry.trim() || customers.find((c) => c.id === customerId)?.country?.trim() || null;
-    const unitPrice =
-      countryForVisa && pkg.visaPrices?.length
-        ? pkg.visaPrices.find((v) => v.country.trim().toLowerCase() === countryForVisa.toLowerCase())?.price ?? 0
-        : 0;
-    setLines((prev) => [
-      ...prev,
-      { packageId: pkg.id, packageName: pkg.name, quantity: 1, unitPrice },
-    ]);
+    if (!countryForVisa) {
+      await Swal.fire({
+        icon: "warning",
+        title: "Select passport country first",
+        text: "Please select a passport country above before adding packages. Package prices depend on the passport country.",
+      });
+      setShowAddPackage(false);
+      return;
+    }
+    const matchedPrice = pkg.visaPrices?.find(
+      (v) => v.country.trim().toLowerCase() === countryForVisa.toLowerCase()
+    )?.price;
+    const fallbackPrice = pkg.visaPrices?.[0]?.price;
+    const amount = matchedPrice ?? fallbackPrice ?? 0;
+    setLines((prev) => [...prev, { packageId: pkg.id, packageName: pkg.name, amount }]);
     setShowAddPackage(false);
   }
 
@@ -209,7 +225,7 @@ export default function CreateBookingForm({ nextTrackNumberDisplay, initialCusto
             campaignId: campaignId || null,
             status,
             notes: notes.trim() || null,
-            packages: lines.map((l) => ({ packageId: l.packageId, quantity: l.quantity, unitPrice: l.unitPrice })),
+            packages: lines.map((l) => ({ packageId: l.packageId, quantity: 1, unitPrice: l.amount })),
             profit: Number(profit) || 0,
             passportCountry: passportCountry.trim() || null,
           }),
@@ -231,7 +247,7 @@ export default function CreateBookingForm({ nextTrackNumberDisplay, initialCusto
             customerId,
             status,
             notes: notes.trim() || undefined,
-            packages: lines.map((l) => ({ packageId: l.packageId, quantity: l.quantity, unitPrice: l.unitPrice })),
+            packages: lines.map((l) => ({ packageId: l.packageId, quantity: 1, unitPrice: l.amount })),
             profit: Number(profit) || 0,
             passportCountry: passportCountry.trim() || null,
           }),
@@ -251,12 +267,12 @@ export default function CreateBookingForm({ nextTrackNumberDisplay, initialCusto
     }
   }
 
-  const packagesTotal = lines.reduce((sum, l) => sum + l.quantity * l.unitPrice, 0);
+  const packagesTotal = lines.reduce((sum, l) => sum + l.amount, 0);
   const profitAmount = Number(profit) || 0;
   const totalAmount = packagesTotal + profitAmount;
 
   return (
-    <form onSubmit={handleSubmit} className="max-w-2xl space-y-6">
+    <form onSubmit={handleSubmit} className="w-full max-w-6xl space-y-6">
       {error && (
         <p className="rounded-lg bg-red-50 px-4 py-2 text-sm text-red-800 dark:bg-red-900/30 dark:text-red-300">
           {error}
@@ -346,7 +362,7 @@ export default function CreateBookingForm({ nextTrackNumberDisplay, initialCusto
           <div>
             <h3 className="text-sm font-semibold text-zinc-900 dark:text-white">Packages</h3>
             <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
-              Each package is served per person. Quantity = number of persons.
+              Add packages and set the amount for each.
             </p>
           </div>
           {packages.length > 0 && (
@@ -411,8 +427,6 @@ export default function CreateBookingForm({ nextTrackNumberDisplay, initialCusto
                 <thead>
                   <tr className="border-b border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800/50">
                     <th className="px-4 py-3 text-left font-medium text-zinc-700 dark:text-zinc-300">Package</th>
-                    <th className="px-4 py-3 text-center font-medium text-zinc-700 dark:text-zinc-300">Persons</th>
-                    <th className="px-4 py-3 text-right font-medium text-zinc-700 dark:text-zinc-300">Price / person</th>
                     <th className="px-4 py-3 text-right font-medium text-zinc-700 dark:text-zinc-300">Amount</th>
                     <th className="w-16 px-2 py-3" />
                   </tr>
@@ -424,27 +438,15 @@ export default function CreateBookingForm({ nextTrackNumberDisplay, initialCusto
                       className="border-b border-zinc-100 last:border-0 dark:border-zinc-800"
                     >
                       <td className="px-4 py-3 font-medium text-zinc-900 dark:text-white">{line.packageName}</td>
-                      <td className="px-4 py-3 text-center">
-                        <input
-                          type="number"
-                          min={1}
-                          value={line.quantity}
-                          onChange={(e) => updateLine(index, { quantity: Math.max(1, Number(e.target.value) || 1) })}
-                          className="w-16 rounded-md border border-zinc-300 px-2 py-1.5 text-center text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
-                        />
-                      </td>
                       <td className="px-4 py-3 text-right">
                         <input
                           type="number"
                           min={0}
                           step={0.01}
-                          value={line.unitPrice}
-                          onChange={(e) => updateLine(index, { unitPrice: Number(e.target.value) || 0 })}
-                          className="w-24 rounded-md border border-zinc-300 px-2 py-1.5 text-right text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
+                          value={line.amount}
+                          onChange={(e) => updateLine(index, { amount: Number(e.target.value) || 0 })}
+                          className="w-28 rounded-md border border-zinc-300 px-2 py-1.5 text-right text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
                         />
-                      </td>
-                      <td className="px-4 py-3 text-right font-medium text-zinc-900 dark:text-white">
-                        ${(line.quantity * line.unitPrice).toLocaleString()}
                       </td>
                       <td className="px-2 py-3">
                         <button

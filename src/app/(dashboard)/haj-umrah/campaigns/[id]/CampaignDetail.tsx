@@ -10,8 +10,6 @@ import { CheckCircleIcon, XCircleIcon, EyeIcon, ReceiptIcon, UsersIcon, Calendar
 type PackageItem = {
   name: string;
   type: string;
-  quantity: number;
-  unitPrice: number;
   amount: number;
 };
 
@@ -475,13 +473,7 @@ export default function CampaignDetail({ campaign, canEdit, leaderView }: Props)
                   <thead>
                     <tr className="border-b border-zinc-200 text-left text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
                       <th className="pb-2 pr-3 font-medium">Package</th>
-                      <th className="pb-2 pr-3 text-center font-medium">Qty</th>
-                      {!leaderView && (
-                        <>
-                          <th className="pb-2 pr-3 text-right font-medium">Unit price</th>
-                          <th className="pb-2 text-right font-medium">Amount</th>
-                        </>
-                      )}
+                      {!leaderView && <th className="pb-2 text-right font-medium">Amount</th>}
                     </tr>
                   </thead>
                   <tbody>
@@ -491,16 +483,10 @@ export default function CampaignDetail({ campaign, canEdit, leaderView }: Props)
                           {p.name}
                           <span className="ml-1 text-zinc-500 dark:text-zinc-400">({p.type})</span>
                         </td>
-                        <td className="py-2 pr-3 text-center text-zinc-600 dark:text-zinc-400">{p.quantity}</td>
                         {!leaderView && (
-                          <>
-                            <td className="py-2 pr-3 text-right text-zinc-600 dark:text-zinc-400">
-                              ${p.unitPrice.toLocaleString()}
-                            </td>
-                            <td className="py-2 text-right font-medium text-zinc-900 dark:text-white">
-                              ${p.amount.toLocaleString()}
-                            </td>
-                          </>
+                          <td className="py-2 text-right font-medium text-zinc-900 dark:text-white">
+                            ${p.amount.toLocaleString()}
+                          </td>
                         )}
                       </tr>
                     ))}
