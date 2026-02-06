@@ -28,6 +28,8 @@ type Booking = {
   month: string;
   status: string;
   notes: string | null;
+  profit?: number | null;
+  paymentDate?: string | null;
   createdAt: string;
   canceledAt: string | null;
   packages: {

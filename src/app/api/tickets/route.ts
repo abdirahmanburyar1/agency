@@ -103,13 +103,19 @@ export async function POST(request: Request) {
     }
 
     // Payment: customer owes us (netSales) - generated when customer exists
+    // paymentDate: departure > return > ticket date (for reports/grouping by trip)
+    const paymentDate =
+      body.departure ? new Date(body.departure)
+      : body.return ? new Date(body.return)
+      : new Date(body.date);
+
     const netSales = Number(body.netSales ?? 0);
     if (netSales > 0 && (customerId || customerName)) {
       await prisma.payment.create({
         data: {
           date: new Date(body.date),
           month: body.month,
-          paymentDate: new Date(body.date),
+          paymentDate,
           status: "pending",
           name: body.airline ? `Ticket: ${body.airline}` : "Ticket",
           description: customerName ? `Customer: ${customerName}` : null,

@@ -41,6 +41,7 @@ export async function GET(
     return NextResponse.json({
       id: campaign.id,
       date: campaign.date.toISOString(),
+      returnDate: campaign.returnDate?.toISOString() ?? null,
       month: campaign.month,
       name: campaign.name,
       type: campaign.type,
@@ -129,11 +130,14 @@ export async function PATCH(
     const now = new Date();
     if (campaign.date <= now) return NextResponse.json({ error: "Campaign departure date and time have passed. It can no longer be edited." }, { status: 400 });
 
-    const updateData: { date?: Date; month?: string; name?: string | null; type?: string | null; leaderId?: string | null } = {};
+    const updateData: { date?: Date; month?: string; returnDate?: Date | null; name?: string | null; type?: string | null; leaderId?: string | null } = {};
     if (body.date != null) {
       const date = new Date(body.date);
       updateData.date = date;
       updateData.month = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+    }
+    if (body.returnDate !== undefined) {
+      updateData.returnDate = body.returnDate ? new Date(body.returnDate) : null;
     }
     if (body.name !== undefined) updateData.name = body.name ? String(body.name).trim() || null : null;
     if (body.type !== undefined) {
@@ -164,6 +168,7 @@ export async function PATCH(
     return NextResponse.json({
       id: updated.id,
       date: updated.date.toISOString(),
+      returnDate: updated.returnDate?.toISOString() ?? null,
       month: updated.month,
       name: updated.name,
       type: updated.type,

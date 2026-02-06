@@ -125,12 +125,17 @@ export async function PATCH(
         })
       );
     } else if (newNetSales > 0 && (customerId || customerName)) {
+      const paymentDate =
+        body.departure ? new Date(body.departure)
+        : body.return ? new Date(body.return)
+        : body.date ? new Date(body.date) : ticket.date;
+
       ops.push(
         prisma.payment.create({
           data: {
             date: body.date ? new Date(body.date) : ticket.date,
             month: body.month ?? ticket.month,
-            paymentDate: body.date ? new Date(body.date) : ticket.date,
+            paymentDate,
             status: "pending",
             name: (body.airline ?? ticket.airline)
               ? `Ticket: ${body.airline ?? ticket.airline}`

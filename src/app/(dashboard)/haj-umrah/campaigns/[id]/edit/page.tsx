@@ -75,10 +75,13 @@ export default async function EditCampaignPage({
   });
 
   const d = new Date(campaign.date);
+  const rd = campaign.returnDate ? new Date(campaign.returnDate) : null;
   const initialCampaign = {
     id: campaign.id,
     date: d.toISOString().slice(0, 10),
     time: d.toTimeString().slice(0, 5),
+    returnDate: rd ? rd.toISOString().slice(0, 10) : "",
+    returnTime: rd ? rd.toTimeString().slice(0, 5) : "14:00",
     name: campaign.name ?? "",
     type: (campaign.type as "haj" | "umrah") ?? "",
     leaderId: campaign.leaderId ?? "",

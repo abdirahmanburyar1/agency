@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-type Customer = { id: string; name: string; email: string | null; phone: string | null };
+type Customer = { id: string; name: string; email: string | null; phone: string | null; country?: string | null };
 
 const PER_PAGE_OPTIONS = [10, 25, 50, 100];
 
@@ -22,6 +22,7 @@ export default function CustomersTable({
   const [editName, setEditName] = useState("");
   const [editEmail, setEditEmail] = useState("");
   const [editPhone, setEditPhone] = useState("");
+  const [editCountry, setEditCountry] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -55,6 +56,7 @@ export default function CustomersTable({
     setEditName(c.name);
     setEditEmail(c.email ?? "");
     setEditPhone(c.phone ?? "");
+    setEditCountry(c.country ?? "");
     setError("");
   };
 
@@ -76,6 +78,7 @@ export default function CustomersTable({
           name: editName.trim(),
           email: editEmail.trim() || null,
           phone: editPhone.trim() || null,
+          country: editCountry.trim() || null,
         }),
       });
       const data = await res.json();
@@ -218,6 +221,18 @@ export default function CustomersTable({
                   type="text"
                   value={editPhone}
                   onChange={(e) => setEditPhone(e.target.value)}
+                  className="w-full rounded border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                  Country
+                </label>
+                <input
+                  type="text"
+                  value={editCountry}
+                  onChange={(e) => setEditCountry(e.target.value)}
+                  placeholder="For Haj/Umrah visa price"
                   className="w-full rounded border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
                 />
               </div>

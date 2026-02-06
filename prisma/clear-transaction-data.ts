@@ -28,6 +28,9 @@ async function main() {
   const adjustmentCount = await prisma.ticketAdjustment.deleteMany({});
   console.log(`  Deleted ${adjustmentCount.count} ticket adjustments`);
 
+  const payablePaymentCount = await prisma.payablePayment.deleteMany({});
+  console.log(`  Deleted ${payablePaymentCount.count} payable payments`);
+
   const payableCount = await prisma.payable.deleteMany({});
   console.log(`  Deleted ${payableCount.count} payables`);
 

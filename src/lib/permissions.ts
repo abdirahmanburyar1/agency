@@ -23,6 +23,7 @@ export const PERMISSION = {
   PAYABLES_VIEW: "payables.view",
   PAYABLES_CREATE: "payables.create",
   PAYABLES_EDIT: "payables.edit",
+  PAYABLES_APPROVE: "payables.approve",
   PAYABLES_DELETE: "payables.delete",
   PAYMENTS_VIEW: "payments.view",
   PAYMENTS_CREATE: "payments.create",

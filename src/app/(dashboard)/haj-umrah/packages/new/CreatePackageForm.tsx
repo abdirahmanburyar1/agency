@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+
+type VisaPrice = { country: string; price: number };
 
 export default function CreatePackageForm() {
   const router = useRouter();
@@ -12,8 +14,17 @@ export default function CreatePackageForm() {
   const [defaultPrice, setDefaultPrice] = useState("");
   const [durationDays, setDurationDays] = useState("");
   const [isActive, setIsActive] = useState(true);
+  const [visaPrices, setVisaPrices] = useState<VisaPrice[]>([]);
+  const [countries, setCountries] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    fetch("/api/settings/ticket-options")
+      .then((r) => r.json())
+      .then((data) => setCountries(Array.isArray(data?.country) ? data.country : []))
+      .catch(() => {});
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -39,6 +50,7 @@ export default function CreatePackageForm() {
           defaultPrice: price,
           durationDays: durationDays ? Number(durationDays) || null : null,
           isActive,
+          visaPrices: visaPrices.filter((v) => v.country.trim() && v.price >= 0),
         }),
       });
       const data = await res.json();
@@ -116,6 +128,61 @@ export default function CreatePackageForm() {
           />
         </div>
       </div>
+      <div>
+        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+          Visa price by country (optional)
+        </label>
+        <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+          Add country-specific visa prices. Used when creating bookings for customers with a country.
+        </p>
+        <div className="mt-2 space-y-2">
+          {visaPrices.map((v, i) => (
+            <div key={i} className="flex flex-wrap items-center gap-2">
+              <input
+                type="text"
+                list="visa-country-list"
+                value={v.country}
+                onChange={(e) =>
+                  setVisaPrices((prev) => prev.map((p, j) => (j === i ? { ...p, country: e.target.value } : p)))
+                }
+                placeholder="Country"
+                className="w-40 rounded border border-zinc-300 px-2 py-1.5 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
+              />
+              <datalist id="visa-country-list">
+                {countries.map((c) => (
+                  <option key={c} value={c} />
+                ))}
+              </datalist>
+              <input
+                type="number"
+                min={0}
+                step={0.01}
+                value={v.price || ""}
+                onChange={(e) =>
+                  setVisaPrices((prev) => prev.map((p, j) => (j === i ? { ...p, price: Number(e.target.value) || 0 } : p)))
+                }
+                placeholder="Price"
+                className="w-24 rounded border border-zinc-300 px-2 py-1.5 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
+              />
+              <button
+                type="button"
+                onClick={() => setVisaPrices((prev) => prev.filter((_, j) => j !== i))}
+                className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
+              >
+                Remove
+              </button>
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={() => setVisaPrices((prev) => [...prev, { country: "", price: 0 }])}
+            className="text-sm font-medium text-teal-600 hover:text-teal-700 dark:text-teal-400 dark:hover:text-teal-300"
+          >
+            + Add visa price
+          </button>
+        </div>
+      </div>
+
       <div className="flex items-center gap-2">
         <input
           type="checkbox"

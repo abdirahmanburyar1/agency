@@ -42,6 +42,7 @@ export async function POST(request: Request) {
         name,
         email: body.email ? String(body.email).trim() || null : null,
         phone: body.phone ? String(body.phone).trim() || null : null,
+        country: body.country ? String(body.country).trim() || null : null,
       },
     });
     return NextResponse.json(customer);

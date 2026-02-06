@@ -27,7 +27,9 @@ export async function GET(
       },
     });
     if (!booking) return NextResponse.json({ error: "Booking not found" }, { status: 404 });
-    const totalAmount = booking.packages.reduce((sum, bp) => sum + Number(bp.amount), 0);
+    const packagesTotal = booking.packages.reduce((sum, bp) => sum + Number(bp.amount), 0);
+    const profitAmount = booking.profit != null ? Number(booking.profit) : 0;
+    const totalAmount = packagesTotal + profitAmount;
     const campaignPayload = booking.campaign
       ? {
           id: booking.campaign.id,
@@ -50,6 +52,8 @@ export async function GET(
       month: booking.month,
       status: booking.status,
       notes: booking.notes,
+      profit: booking.profit != null ? Number(booking.profit) : null,
+      paymentDate: booking.paymentDate?.toISOString().slice(0, 10) ?? null,
       createdAt: booking.createdAt.toISOString(),
       canceledAt: booking.canceledAt?.toISOString() ?? null,
       packages: booking.packages.map((bp) => ({
@@ -96,11 +100,20 @@ export async function PATCH(
       date?: Date;
       month?: string;
       trackNumber?: number;
+      profit?: number | null;
+      paymentDate?: Date | null;
     } = {};
     if (status !== undefined) updateData.status = status;
     if (status === "canceled") updateData.canceledAt = new Date();
     else if (status && status !== "canceled") updateData.canceledAt = null;
     if (body.notes !== undefined) updateData.notes = body.notes ? String(body.notes).trim() || null : null;
+    if (body.profit !== undefined) {
+      const p = Number(body.profit);
+      updateData.profit = !Number.isNaN(p) && p >= 0 ? p : null;
+    }
+    if (body.paymentDate !== undefined) {
+      updateData.paymentDate = body.paymentDate ? new Date(String(body.paymentDate)) : null;
+    }
 
     const customerId = body.customerId != null ? String(body.customerId).trim() : undefined;
     if (customerId !== undefined && customerId) updateData.customerId = customerId;
@@ -211,7 +224,9 @@ export async function PATCH(
       },
       { timeout: 15000 }
     );
-    const totalAmount = booking.packages.reduce((sum, bp) => sum + Number(bp.amount), 0);
+    const packagesTotal = booking.packages.reduce((sum, bp) => sum + Number(bp.amount), 0);
+    const profitAmount = booking.profit != null ? Number(booking.profit) : 0;
+    const totalAmount = packagesTotal + profitAmount;
 
     // When booking is confirmed, create payment automatically if none exists (or previous was refunded/reinitiated)
     if (status === "confirmed" && totalAmount > 0 && booking.customer) {
@@ -225,11 +240,12 @@ export async function PATCH(
               ? String(booking.trackNumber).padStart(3, "0")
               : String(booking.trackNumber)
             : "";
+        const effectivePaymentDate = booking.paymentDate ?? booking.date;
         const payment = await prisma.payment.create({
           data: {
             date: booking.date,
             month: booking.month,
-            paymentDate: booking.date,
+            paymentDate: effectivePaymentDate,
             status: "pending",
             name: trackDisplay ? `Haj & Umrah #${trackDisplay}` : "Haj & Umrah",
             description: booking.customer.name ? `Customer: ${booking.customer.name}` : null,

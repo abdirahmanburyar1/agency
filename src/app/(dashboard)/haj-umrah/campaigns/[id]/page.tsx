@@ -32,6 +32,7 @@ export default async function CampaignPage({
   const serialized = {
     id: campaign.id,
     date: campaign.date.toISOString(),
+    returnDate: campaign.returnDate?.toISOString() ?? null,
     month: campaign.month,
     name: campaign.name,
     type: campaign.type,

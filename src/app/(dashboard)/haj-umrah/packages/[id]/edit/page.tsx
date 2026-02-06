@@ -12,7 +12,10 @@ export default async function EditPackagePage({
 }) {
   await requirePermission(PERMISSION.HAJ_UMRAH_EDIT, { redirectOnForbidden: true });
   const { id } = await params;
-  const pkg = await prisma.hajUmrahPackage.findUnique({ where: { id } });
+  const pkg = await prisma.hajUmrahPackage.findUnique({
+    where: { id },
+    include: { visaPrices: true },
+  });
   if (!pkg) notFound();
 
   return (
@@ -31,6 +34,7 @@ export default async function EditPackagePage({
         initialDefaultPrice={Number(pkg.defaultPrice)}
         initialDurationDays={pkg.durationDays ?? ""}
         initialIsActive={pkg.isActive}
+        initialVisaPrices={pkg.visaPrices.map((v) => ({ country: v.country, price: Number(v.price) }))}
       />
     </main>
   );

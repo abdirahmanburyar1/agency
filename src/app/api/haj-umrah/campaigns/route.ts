@@ -30,6 +30,7 @@ export async function GET(request: Request) {
       campaigns.map((c) => ({
         id: c.id,
         date: c.date.toISOString(),
+        returnDate: c.returnDate?.toISOString() ?? null,
         month: c.month,
         name: c.name,
         type: c.type,
@@ -59,6 +60,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const date = body.date ? new Date(body.date) : new Date();
     const month = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+    const returnDate = body.returnDate ? new Date(body.returnDate) : null;
     const name = body.name ? String(body.name).trim() || null : null;
     const type = body.type ? String(body.type).toLowerCase() : null;
     if (type && type !== "haj" && type !== "umrah") {
@@ -70,12 +72,13 @@ export async function POST(request: Request) {
       if (!user) return NextResponse.json({ error: "Invalid leader user" }, { status: 400 });
     }
     const campaign = await prisma.hajUmrahCampaign.create({
-      data: { date, month, name, type, leaderId },
+      data: { date, month, returnDate, name, type, leaderId },
       include: { leader: { select: { id: true, name: true, email: true } } },
     });
     return NextResponse.json({
       id: campaign.id,
       date: campaign.date.toISOString(),
+      returnDate: campaign.returnDate?.toISOString() ?? null,
       month: campaign.month,
       name: campaign.name,
       type: campaign.type,

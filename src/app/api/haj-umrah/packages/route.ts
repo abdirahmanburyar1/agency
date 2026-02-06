@@ -18,6 +18,7 @@ export async function GET(request: Request) {
     const packages = await prisma.hajUmrahPackage.findMany({
       where: activeOnly ? { isActive: true } : undefined,
       orderBy: [{ type: "asc" }, { name: "asc" }],
+      include: { visaPrices: true },
     });
     return NextResponse.json(
       packages.map((p) => ({
@@ -29,6 +30,7 @@ export async function GET(request: Request) {
         durationDays: p.durationDays,
         isActive: p.isActive,
         createdAt: p.createdAt.toISOString(),
+        visaPrices: p.visaPrices.map((v) => ({ country: v.country, price: Number(v.price) })),
       }))
     );
   } catch (error) {
@@ -57,6 +59,12 @@ export async function POST(request: Request) {
     if (Number.isNaN(defaultPrice) || defaultPrice < 0) {
       return NextResponse.json({ error: "Valid default price is required" }, { status: 400 });
     }
+    const visaPrices = Array.isArray(body.visaPrices)
+      ? body.visaPrices
+          .filter((v: unknown) => v && typeof v === "object" && typeof (v as { country?: unknown }).country === "string" && typeof (v as { price?: unknown }).price === "number")
+          .map((v: { country: string; price: number }) => ({ country: String(v.country).trim(), price: v.price }))
+          .filter((v) => v.country && v.price >= 0)
+      : [];
     const pkg = await prisma.hajUmrahPackage.create({
       data: {
         name,
@@ -65,7 +73,12 @@ export async function POST(request: Request) {
         defaultPrice,
         durationDays: body.durationDays != null ? Number(body.durationDays) || null : null,
         isActive: body.isActive !== false,
+        visaPrices: visaPrices.length > 0 ? { create: visaPrices } : undefined,
       },
+    });
+    const withPrices = await prisma.hajUmrahPackage.findUnique({
+      where: { id: pkg.id },
+      include: { visaPrices: true },
     });
     return NextResponse.json({
       id: pkg.id,
@@ -76,6 +89,7 @@ export async function POST(request: Request) {
       durationDays: pkg.durationDays,
       isActive: pkg.isActive,
       createdAt: pkg.createdAt.toISOString(),
+      visaPrices: withPrices?.visaPrices.map((v) => ({ country: v.country, price: Number(v.price) })) ?? [],
     });
   } catch (error) {
     console.error("Haj Umrah package POST error:", error);

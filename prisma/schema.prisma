@@ -107,6 +107,7 @@ model Customer {
   name      String   @map("name")
   email     String?  @map("email")
   phone     String?  @map("phone")
+  country   String?  @map("country")
   createdAt DateTime @default(now()) @map("created_at")
 
   tickets       Ticket[]
@@ -248,11 +249,35 @@ model Payable {
   ticket          Ticket?          @relation(fields: [ticketId], references: [id], onDelete: SetNull)
   visa            Visa?            @relation(fields: [visaId], references: [id], onDelete: SetNull)
   hajUmrahBooking HajUmrahBooking? @relation(fields: [hajUmrahBookingId], references: [id], onDelete: SetNull)
+  payments        PayablePayment[]
 
   @@index([ticketId])
   @@index([visaId])
   @@index([hajUmrahBookingId])
   @@map("payables")
+}
+
+model PayablePayment {
+  id          String    @id @default(cuid())
+  date        DateTime  @map("date")
+  amount      Decimal   @map("amount") @db.Decimal(12, 2)
+  pMethod     String?   @map("p_method")
+  account     String?   @map("account")
+  reference   String?   @map("reference")
+  status      String    @default("pending") @map("status") // pending | approved | paid
+  submittedBy String?   @map("submitted_by")
+  approvedBy  String?   @map("approved_by")
+  approvedAt  DateTime? @map("approved_at")
+  paidBy      String?   @map("paid_by")
+  paidAt      DateTime? @map("paid_at")
+  payableId   String    @map("payable_id")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  payable Payable @relation(fields: [payableId], references: [id], onDelete: Cascade)
+
+  @@index([payableId])
+  @@index([status])
+  @@map("payable_payments")
 }
 
 model Payment {
@@ -304,6 +329,7 @@ model Receipt {
 model HajUmrahCampaign {
   id          String    @id @default(cuid())
   date        DateTime  @map("date")   // departure date and time (e.g. 10 Feb 2026 14:00)
+  returnDate  DateTime? @map("return_date") // returning date and time (optional)
   month       String    @map("month") // YYYY-MM for grouping
   name        String?   @map("name")  // optional label e.g. "February Group 1"
   type        String?   @map("type")  // haj | umrah optional
@@ -332,10 +358,25 @@ model HajUmrahPackage {
   updatedAt     DateTime @updatedAt @map("updated_at")
 
   bookingPackages HajUmrahBookingPackage[]
+  visaPrices     HajUmrahPackageVisaPrice[]
 
   @@index([type])
   @@index([isActive])
   @@map("haj_umrah_packages")
+}
+
+model HajUmrahPackageVisaPrice {
+  id        String   @id @default(cuid())
+  packageId String   @map("package_id")
+  country   String   @map("country")
+  price     Decimal  @map("price") @db.Decimal(12, 2)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  package HajUmrahPackage @relation(fields: [packageId], references: [id], onDelete: Cascade)
+
+  @@unique([packageId, country])
+  @@index([packageId])
+  @@map("haj_umrah_package_visa_prices")
 }
 
 model HajUmrahBooking {
@@ -347,6 +388,8 @@ model HajUmrahBooking {
   month       String    @map("month")
   status      String    @default("draft") @map("status") // draft | confirmed | canceled
   notes       String?   @map("notes")
+  profit      Decimal?  @map("profit") @db.Decimal(12, 2) // extra profit added to total
+  paymentDate DateTime? @map("payment_date") // when payment is due/expected (for reports); defaults to date
   createdAt   DateTime  @default(now()) @map("created_at")
   canceledAt  DateTime? @map("canceled_at")
 

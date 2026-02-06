@@ -9,6 +9,7 @@ export default function CreateCustomerForm() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [country, setCountry] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -20,7 +21,12 @@ export default function CreateCustomerForm() {
       const res = await fetch("/api/customers", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim(), email: email.trim() || null, phone: phone.trim() || null }),
+        body: JSON.stringify({
+          name: name.trim(),
+          email: email.trim() || null,
+          phone: phone.trim() || null,
+          country: country.trim() || null,
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -75,6 +81,16 @@ export default function CreateCustomerForm() {
             type="text"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
+            className="mt-1 w-full rounded border border-zinc-300 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">Country</label>
+          <input
+            type="text"
+            value={country}
+            onChange={(e) => setCountry(e.target.value)}
+            placeholder="Used for Haj/Umrah visa price"
             className="mt-1 w-full rounded border border-zinc-300 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
           />
         </div>

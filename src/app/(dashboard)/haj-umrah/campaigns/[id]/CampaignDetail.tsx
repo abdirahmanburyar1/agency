@@ -32,6 +32,7 @@ type Booking = {
 type Campaign = {
   id: string;
   date: string;
+  returnDate: string | null;
   month: string;
   name: string | null;
   type: string | null;
@@ -61,6 +62,12 @@ export default function CampaignDetail({ campaign, canEdit, leaderView }: Props)
     year: "numeric",
   });
   const timeDisplay = d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false });
+  const returnDateDisplay = campaign.returnDate
+    ? (() => {
+        const rd = new Date(campaign.returnDate!);
+        return `${rd.toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" })} ${rd.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false })}`;
+      })()
+    : null;
   const campaignDateInFuture = d > new Date();
   const isCanceled = !!campaign.canceledAt;
   const draftBookings = campaign.bookings.filter((b) => b.status === "draft" && !b.canceledAt);
@@ -211,6 +218,12 @@ export default function CampaignDetail({ campaign, canEdit, leaderView }: Props)
         <div>
           <h1 className="text-xl font-semibold text-zinc-900 dark:text-white">
             Campaign — {dateDisplay} {timeDisplay}
+            {returnDateDisplay && (
+              <>
+                {" "}
+                · Return {returnDateDisplay}
+              </>
+            )}
             {campaign.name ? ` (${campaign.name})` : ""}
             {campaign.leader ? ` · Leader: ${campaign.leader.name?.trim() || campaign.leader.email}` : ""}
             {campaign.type ? ` · ${campaign.type}` : ""}

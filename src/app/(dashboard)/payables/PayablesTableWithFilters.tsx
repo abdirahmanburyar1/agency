@@ -413,7 +413,14 @@ export default function PayablesTableWithFilters({ payables: allPayables }: Paya
                       "—"
                     )}
                   </td>
-                  <td className="px-4 py-3 text-zinc-700 dark:text-zinc-300">{p.name ?? "—"}</td>
+                  <td className="px-4 py-3 text-zinc-700 dark:text-zinc-300">
+                    <Link
+                      href={`/payables/${p.id}`}
+                      className="text-blue-600 hover:underline dark:text-blue-400"
+                    >
+                      {p.name ?? "—"}
+                    </Link>
+                  </td>
                   <td className="px-4 py-3 text-zinc-700 dark:text-zinc-300">{p.description ?? "—"}</td>
                   <td className="px-4 py-3 text-right text-zinc-700 dark:text-zinc-300">
                     ${p.amount.toLocaleString()}

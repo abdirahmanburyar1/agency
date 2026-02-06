@@ -17,7 +17,9 @@ export async function GET() {
     perms.includes(PERMISSION.TICKETS_VIEW) ||
     perms.includes(PERMISSION.TICKETS_CREATE) ||
     perms.includes(PERMISSION.VISAS_VIEW) ||
-    perms.includes(PERMISSION.VISAS_CREATE);
+    perms.includes(PERMISSION.VISAS_CREATE) ||
+    perms.includes(PERMISSION.HAJ_UMRAH_VIEW) ||
+    perms.includes(PERMISSION.HAJ_UMRAH_CREATE);
   if (!canView) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }

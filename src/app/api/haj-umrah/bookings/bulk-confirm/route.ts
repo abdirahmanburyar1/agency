@@ -57,7 +57,9 @@ export async function POST(request: Request) {
         .filter(Boolean) as string[]
     );
     for (const booking of confirmedBookings) {
-      const totalAmount = booking.packages.reduce((sum, bp) => sum + Number(bp.amount), 0);
+      const packagesTotal = booking.packages.reduce((sum, bp) => sum + Number(bp.amount), 0);
+      const profitAmount = booking.profit != null ? Number(booking.profit) : 0;
+      const totalAmount = packagesTotal + profitAmount;
       if (totalAmount > 0 && booking.customer && !existingPaymentBookingIds.has(booking.id)) {
         const trackDisplay =
           booking.trackNumber != null
@@ -65,11 +67,12 @@ export async function POST(request: Request) {
               ? String(booking.trackNumber).padStart(3, "0")
               : String(booking.trackNumber)
             : "";
+        const effectivePaymentDate = booking.paymentDate ?? booking.date;
         const payment = await prisma.payment.create({
           data: {
             date: booking.date,
             month: booking.month,
-            paymentDate: booking.date,
+            paymentDate: effectivePaymentDate,
             status: "pending",
             name: trackDisplay ? `Haj & Umrah #${trackDisplay}` : "Haj & Umrah",
             description: booking.customer.name ? `Customer: ${booking.customer.name}` : null,

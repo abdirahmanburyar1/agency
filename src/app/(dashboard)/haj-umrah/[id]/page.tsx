@@ -28,7 +28,9 @@ export default async function HajUmrahBookingPage({
   });
   if (!booking) notFound();
 
-  const totalAmount = booking.packages.reduce((sum, bp) => sum + Number(bp.amount), 0);
+  const packagesTotal = booking.packages.reduce((sum, bp) => sum + Number(bp.amount), 0);
+  const profitAmount = booking.profit != null ? Number(booking.profit) : 0;
+  const totalAmount = packagesTotal + profitAmount;
   const trackNumberDisplay =
     booking.trackNumber != null
       ? booking.trackNumber < 1000
@@ -75,6 +77,8 @@ export default async function HajUmrahBookingPage({
     month: booking.month,
     status: booking.status,
     notes: booking.notes,
+    profit: booking.profit != null ? Number(booking.profit) : null,
+    paymentDate: booking.paymentDate?.toISOString().slice(0, 10) ?? null,
     createdAt: booking.createdAt.toISOString(),
     canceledAt: booking.canceledAt?.toISOString() ?? null,
     payments: booking.payments.map((p) => {

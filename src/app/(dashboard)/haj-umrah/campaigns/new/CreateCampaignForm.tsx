@@ -17,6 +17,8 @@ export default function CreateCampaignForm({ users }: Props) {
   const defaultTime = "14:00";
   const [date, setDate] = useState(defaultDate);
   const [time, setTime] = useState(defaultTime);
+  const [returnDate, setReturnDate] = useState("");
+  const [returnTime, setReturnTime] = useState("14:00");
   const [name, setName] = useState("");
   const [type, setType] = useState<"haj" | "umrah" | "">("");
   const [leaderId, setLeaderId] = useState("");
@@ -29,11 +31,14 @@ export default function CreateCampaignForm({ users }: Props) {
     setLoading(true);
     try {
       const dateTime = new Date(`${date}T${time}:00`);
+      const returnDateTime =
+        returnDate && returnTime ? new Date(`${returnDate}T${returnTime}:00`).toISOString() : null;
       const res = await fetch("/api/haj-umrah/campaigns", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           date: dateTime.toISOString(),
+          returnDate: returnDateTime,
           name: name.trim() || null,
           type: type || null,
           leaderId: leaderId.trim() || null,
@@ -79,6 +84,26 @@ export default function CreateCampaignForm({ users }: Props) {
             onChange={(e) => setTime(e.target.value)}
             className="mt-1 w-full rounded border border-zinc-300 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
             required
+          />
+        </div>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">Returning date (optional)</label>
+          <input
+            type="date"
+            value={returnDate}
+            onChange={(e) => setReturnDate(e.target.value)}
+            className="mt-1 w-full rounded border border-zinc-300 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">Returning time (optional)</label>
+          <input
+            type="time"
+            value={returnTime}
+            onChange={(e) => setReturnTime(e.target.value)}
+            className="mt-1 w-full rounded border border-zinc-300 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
           />
         </div>
       </div>

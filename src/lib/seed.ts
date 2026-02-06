@@ -22,6 +22,7 @@ const PERMISSIONS = [
   { code: "payables.view", name: "View Payables", resource: "payables", action: "view" },
   { code: "payables.create", name: "Create Payables", resource: "payables", action: "create" },
   { code: "payables.edit", name: "Edit Payables", resource: "payables", action: "edit" },
+  { code: "payables.approve", name: "Approve Payable Payments", resource: "payables", action: "approve" },
   { code: "payables.delete", name: "Delete Payables", resource: "payables", action: "delete" },
   { code: "payments.view", name: "View Payments", resource: "payments", action: "view" },
   { code: "payments.create", name: "Create Payments", resource: "payments", action: "create" },

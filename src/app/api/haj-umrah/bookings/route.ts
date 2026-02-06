@@ -55,7 +55,7 @@ export async function GET() {
           unitPrice: Number(bp.unitPrice),
           amount: Number(bp.amount),
         })),
-        totalAmount: b.packages.reduce((sum, bp) => sum + Number(bp.amount), 0),
+        totalAmount: b.packages.reduce((sum, bp) => sum + Number(bp.amount), 0) + (b.profit != null ? Number(b.profit) : 0),
       }))
     );
   } catch (error) {
@@ -109,6 +109,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid status" }, { status: 400 });
     }
     const notes = body.notes ? String(body.notes).trim() || null : null;
+    const profit = body.profit != null ? Number(body.profit) : null;
+    const paymentDateInput = body.paymentDate ? String(body.paymentDate).trim() || null : null;
+    const paymentDateValue = paymentDateInput ? new Date(paymentDateInput) : null;
 
     const booking = await prisma.$transaction(async (tx) => {
       const lastBooking = await tx.hajUmrahBooking.findFirst({
@@ -118,7 +121,17 @@ export async function POST(request: Request) {
       });
       const nextTrackNumber = (lastBooking?.trackNumber ?? 0) + 1;
       const b = await tx.hajUmrahBooking.create({
-        data: { customerId, campaignId, date, month, trackNumber: nextTrackNumber, status, notes },
+        data: {
+          customerId,
+          campaignId,
+          date,
+          month,
+          trackNumber: nextTrackNumber,
+          status,
+          notes,
+          profit: profit != null && !Number.isNaN(profit) && profit >= 0 ? profit : null,
+          paymentDate: paymentDateValue,
+        },
       });
       for (const line of packageLines) {
         const packageId = String(line.packageId ?? "").trim();
@@ -136,7 +149,9 @@ export async function POST(request: Request) {
       });
     });
 
-    const totalAmount = booking.packages.reduce((sum, bp) => sum + Number(bp.amount), 0);
+    const packagesTotal = booking.packages.reduce((sum, bp) => sum + Number(bp.amount), 0);
+    const profitAmount = booking.profit != null ? Number(booking.profit) : 0;
+    const totalAmount = packagesTotal + profitAmount;
 
     // Create payment only when booking is confirmed: customer owes us totalAmount
     if (status === "confirmed" && totalAmount > 0 && booking.customer) {
@@ -147,11 +162,12 @@ export async function POST(request: Request) {
             ? String(booking.trackNumber).padStart(3, "0")
             : String(booking.trackNumber)
           : "";
+      const effectivePaymentDate = booking.paymentDate ?? booking.date;
       await prisma.payment.create({
         data: {
           date: booking.date,
           month: booking.month,
-          paymentDate: booking.date,
+          paymentDate: effectivePaymentDate,
           status: "pending",
           name: trackDisplay ? `Haj & Umrah #${trackDisplay}` : "Haj & Umrah",
           description: customerName ? `Customer: ${customerName}` : null,

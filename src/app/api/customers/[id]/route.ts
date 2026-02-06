@@ -54,6 +54,7 @@ export async function PUT(
         ...(name !== undefined && { name }),
         ...(body.email !== undefined && { email: body.email ? String(body.email).trim() || null : null }),
         ...(body.phone !== undefined && { phone: body.phone ? String(body.phone).trim() || null : null }),
+        ...(body.country !== undefined && { country: body.country ? String(body.country).trim() || null : null }),
       },
     });
     return NextResponse.json(customer);

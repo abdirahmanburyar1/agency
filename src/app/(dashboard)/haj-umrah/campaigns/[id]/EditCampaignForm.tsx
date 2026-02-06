@@ -10,6 +10,8 @@ type InitialCampaign = {
   id: string;
   date: string;
   time: string;
+  returnDate: string;
+  returnTime: string;
   name: string;
   type: "haj" | "umrah" | "";
   leaderId: string;
@@ -25,6 +27,8 @@ export default function EditCampaignForm({ campaignId, initial, users }: Props) 
   const router = useRouter();
   const [date, setDate] = useState(initial.date);
   const [time, setTime] = useState(initial.time);
+  const [returnDate, setReturnDate] = useState(initial.returnDate);
+  const [returnTime, setReturnTime] = useState(initial.returnTime);
   const [name, setName] = useState(initial.name);
   const [type, setType] = useState<"haj" | "umrah" | "">(initial.type);
   const [leaderId, setLeaderId] = useState(initial.leaderId);
@@ -37,11 +41,14 @@ export default function EditCampaignForm({ campaignId, initial, users }: Props) 
     setLoading(true);
     try {
       const dateTime = new Date(`${date}T${time}:00`);
+      const returnDateTime =
+        returnDate && returnTime ? new Date(`${returnDate}T${returnTime}:00`).toISOString() : null;
       const res = await fetch(`/api/haj-umrah/campaigns/${campaignId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           date: dateTime.toISOString(),
+          returnDate: returnDateTime,
           name: name.trim() || null,
           type: type || null,
           leaderId: leaderId.trim() || null,
@@ -87,6 +94,26 @@ export default function EditCampaignForm({ campaignId, initial, users }: Props) 
             onChange={(e) => setTime(e.target.value)}
             className="mt-1 w-full rounded border border-zinc-300 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
             required
+          />
+        </div>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">Returning date (optional)</label>
+          <input
+            type="date"
+            value={returnDate}
+            onChange={(e) => setReturnDate(e.target.value)}
+            className="mt-1 w-full rounded border border-zinc-300 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">Returning time (optional)</label>
+          <input
+            type="time"
+            value={returnTime}
+            onChange={(e) => setReturnTime(e.target.value)}
+            className="mt-1 w-full rounded border border-zinc-300 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
           />
         </div>
       </div>

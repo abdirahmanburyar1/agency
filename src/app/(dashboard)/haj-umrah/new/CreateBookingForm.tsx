@@ -5,8 +5,14 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import SearchableCustomerSelect from "@/components/SearchableCustomerSelect";
 
-type Customer = { id: string; name: string; phone?: string | null };
-type PackageOption = { id: string; name: string; type: string; defaultPrice: number };
+type Customer = { id: string; name: string; phone?: string | null; country?: string | null };
+type PackageOption = {
+  id: string;
+  name: string;
+  type: string;
+  defaultPrice: number;
+  visaPrices?: { country: string; price: number }[];
+};
 
 type PackageLine = {
   packageId: string;
@@ -25,6 +31,8 @@ type InitialBooking = {
   campaignId: string | null;
   status: string;
   notes: string | null;
+  profit?: number;
+  paymentDate?: string;
   packages: { packageId: string; packageName: string; quantity: number; unitPrice: number }[];
 };
 
@@ -47,6 +55,10 @@ export default function CreateBookingForm({ nextTrackNumberDisplay, initialCusto
   const [customerId, setCustomerId] = useState(initialCustomerId ?? initialBooking?.customerId ?? "");
   const [status, setStatus] = useState<"draft" | "confirmed">((initialBooking?.status as "draft" | "confirmed") ?? "draft");
   const [notes, setNotes] = useState(initialBooking?.notes ?? "");
+  const [profit, setProfit] = useState(initialBooking?.profit ?? 0);
+  const [paymentDate, setPaymentDate] = useState(
+    initialBooking?.paymentDate ?? ""
+  );
   const [lines, setLines] = useState<PackageLine[]>(
     initialBooking?.packages?.map((p) => ({ packageId: p.packageId, packageName: p.packageName, quantity: p.quantity, unitPrice: p.unitPrice })) ?? []
   );
@@ -55,6 +67,7 @@ export default function CreateBookingForm({ nextTrackNumberDisplay, initialCusto
   const [newCustomerName, setNewCustomerName] = useState("");
   const [newCustomerEmail, setNewCustomerEmail] = useState("");
   const [newCustomerPhone, setNewCustomerPhone] = useState("");
+  const [newCustomerCountry, setNewCustomerCountry] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -77,11 +90,24 @@ export default function CreateBookingForm({ nextTrackNumberDisplay, initialCusto
       setCustomerId(initialBooking.customerId);
       setStatus((initialBooking.status as "draft" | "confirmed") || "draft");
       setNotes(initialBooking.notes ?? "");
+      setProfit(initialBooking.profit ?? 0);
+      setPaymentDate(initialBooking.paymentDate ?? "");
       setLines(
         initialBooking.packages?.map((p) => ({ packageId: p.packageId, packageName: p.packageName, quantity: p.quantity, unitPrice: p.unitPrice })) ?? []
       );
     }
   }, [initialBooking?.id]);
+
+  // Default payment date when campaign changes (new bookings)
+  useEffect(() => {
+    if (!isEdit && campaignId && campaigns.length > 0) {
+      const c = campaigns.find((x) => x.id === campaignId);
+      if (c) {
+        const d = c.date.slice(0, 10);
+        setPaymentDate((prev) => (prev ? prev : d));
+      }
+    }
+  }, [campaignId, campaigns, isEdit]);
   useEffect(() => {
     fetch("/api/haj-umrah/packages?active=true")
       .then((r) => r.json())
@@ -97,9 +123,16 @@ export default function CreateBookingForm({ nextTrackNumberDisplay, initialCusto
 
   function addPackage(pkg: PackageOption) {
     if (lines.some((l) => l.packageId === pkg.id)) return;
+    const customer = customers.find((c) => c.id === customerId);
+    const customerCountry = customer?.country?.trim() ?? null;
+    const visaPrice =
+      customerCountry && pkg.visaPrices?.length
+        ? pkg.visaPrices.find((v) => v.country.trim().toLowerCase() === customerCountry.toLowerCase())?.price ?? 0
+        : 0;
+    const unitPrice = pkg.defaultPrice + visaPrice;
     setLines((prev) => [
       ...prev,
-      { packageId: pkg.id, packageName: pkg.name, quantity: 1, unitPrice: pkg.defaultPrice },
+      { packageId: pkg.id, packageName: pkg.name, quantity: 1, unitPrice },
     ]);
     setShowAddPackage(false);
   }
@@ -126,6 +159,7 @@ export default function CreateBookingForm({ nextTrackNumberDisplay, initialCusto
           name,
           email: newCustomerEmail.trim() || null,
           phone: newCustomerPhone.trim() || null,
+          country: newCustomerCountry.trim() || null,
         }),
       });
       const data = await res.json();
@@ -140,6 +174,7 @@ export default function CreateBookingForm({ nextTrackNumberDisplay, initialCusto
       setNewCustomerName("");
       setNewCustomerEmail("");
       setNewCustomerPhone("");
+      setNewCustomerCountry("");
       setShowAddCustomerModal(false);
     } catch {
       setError("Failed to create customer");
@@ -173,6 +208,8 @@ export default function CreateBookingForm({ nextTrackNumberDisplay, initialCusto
             status,
             notes: notes.trim() || null,
             packages: lines.map((l) => ({ packageId: l.packageId, quantity: l.quantity, unitPrice: l.unitPrice })),
+            profit: Number(profit) || 0,
+            paymentDate: paymentDate || null,
           }),
         });
         const data = await res.json();
@@ -193,6 +230,8 @@ export default function CreateBookingForm({ nextTrackNumberDisplay, initialCusto
             status,
             notes: notes.trim() || undefined,
             packages: lines.map((l) => ({ packageId: l.packageId, quantity: l.quantity, unitPrice: l.unitPrice })),
+            profit: Number(profit) || 0,
+            paymentDate: paymentDate || null,
           }),
         });
         const data = await res.json();
@@ -210,7 +249,9 @@ export default function CreateBookingForm({ nextTrackNumberDisplay, initialCusto
     }
   }
 
-  const totalAmount = lines.reduce((sum, l) => sum + l.quantity * l.unitPrice, 0);
+  const packagesTotal = lines.reduce((sum, l) => sum + l.quantity * l.unitPrice, 0);
+  const profitAmount = Number(profit) || 0;
+  const totalAmount = packagesTotal + profitAmount;
 
   return (
     <form onSubmit={handleSubmit} className="max-w-2xl space-y-6">
@@ -357,11 +398,40 @@ export default function CreateBookingForm({ nextTrackNumberDisplay, initialCusto
                 </button>
               </div>
             ))}
-            <p className="text-right font-medium text-zinc-900 dark:text-white">
-              Total: ${totalAmount.toLocaleString()}
-            </p>
+            <div className="mt-2 flex flex-wrap items-center gap-4 border-t border-zinc-200 pt-2 dark:border-zinc-600">
+              <div className="flex items-center gap-2">
+                <label className="text-sm text-zinc-600 dark:text-zinc-400">Profit</label>
+                <input
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  value={profit || ""}
+                  onChange={(e) => setProfit(Number(e.target.value) || 0)}
+                  placeholder="0"
+                  className="w-24 rounded border border-zinc-300 px-2 py-1 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
+                />
+              </div>
+              <p className="text-right font-medium text-zinc-900 dark:text-white">
+                Total: ${totalAmount.toLocaleString()}
+              </p>
+            </div>
           </div>
         )}
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">Payment date</label>
+          <input
+            type="date"
+            value={paymentDate}
+            onChange={(e) => setPaymentDate(e.target.value)}
+            className="mt-1 w-full rounded border border-zinc-300 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
+          />
+          <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+            When payment is due/expected (for reports). Defaults to campaign date.
+          </p>
+        </div>
       </div>
 
       <div>
@@ -399,6 +469,7 @@ export default function CreateBookingForm({ nextTrackNumberDisplay, initialCusto
             setNewCustomerName("");
             setNewCustomerEmail("");
             setNewCustomerPhone("");
+            setNewCustomerCountry("");
             setError("");
           }}
         >
@@ -443,6 +514,13 @@ export default function CreateBookingForm({ nextTrackNumberDisplay, initialCusto
                 value={newCustomerPhone}
                 onChange={(e) => setNewCustomerPhone(e.target.value)}
                 placeholder="Phone"
+                className="w-full rounded border border-zinc-300 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
+              />
+              <input
+                type="text"
+                value={newCustomerCountry}
+                onChange={(e) => setNewCustomerCountry(e.target.value)}
+                placeholder="Country (for visa price)"
                 className="w-full rounded border border-zinc-300 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
               />
             </div>

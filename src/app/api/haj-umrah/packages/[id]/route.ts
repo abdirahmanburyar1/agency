@@ -17,7 +17,10 @@ export async function GET(
   }
   try {
     const { id } = await params;
-    const pkg = await prisma.hajUmrahPackage.findUnique({ where: { id } });
+    const pkg = await prisma.hajUmrahPackage.findUnique({
+      where: { id },
+      include: { visaPrices: true },
+    });
     if (!pkg) return NextResponse.json({ error: "Package not found" }, { status: 404 });
     return NextResponse.json({
       id: pkg.id,
@@ -29,6 +32,7 @@ export async function GET(
       isActive: pkg.isActive,
       createdAt: pkg.createdAt.toISOString(),
       updatedAt: pkg.updatedAt.toISOString(),
+      visaPrices: pkg.visaPrices.map((v) => ({ country: v.country, price: Number(v.price) })),
     });
   } catch (error) {
     console.error("Haj Umrah package GET error:", error);
@@ -62,6 +66,12 @@ export async function PATCH(
     if (defaultPrice !== undefined && (Number.isNaN(defaultPrice) || defaultPrice < 0)) {
       return NextResponse.json({ error: "Invalid default price" }, { status: 400 });
     }
+    const visaPrices = Array.isArray(body.visaPrices)
+      ? body.visaPrices
+          .filter((v: unknown) => v && typeof v === "object" && typeof (v as { country?: unknown }).country === "string" && typeof (v as { price?: unknown }).price === "number")
+          .map((v: { country: string; price: number }) => ({ country: String(v.country).trim(), price: v.price }))
+          .filter((v) => v.country && v.price >= 0)
+      : undefined;
     const pkg = await prisma.hajUmrahPackage.update({
       where: { id },
       data: {
@@ -71,7 +81,14 @@ export async function PATCH(
         ...(defaultPrice !== undefined && { defaultPrice }),
         ...(body.durationDays !== undefined && { durationDays: body.durationDays != null ? Number(body.durationDays) || null : null }),
         ...(body.isActive !== undefined && { isActive: Boolean(body.isActive) }),
+        ...(visaPrices !== undefined && {
+          visaPrices: { deleteMany: {}, create: visaPrices },
+        }),
       },
+    });
+    const withPrices = await prisma.hajUmrahPackage.findUnique({
+      where: { id: pkg.id },
+      include: { visaPrices: true },
     });
     return NextResponse.json({
       id: pkg.id,
@@ -82,6 +99,7 @@ export async function PATCH(
       durationDays: pkg.durationDays,
       isActive: pkg.isActive,
       updatedAt: pkg.updatedAt.toISOString(),
+      visaPrices: withPrices?.visaPrices.map((v) => ({ country: v.country, price: Number(v.price) })) ?? [],
     });
   } catch (error) {
     console.error("Haj Umrah package PATCH error:", error);
