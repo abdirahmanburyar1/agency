@@ -63,7 +63,7 @@ export default function CreateBookingForm({ nextTrackNumberDisplay, initialCusto
     initialBooking?.packages?.map((p) => ({
       packageId: p.packageId,
       packageName: p.packageName,
-      amount: p.quantity * p.unitPrice,
+      amount: p.amount,
     })) ?? []
   );
   const [showAddPackage, setShowAddPackage] = useState(false);
@@ -100,7 +100,7 @@ export default function CreateBookingForm({ nextTrackNumberDisplay, initialCusto
         initialBooking.packages?.map((p) => ({
           packageId: p.packageId,
           packageName: p.packageName,
-          amount: p.quantity * p.unitPrice,
+          amount: p.amount,
         })) ?? []
       );
     }
