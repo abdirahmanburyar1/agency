@@ -63,7 +63,7 @@ export async function POST(request: Request) {
       ? body.visaPrices
           .filter((v: unknown) => v && typeof v === "object" && typeof (v as { country?: unknown }).country === "string" && typeof (v as { price?: unknown }).price === "number")
           .map((v: { country: string; price: number }) => ({ country: String(v.country).trim(), price: v.price }))
-          .filter((v) => v.country && v.price >= 0)
+          .filter((v: { country: string; price: number }) => v.country && v.price >= 0)
       : [];
     const pkg = await prisma.hajUmrahPackage.create({
       data: {
