@@ -11,7 +11,7 @@ type Props = {
   initialName: string;
   initialType: "haj" | "umrah";
   initialDescription: string;
-  initialDefaultPrice: number;
+  initialDefaultPrice: number | null;
   initialDurationDays: number | "";
   initialIsActive: boolean;
   initialVisaPrices?: VisaPrice[];
@@ -31,7 +31,7 @@ export default function EditPackageForm({
   const [name, setName] = useState(initialName);
   const [type, setType] = useState<"haj" | "umrah">(initialType);
   const [description, setDescription] = useState(initialDescription);
-  const [defaultPrice, setDefaultPrice] = useState(String(initialDefaultPrice));
+  const [defaultPrice, setDefaultPrice] = useState(initialDefaultPrice != null ? String(initialDefaultPrice) : "");
   const [durationDays, setDurationDays] = useState(initialDurationDays === "" ? "" : String(initialDurationDays));
   const [isActive, setIsActive] = useState(initialIsActive);
   const [visaPrices, setVisaPrices] = useState<VisaPrice[]>(initialVisaPrices);
@@ -49,13 +49,18 @@ export default function EditPackageForm({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-    const price = Number(defaultPrice);
+    const price = defaultPrice.trim() ? Number(defaultPrice) : null;
+    const validVisaPrices = visaPrices.filter((v) => v.country.trim() && v.price >= 0);
     if (!name.trim()) {
       setError("Name is required.");
       return;
     }
-    if (Number.isNaN(price) || price < 0) {
+    if (price != null && (Number.isNaN(price) || price < 0)) {
       setError("Enter a valid default price.");
+      return;
+    }
+    if ((price == null || Number.isNaN(price)) && validVisaPrices.length === 0) {
+      setError("Enter a default price or add at least one visa price by country.");
       return;
     }
     setLoading(true);
@@ -67,10 +72,10 @@ export default function EditPackageForm({
           name: name.trim(),
           type,
           description: description.trim() || null,
-          defaultPrice: price,
+          defaultPrice: price != null && !Number.isNaN(price) ? price : null,
           durationDays: durationDays ? Number(durationDays) || null : null,
           isActive,
-          visaPrices: visaPrices.filter((v) => v.country.trim() && v.price >= 0),
+          visaPrices: validVisaPrices,
         }),
       });
       const data = await res.json();
@@ -126,15 +131,15 @@ export default function EditPackageForm({
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
-          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">Default Price *</label>
+          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">Default Price (optional if using country prices)</label>
           <input
             type="number"
             min={0}
             step={0.01}
             value={defaultPrice}
             onChange={(e) => setDefaultPrice(e.target.value)}
+            placeholder="Leave empty when using visa prices by country"
             className="mt-1 w-full rounded border border-zinc-300 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
-            required
           />
         </div>
         <div>

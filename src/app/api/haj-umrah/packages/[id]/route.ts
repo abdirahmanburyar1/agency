@@ -27,7 +27,7 @@ export async function GET(
       name: pkg.name,
       type: pkg.type,
       description: pkg.description,
-      defaultPrice: Number(pkg.defaultPrice),
+      defaultPrice: pkg.defaultPrice != null ? Number(pkg.defaultPrice) : null,
       durationDays: pkg.durationDays,
       isActive: pkg.isActive,
       createdAt: pkg.createdAt.toISOString(),
@@ -62,8 +62,14 @@ export async function PATCH(
     if (type !== undefined && type !== "haj" && type !== "umrah") {
       return NextResponse.json({ error: "Type must be haj or umrah" }, { status: 400 });
     }
-    const defaultPrice = body.defaultPrice != null ? Number(body.defaultPrice) : undefined;
-    if (defaultPrice !== undefined && (Number.isNaN(defaultPrice) || defaultPrice < 0)) {
+    const defaultPrice =
+      body.defaultPrice === "" || body.defaultPrice === null
+        ? null
+        : body.defaultPrice != null
+          ? Number(body.defaultPrice)
+          : undefined;
+    const defaultPriceExplicit = body.defaultPrice !== undefined;
+    if (defaultPrice !== undefined && defaultPrice !== null && (Number.isNaN(defaultPrice) || defaultPrice < 0)) {
       return NextResponse.json({ error: "Invalid default price" }, { status: 400 });
     }
     const visaPrices = Array.isArray(body.visaPrices)
@@ -78,7 +84,7 @@ export async function PATCH(
         ...(name !== undefined && { name }),
         ...(type !== undefined && { type }),
         ...(body.description !== undefined && { description: body.description ? String(body.description).trim() || null : null }),
-        ...(defaultPrice !== undefined && { defaultPrice }),
+        ...(defaultPriceExplicit && { defaultPrice }),
         ...(body.durationDays !== undefined && { durationDays: body.durationDays != null ? Number(body.durationDays) || null : null }),
         ...(body.isActive !== undefined && { isActive: Boolean(body.isActive) }),
         ...(visaPrices !== undefined && {
@@ -95,7 +101,7 @@ export async function PATCH(
       name: pkg.name,
       type: pkg.type,
       description: pkg.description,
-      defaultPrice: Number(pkg.defaultPrice),
+      defaultPrice: pkg.defaultPrice != null ? Number(pkg.defaultPrice) : null,
       durationDays: pkg.durationDays,
       isActive: pkg.isActive,
       updatedAt: pkg.updatedAt.toISOString(),

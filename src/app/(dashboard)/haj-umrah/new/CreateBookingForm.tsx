@@ -10,7 +10,7 @@ type PackageOption = {
   id: string;
   name: string;
   type: string;
-  defaultPrice: number;
+  defaultPrice: number | null;
   visaPrices?: { country: string; price: number }[];
 };
 
@@ -125,11 +125,12 @@ export default function CreateBookingForm({ nextTrackNumberDisplay, initialCusto
     if (lines.some((l) => l.packageId === pkg.id)) return;
     const customer = customers.find((c) => c.id === customerId);
     const customerCountry = customer?.country?.trim() ?? null;
-    const visaPrice =
+    const visaPriceForCountry =
       customerCountry && pkg.visaPrices?.length
-        ? pkg.visaPrices.find((v) => v.country.trim().toLowerCase() === customerCountry.toLowerCase())?.price ?? 0
-        : 0;
-    const unitPrice = pkg.defaultPrice + visaPrice;
+        ? pkg.visaPrices.find((v) => v.country.trim().toLowerCase() === customerCountry.toLowerCase())?.price
+        : undefined;
+    const defaultPrice = pkg.defaultPrice ?? 0;
+    const unitPrice = visaPriceForCountry ?? defaultPrice;
     setLines((prev) => [
       ...prev,
       { packageId: pkg.id, packageName: pkg.name, quantity: 1, unitPrice },
@@ -349,7 +350,12 @@ export default function CreateBookingForm({ nextTrackNumberDisplay, initialCusto
                         onClick={() => addPackage(p)}
                         className="block w-full px-4 py-2 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-700"
                       >
-                        {p.name} ({p.type}) — ${p.defaultPrice.toLocaleString()}
+                        {p.name} ({p.type}){" "}
+                        {p.defaultPrice != null
+                          ? `— $${p.defaultPrice.toLocaleString()}`
+                          : p.visaPrices?.length
+                            ? `— by country (${p.visaPrices.length} prices)`
+                            : "—"}
                       </button>
                     ))}
                   {packages.every((p) => lines.some((l) => l.packageId === p.id)) && (

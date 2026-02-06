@@ -31,7 +31,7 @@ export default async function EditPackagePage({
         initialName={pkg.name}
         initialType={pkg.type as "haj" | "umrah"}
         initialDescription={pkg.description ?? ""}
-        initialDefaultPrice={Number(pkg.defaultPrice)}
+        initialDefaultPrice={pkg.defaultPrice != null ? Number(pkg.defaultPrice) : null}
         initialDurationDays={pkg.durationDays ?? ""}
         initialIsActive={pkg.isActive}
         initialVisaPrices={pkg.visaPrices.map((v) => ({ country: v.country, price: Number(v.price) }))}

@@ -351,7 +351,7 @@ model HajUmrahPackage {
   name          String   @map("name")
   type          String   @map("type")   // haj | umrah
   description   String?  @map("description")
-  defaultPrice  Decimal  @map("default_price") @db.Decimal(12, 2)
+  defaultPrice  Decimal? @map("default_price") @db.Decimal(12, 2) // optional when using country-specific visa prices
   durationDays  Int?     @map("duration_days")
   isActive      Boolean  @default(true) @map("is_active")
   createdAt     DateTime @default(now()) @map("created_at")

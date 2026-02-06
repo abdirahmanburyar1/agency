@@ -94,7 +94,7 @@ export default async function HajUmrahPackagesPage() {
                       {p.description || "—"}
                     </td>
                     <td className="px-4 py-3 text-right font-medium text-zinc-900 dark:text-white">
-                      ${Number(p.defaultPrice).toLocaleString()}
+                      {p.defaultPrice != null ? `$${Number(p.defaultPrice).toLocaleString()}` : "—"}
                     </td>
                     <td className="px-4 py-3 text-center text-zinc-600 dark:text-zinc-400">
                       {p.durationDays != null ? `${p.durationDays} days` : "—"}
