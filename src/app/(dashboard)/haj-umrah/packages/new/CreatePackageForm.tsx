@@ -13,6 +13,8 @@ export default function CreatePackageForm() {
   const [description, setDescription] = useState("");
   const [durationDays, setDurationDays] = useState("");
   const [isActive, setIsActive] = useState(true);
+  const [priceByCountry, setPriceByCountry] = useState(true);
+  const [fixedPrice, setFixedPrice] = useState("");
   const [visaPrices, setVisaPrices] = useState<VisaPrice[]>([]);
   const [countries, setCountries] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
@@ -33,9 +35,16 @@ export default function CreatePackageForm() {
       setError("Name is required.");
       return;
     }
-    if (validVisaPrices.length === 0) {
+    if (priceByCountry && validVisaPrices.length === 0) {
       setError("Add at least one visa price by country.");
       return;
+    }
+    if (!priceByCountry) {
+      const fp = Number(fixedPrice);
+      if (Number.isNaN(fp) || fp < 0) {
+        setError("Enter a valid fixed price.");
+        return;
+      }
     }
     setLoading(true);
     try {
@@ -48,7 +57,9 @@ export default function CreatePackageForm() {
           description: description.trim() || null,
           durationDays: durationDays ? Number(durationDays) || null : null,
           isActive,
-          visaPrices: validVisaPrices,
+          priceByCountry,
+          fixedPrice: !priceByCountry ? Number(fixedPrice) : undefined,
+          visaPrices: priceByCountry ? validVisaPrices : [],
         }),
       });
       const data = await res.json();
@@ -114,6 +125,20 @@ export default function CreatePackageForm() {
           />
         </div>
       </div>
+      <div className="flex items-center gap-2">
+        <input
+          type="checkbox"
+          id="priceByCountry"
+          checked={priceByCountry}
+          onChange={(e) => setPriceByCountry(e.target.checked)}
+          className="rounded border-zinc-300 dark:border-zinc-600"
+        />
+        <label htmlFor="priceByCountry" className="text-sm text-zinc-700 dark:text-zinc-300">
+          Price depends on passport country (e.g. visa packages)
+        </label>
+      </div>
+
+      {priceByCountry ? (
       <div>
         <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
           Visa price by country *
@@ -168,6 +193,23 @@ export default function CreatePackageForm() {
           </button>
         </div>
       </div>
+      ) : (
+      <div>
+        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">Price *</label>
+        <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+          Fixed price. No passport country needed when adding to a booking.
+        </p>
+        <input
+          type="number"
+          min={0}
+          step={0.01}
+          value={fixedPrice}
+          onChange={(e) => setFixedPrice(e.target.value)}
+          className="mt-2 w-32 rounded border border-zinc-300 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
+          placeholder="0"
+        />
+      </div>
+      )}
 
       <div className="flex items-center gap-2">
         <input

@@ -13,6 +13,8 @@ type PackageOption = {
   id: string;
   name: string;
   type: string;
+  priceByCountry?: boolean;
+  fixedPrice?: number | null;
   visaPrices?: { country: string; price: number }[];
 };
 
@@ -136,21 +138,30 @@ export default function CreateBookingForm({ nextTrackNumberDisplay, initialCusto
 
   async function addPackage(pkg: PackageOption) {
     if (lines.some((l) => l.packageId === pkg.id)) return;
-    const countryForVisa = passportCountry.trim() || customers.find((c) => c.id === customerId)?.country?.trim() || null;
-    if (!countryForVisa) {
-      await Swal.fire({
-        icon: "warning",
-        title: "Select passport country first",
-        text: "Please select a passport country above before adding packages. Package prices depend on the passport country.",
-      });
-      setShowAddPackage(false);
-      return;
+    let amount: number;
+    // Fixed price: when priceByCountry is unchecked, or when package has fixedPrice and no visa prices
+    const isFixedPrice =
+      pkg.priceByCountry === false ||
+      (pkg.fixedPrice != null && pkg.fixedPrice > 0 && (!pkg.visaPrices?.length || pkg.visaPrices.length === 0));
+    if (!isFixedPrice) {
+      const countryForVisa = passportCountry.trim() || customers.find((c) => c.id === customerId)?.country?.trim() || null;
+      if (!countryForVisa) {
+        await Swal.fire({
+          icon: "warning",
+          title: "Select passport country first",
+          text: "This package price depends on passport country. Please select a passport country above before adding it.",
+        });
+        setShowAddPackage(false);
+        return;
+      }
+      const matchedPrice = pkg.visaPrices?.find(
+        (v) => v.country.trim().toLowerCase() === countryForVisa.toLowerCase()
+      )?.price;
+      const fallbackPrice = pkg.visaPrices?.[0]?.price;
+      amount = matchedPrice ?? fallbackPrice ?? 0;
+    } else {
+      amount = pkg.fixedPrice ?? 0;
     }
-    const matchedPrice = pkg.visaPrices?.find(
-      (v) => v.country.trim().toLowerCase() === countryForVisa.toLowerCase()
-    )?.price;
-    const fallbackPrice = pkg.visaPrices?.[0]?.price;
-    const amount = matchedPrice ?? fallbackPrice ?? 0;
     setLines((prev) => [...prev, { packageId: pkg.id, packageName: pkg.name, amount }]);
     setShowAddPackage(false);
   }
@@ -225,7 +236,7 @@ export default function CreateBookingForm({ nextTrackNumberDisplay, initialCusto
             campaignId: campaignId || null,
             status,
             notes: notes.trim() || null,
-            packages: lines.map((l) => ({ packageId: l.packageId, quantity: 1, unitPrice: l.amount })),
+            packages: lines.map((l) => ({ packageId: l.packageId, packageName: l.packageName, quantity: 1, unitPrice: l.amount })),
             profit: Number(profit) || 0,
             passportCountry: passportCountry.trim() || null,
           }),
@@ -247,7 +258,7 @@ export default function CreateBookingForm({ nextTrackNumberDisplay, initialCusto
             customerId,
             status,
             notes: notes.trim() || undefined,
-            packages: lines.map((l) => ({ packageId: l.packageId, quantity: 1, unitPrice: l.amount })),
+            packages: lines.map((l) => ({ packageId: l.packageId, packageName: l.packageName, quantity: 1, unitPrice: l.amount })),
             profit: Number(profit) || 0,
             passportCountry: passportCountry.trim() || null,
           }),
@@ -397,7 +408,7 @@ export default function CreateBookingForm({ nextTrackNumberDisplay, initialCusto
                           <div className="min-w-0 flex-1">
                             <p className="truncate font-medium text-zinc-900 dark:text-white">{p.name}</p>
                             <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                              {p.type} · {p.visaPrices?.length ? "Price by passport country" : "—"}
+                              {p.type} · {p.priceByCountry !== false ? "Price by passport country" : `Fixed $${(p.fixedPrice ?? 0).toLocaleString()}`}
                             </p>
                           </div>
                         </button>

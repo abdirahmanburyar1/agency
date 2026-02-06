@@ -45,7 +45,14 @@ type Booking = {
   totalReceived?: number;
 };
 
-type PackageOption = { id: string; name: string; type: string; visaPrices?: { country: string; price: number }[] };
+type PackageOption = {
+  id: string;
+  name: string;
+  type: string;
+  priceByCountry?: boolean;
+  fixedPrice?: number | null;
+  visaPrices?: { country: string; price: number }[];
+};
 
 type Props = {
   booking: Booking;
@@ -110,12 +117,26 @@ export default function HajUmrahBookingDetail({ booking, canEdit }: Props) {
     }
   }
 
-  function addPackage(pkg: PackageOption) {
+  async function addPackage(pkg: PackageOption) {
     if (packageLines.some((l) => l.packageId === pkg.id)) return;
-    const country = booking.passportCountry?.trim();
-    const matchedPrice = pkg.visaPrices?.find((v) => v.country.trim().toLowerCase() === (country ?? "").toLowerCase())?.price;
-    const fallbackPrice = pkg.visaPrices?.[0]?.price;
-    const amount = matchedPrice ?? fallbackPrice ?? 0;
+    let amount: number;
+    if (pkg.priceByCountry !== false) {
+      const country = booking.passportCountry?.trim();
+      if (!country) {
+        await Swal.fire({
+          icon: "warning",
+          title: "Select passport country first",
+          text: "This package price depends on passport country. Please set passport country on the booking first.",
+        });
+        setShowAddPackage(false);
+        return;
+      }
+      const matchedPrice = pkg.visaPrices?.find((v) => v.country.trim().toLowerCase() === country.toLowerCase())?.price;
+      const fallbackPrice = pkg.visaPrices?.[0]?.price;
+      amount = matchedPrice ?? fallbackPrice ?? 0;
+    } else {
+      amount = pkg.fixedPrice ?? 0;
+    }
     setPackageLines((prev) => [...prev, { packageId: pkg.id, packageName: pkg.name, packageType: pkg.type, amount }]);
     setShowAddPackage(false);
   }
@@ -140,7 +161,7 @@ export default function HajUmrahBookingDetail({ booking, canEdit }: Props) {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          packages: packageLines.map((l) => ({ packageId: l.packageId, quantity: 1, unitPrice: l.amount })),
+          packages: packageLines.map((l) => ({ packageId: l.packageId, packageName: l.packageName, quantity: 1, unitPrice: l.amount })),
         }),
       });
       if (!res.ok) {

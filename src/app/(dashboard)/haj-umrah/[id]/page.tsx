@@ -19,7 +19,6 @@ export default async function HajUmrahBookingPage({
     include: {
       customer: true,
       campaign: { include: { leader: { select: { id: true, name: true, email: true } } } },
-      packages: { include: { package: true } },
       payments: {
         orderBy: { date: "desc" },
         include: { receipts: { select: { amount: true } } },
@@ -28,7 +27,24 @@ export default async function HajUmrahBookingPage({
   });
   if (!booking) notFound();
 
-  const packagesTotal = booking.packages.reduce((sum, bp) => sum + Number(bp.amount), 0);
+  // Fetch packages via raw SQL (bypasses Prisma rejecting null packageId)
+  type PkgRow = { id: string; booking_id: string; package_id: string | null; package_name: string; quantity: unknown; unit_price: unknown; amount: unknown };
+  const packageRows = await prisma.$queryRaw<PkgRow[]>`
+    SELECT id, booking_id, package_id, package_name, quantity, unit_price, amount
+    FROM haj_umrah_booking_packages
+    WHERE booking_id = ${id}
+  `;
+  const packages = packageRows.map((row) => ({
+    id: row.id,
+    packageId: row.package_id,
+    packageName: row.package_name ?? "Package",
+    packageType: "umrah" as const,
+    quantity: Number(row.quantity),
+    unitPrice: Number(row.unit_price),
+    amount: Number(row.amount),
+  }));
+
+  const packagesTotal = packages.reduce((sum, bp) => sum + bp.amount, 0);
   const profitAmount = booking.profit != null ? Number(booking.profit) : 0;
   const totalAmount = packagesTotal + profitAmount;
   const trackNumberDisplay =
@@ -95,15 +111,7 @@ export default async function HajUmrahBookingPage({
     totalReceived: booking.payments.reduce((sum, p) => {
       return sum + p.receipts.reduce((s, r) => s + Number(r.amount), 0);
     }, 0),
-    packages: booking.packages.map((bp) => ({
-      id: bp.id,
-      packageId: bp.packageId,
-      packageName: bp.package.name,
-      packageType: bp.package.type,
-      quantity: bp.quantity,
-      unitPrice: Number(bp.unitPrice),
-      amount: Number(bp.amount),
-    })),
+    packages,
     totalAmount,
   };
 

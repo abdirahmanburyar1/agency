@@ -347,17 +347,19 @@ model HajUmrahCampaign {
 }
 
 model HajUmrahPackage {
-  id            String   @id @default(cuid())
-  name          String   @map("name")
-  type          String   @map("type")   // haj | umrah
-  description   String?  @map("description")
-  durationDays  Int?     @map("duration_days")
-  isActive      Boolean  @default(true) @map("is_active")
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  id              String    @id @default(cuid())
+  name            String    @map("name")
+  type            String    @map("type")   // haj | umrah
+  description     String?   @map("description")
+  durationDays    Int?      @map("duration_days")
+  isActive        Boolean   @default(true) @map("is_active")
+  priceByCountry  Boolean   @default(true) @map("price_by_country") // true = use visa prices by country; false = use fixedPrice
+  fixedPrice      Decimal?  @map("fixed_price") @db.Decimal(12, 2)  // used when priceByCountry is false
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
 
   bookingPackages HajUmrahBookingPackage[]
-  visaPrices     HajUmrahPackageVisaPrice[]
+  visaPrices      HajUmrahPackageVisaPrice[]
 
   @@index([type])
   @@index([isActive])
@@ -406,16 +408,17 @@ model HajUmrahBooking {
 }
 
 model HajUmrahBookingPackage {
-  id        String   @id @default(cuid())
-  bookingId String   @map("booking_id")
-  packageId String   @map("package_id")
-  quantity  Int      @default(1) @map("quantity")
-  unitPrice Decimal  @map("unit_price") @db.Decimal(12, 2)
-  amount    Decimal  @map("amount") @db.Decimal(12, 2) // unitPrice * quantity
-  createdAt DateTime @default(now()) @map("created_at")
+  id          String    @id @default(cuid())
+  bookingId   String    @map("booking_id")
+  packageId   String?   @map("package_id") // optional: when package is deleted, we keep name & amount
+  packageName String   @map("package_name") // stored at booking time; used when package is deleted
+  quantity    Int      @default(1) @map("quantity")
+  unitPrice   Decimal  @map("unit_price") @db.Decimal(12, 2)
+  amount      Decimal  @map("amount") @db.Decimal(12, 2) // unitPrice * quantity
+  createdAt   DateTime @default(now()) @map("created_at")
 
   booking HajUmrahBooking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-  package HajUmrahPackage @relation(fields: [packageId], references: [id], onDelete: Restrict)
+  package HajUmrahPackage? @relation(fields: [packageId], references: [id], onDelete: SetNull)
 
   @@unique([bookingId, packageId])
   @@index([bookingId])

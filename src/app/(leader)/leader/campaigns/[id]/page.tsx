@@ -25,7 +25,7 @@ export default async function LeaderCampaignDetailPage({
       include: {
         leader: { select: { id: true, name: true, email: true } },
         bookings: {
-          include: { customer: true, packages: { include: { package: true } } },
+          include: { customer: true, packages: true },
           orderBy: { createdAt: "asc" },
         },
       },
@@ -72,8 +72,8 @@ export default async function LeaderCampaignDetailPage({
       packageCount: b.packages.reduce((s, bp) => s + bp.quantity, 0),
       totalAmount: b.packages.reduce((sum, bp) => sum + Number(bp.amount), 0),
       packages: b.packages.map((bp) => ({
-        name: bp.package.name,
-        type: bp.package.type,
+        name: bp.packageName ?? "Package",
+        type: "umrah",
         quantity: bp.quantity,
         unitPrice: Number(bp.unitPrice),
         amount: Number(bp.amount),

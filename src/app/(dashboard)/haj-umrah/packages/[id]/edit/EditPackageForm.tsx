@@ -13,6 +13,8 @@ type Props = {
   initialDescription: string;
   initialDurationDays: number | "";
   initialIsActive: boolean;
+  initialPriceByCountry: boolean;
+  initialFixedPrice: number | null;
   initialVisaPrices?: VisaPrice[];
 };
 
@@ -23,6 +25,8 @@ export default function EditPackageForm({
   initialDescription,
   initialDurationDays,
   initialIsActive,
+  initialPriceByCountry,
+  initialFixedPrice,
   initialVisaPrices = [],
 }: Props) {
   const router = useRouter();
@@ -31,6 +35,8 @@ export default function EditPackageForm({
   const [description, setDescription] = useState(initialDescription);
   const [durationDays, setDurationDays] = useState(initialDurationDays === "" ? "" : String(initialDurationDays));
   const [isActive, setIsActive] = useState(initialIsActive);
+  const [priceByCountry, setPriceByCountry] = useState(initialPriceByCountry ?? true);
+  const [fixedPrice, setFixedPrice] = useState(initialFixedPrice != null ? String(initialFixedPrice) : "");
   const [visaPrices, setVisaPrices] = useState<VisaPrice[]>(initialVisaPrices);
   const [countries, setCountries] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
@@ -51,9 +57,16 @@ export default function EditPackageForm({
       setError("Name is required.");
       return;
     }
-    if (validVisaPrices.length === 0) {
+    if (priceByCountry && validVisaPrices.length === 0) {
       setError("Add at least one visa price by country.");
       return;
+    }
+    if (!priceByCountry) {
+      const fp = Number(fixedPrice);
+      if (Number.isNaN(fp) || fp < 0) {
+        setError("Enter a valid fixed price.");
+        return;
+      }
     }
     setLoading(true);
     try {
@@ -66,7 +79,9 @@ export default function EditPackageForm({
           description: description.trim() || null,
           durationDays: durationDays ? Number(durationDays) || null : null,
           isActive,
-          visaPrices: validVisaPrices,
+          priceByCountry,
+          fixedPrice: !priceByCountry ? Number(fixedPrice) : undefined,
+          visaPrices: priceByCountry ? validVisaPrices : [],
         }),
       });
       const data = await res.json();
@@ -132,6 +147,20 @@ export default function EditPackageForm({
           />
         </div>
       </div>
+      <div className="flex items-center gap-2">
+        <input
+          type="checkbox"
+          id="priceByCountry"
+          checked={!!priceByCountry}
+          onChange={(e) => setPriceByCountry(e.target.checked)}
+          className="rounded border-zinc-300 dark:border-zinc-600"
+        />
+        <label htmlFor="priceByCountry" className="text-sm text-zinc-700 dark:text-zinc-300">
+          Price depends on passport country (e.g. visa packages)
+        </label>
+      </div>
+
+      {priceByCountry ? (
       <div>
         <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
           Visa price by country *
@@ -186,6 +215,23 @@ export default function EditPackageForm({
           </button>
         </div>
       </div>
+      ) : (
+      <div>
+        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">Price *</label>
+        <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+          Fixed price. No passport country needed when adding to a booking.
+        </p>
+        <input
+          type="number"
+          min={0}
+          step={0.01}
+          value={fixedPrice}
+          onChange={(e) => setFixedPrice(e.target.value)}
+          className="mt-2 w-32 rounded border border-zinc-300 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
+          placeholder="0"
+        />
+      </div>
+      )}
 
       <div className="flex items-center gap-2">
         <input

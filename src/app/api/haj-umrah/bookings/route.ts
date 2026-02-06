@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requirePermission } from "@/lib/permissions";
@@ -20,7 +21,7 @@ export async function GET() {
       include: {
         customer: true,
         campaign: { include: { leader: { select: { id: true, name: true, email: true } } } },
-        packages: { include: { package: true } },
+        packages: true,
       },
     });
     return NextResponse.json(
@@ -49,8 +50,8 @@ export async function GET() {
         packages: b.packages.map((bp) => ({
           id: bp.id,
           packageId: bp.packageId,
-          packageName: bp.package.name,
-          packageType: bp.package.type,
+          packageName: bp.packageName ?? "Package",
+          packageType: "umrah",
           quantity: bp.quantity,
           unitPrice: Number(bp.unitPrice),
           amount: Number(bp.amount),
@@ -133,18 +134,20 @@ export async function POST(request: Request) {
         },
       });
       for (const line of packageLines) {
-        const packageId = String(line.packageId ?? "").trim();
+        const packageId = String(line.packageId ?? "").trim() || null;
+        const packageName = String(line.packageName ?? "").trim() || "Package";
         const quantity = Math.max(1, Number(line.quantity) || 1);
         const unitPrice = Number(line.unitPrice);
-        if (!packageId || Number.isNaN(unitPrice) || unitPrice < 0) continue;
+        if (Number.isNaN(unitPrice) || unitPrice < 0) continue;
         const amount = unitPrice * quantity;
-        await tx.hajUmrahBookingPackage.create({
-          data: { bookingId: b.id, packageId, quantity, unitPrice, amount },
-        });
+        await tx.$executeRaw`
+          INSERT INTO haj_umrah_booking_packages (id, booking_id, package_id, package_name, quantity, unit_price, amount)
+          VALUES (${randomUUID()}, ${b.id}, ${packageId}, ${packageName}, ${quantity}, ${unitPrice}, ${amount})
+        `;
       }
       return tx.hajUmrahBooking.findUniqueOrThrow({
         where: { id: b.id },
-        include: { customer: true, packages: { include: { package: true } } },
+        include: { customer: true, packages: true },
       });
     });
 
@@ -193,8 +196,8 @@ export async function POST(request: Request) {
       packages: booking.packages.map((bp) => ({
         id: bp.id,
         packageId: bp.packageId,
-        packageName: bp.package.name,
-        packageType: bp.package.type,
+        packageName: bp.packageName ?? "Package",
+        packageType: "umrah",
         quantity: bp.quantity,
         unitPrice: Number(bp.unitPrice),
         amount: Number(bp.amount),

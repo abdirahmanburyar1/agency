@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { requirePermission } from "@/lib/permissions";
 import { PERMISSION } from "@/lib/permissions";
@@ -19,14 +20,41 @@ export default async function HajUmrahPage({
     (await import("@/lib/permissions")).canAccess(PERMISSION.HAJ_UMRAH_EDIT),
   ]);
 
+  // Fetch bookings WITHOUT packages to avoid Prisma rejecting null packageId (deleted packages)
   const bookingsQuery = () =>
     prisma.hajUmrahBooking.findMany({
       orderBy: { createdAt: "desc" },
-      include: { customer: true, campaign: { include: { leader: true } }, packages: { include: { package: true } } },
+      include: { customer: true, campaign: { include: { leader: true } } },
     });
-  let bookings: Awaited<ReturnType<typeof bookingsQuery>> = [];
+  let bookings: (Awaited<ReturnType<typeof bookingsQuery>>[number] & {
+    packages: { packageName: string; amount: number }[];
+  })[] = [];
   try {
-    bookings = await bookingsQuery();
+    const rawBookings = await bookingsQuery();
+    // Fetch packages via raw SQL (bypasses Prisma validation of nullable packageId)
+    const bookingIds = rawBookings.map((b) => b.id);
+    type PkgRow = { booking_id: string; package_name: string; amount: unknown };
+    const packageRows =
+      bookingIds.length > 0
+        ? await prisma.$queryRaw<PkgRow[]>`
+            SELECT booking_id, package_name, amount
+            FROM haj_umrah_booking_packages
+            WHERE booking_id IN (${Prisma.join(bookingIds)})
+          `
+        : [];
+    const packagesByBooking = new Map<string, { packageName: string; amount: number }[]>();
+    for (const row of packageRows) {
+      const list = packagesByBooking.get(row.booking_id) ?? [];
+      list.push({ packageName: row.package_name ?? "Package", amount: Number(row.amount) });
+      packagesByBooking.set(row.booking_id, list);
+    }
+    bookings = rawBookings.map((b) => ({
+      ...b,
+      packages: (packagesByBooking.get(b.id) ?? []).map((p) => ({
+        packageName: p.packageName,
+        amount: p.amount,
+      })),
+    }));
   } catch (err) {
     if (isDbConnectionError(err)) {
       return (
@@ -47,7 +75,7 @@ export default async function HajUmrahPage({
     n == null ? "—" : n < 1000 ? String(n).padStart(3, "0") : String(n);
 
   const serialized = bookings.map((b) => {
-    const packageSummary = b.packages.map((bp) => bp.package.name).join(", ");
+    const packageSummary = b.packages.map((bp) => bp.packageName ?? "Package").join(", ");
     const packageCount = b.packages.length;
     const campaignDisplay = b.campaign
       ? (() => {

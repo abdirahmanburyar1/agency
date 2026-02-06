@@ -33,6 +33,8 @@ export default async function EditPackagePage({
         initialDescription={pkg.description ?? ""}
         initialDurationDays={pkg.durationDays ?? ""}
         initialIsActive={pkg.isActive}
+        initialPriceByCountry={pkg.priceByCountry ?? true}
+        initialFixedPrice={pkg.fixedPrice != null ? Number(pkg.fixedPrice) : null}
         initialVisaPrices={pkg.visaPrices.map((v) => ({ country: v.country, price: Number(v.price) }))}
       />
     </main>

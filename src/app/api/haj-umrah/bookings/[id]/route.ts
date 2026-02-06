@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requirePermission } from "@/lib/permissions";
@@ -23,7 +24,7 @@ export async function GET(
       include: {
         customer: true,
         campaign: { include: { leader: { select: { id: true, name: true, email: true } } } },
-        packages: { include: { package: true } },
+        packages: true,
       },
     });
     if (!booking) return NextResponse.json({ error: "Booking not found" }, { status: 404 });
@@ -59,8 +60,8 @@ export async function GET(
       packages: booking.packages.map((bp) => ({
         id: bp.id,
         packageId: bp.packageId,
-        packageName: bp.package.name,
-        packageType: bp.package.type,
+        packageName: bp.packageName ?? "Package",
+        packageType: "umrah",
         quantity: bp.quantity,
         unitPrice: Number(bp.unitPrice),
         amount: Number(bp.amount),
@@ -192,14 +193,16 @@ export async function PATCH(
         if (packageLines !== undefined) {
           await tx.hajUmrahBookingPackage.deleteMany({ where: { bookingId: id } });
           for (const line of packageLines) {
-            const pkgId = String(line.packageId ?? "").trim();
+            const pkgId = String(line.packageId ?? "").trim() || null;
+            const packageName = String(line.packageName ?? "").trim() || "Package";
             const quantity = Math.max(1, Number(line.quantity) || 1);
             const unitPrice = Number(line.unitPrice);
-            if (!pkgId || Number.isNaN(unitPrice) || unitPrice < 0) continue;
+            if (Number.isNaN(unitPrice) || unitPrice < 0) continue;
             const amount = unitPrice * quantity;
-            await tx.hajUmrahBookingPackage.create({
-              data: { bookingId: id, packageId: pkgId, quantity, unitPrice, amount },
-            });
+            await tx.$executeRaw`
+              INSERT INTO haj_umrah_booking_packages (id, booking_id, package_id, package_name, quantity, unit_price, amount)
+              VALUES (${randomUUID()}, ${id}, ${pkgId}, ${packageName}, ${quantity}, ${unitPrice}, ${amount})
+            `;
           }
         }
         if (canceledAt) {
@@ -218,7 +221,7 @@ export async function PATCH(
           include: {
             customer: true,
             campaign: { include: { leader: { select: { id: true, name: true, email: true } } } },
-            packages: { include: { package: true } },
+            packages: true,
           },
         });
       },
@@ -281,8 +284,8 @@ export async function PATCH(
       packages: booking.packages.map((bp) => ({
         id: bp.id,
         packageId: bp.packageId,
-        packageName: bp.package.name,
-        packageType: bp.package.type,
+        packageName: bp.packageName ?? "Package",
+        packageType: "umrah",
         quantity: bp.quantity,
         unitPrice: Number(bp.unitPrice),
         amount: Number(bp.amount),

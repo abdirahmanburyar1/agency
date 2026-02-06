@@ -5,20 +5,45 @@ import { PERMISSION } from "@/lib/permissions";
 import { isDbConnectionError } from "@/lib/db-safe";
 import DatabaseErrorBanner from "@/components/DatabaseErrorBanner";
 import { PackageIcon, PlusIcon, PencilIcon } from "../icons";
+import PackageDeleteButton from "./PackageDeleteButton";
 
 export default async function HajUmrahPackagesPage() {
   await requirePermission(PERMISSION.HAJ_UMRAH_VIEW, { redirectOnForbidden: true });
   const canEdit = await (await import("@/lib/permissions")).canAccess(PERMISSION.HAJ_UMRAH_EDIT);
+  const canDelete = await (await import("@/lib/permissions")).canAccess(PERMISSION.HAJ_UMRAH_DELETE);
   const canCreate = await (await import("@/lib/permissions")).canAccess(PERMISSION.HAJ_UMRAH_CREATE);
 
-  const packagesQuery = () =>
-    prisma.hajUmrahPackage.findMany({
-      orderBy: [{ type: "asc" }, { name: "asc" }],
-      include: { visaPrices: true },
-    });
-  let packages: Awaited<ReturnType<typeof packagesQuery>> = [];
+  type PackageRow = {
+    id: string;
+    name: string;
+    type: string;
+    description: string | null;
+    duration_days: number | null;
+    is_active: boolean;
+    price_by_country: boolean;
+    fixed_price: unknown;
+  };
+  type VisaPriceRow = { package_id: string; country: string; price: unknown };
+  let packages: (PackageRow & { visaPrices: { country: string; price: number }[]; fixedPrice: number | null; priceByCountry: boolean; durationDays: number | null; isActive: boolean })[] = [];
   try {
-    packages = await packagesQuery();
+    const pkgRows = await prisma.$queryRaw<PackageRow[]>`
+      SELECT id, name, type, description, duration_days, is_active, price_by_country, fixed_price
+      FROM haj_umrah_packages
+      ORDER BY type ASC, name ASC
+    `;
+    const visaRows = await prisma.$queryRaw<VisaPriceRow[]>`
+      SELECT package_id, country, price FROM haj_umrah_package_visa_prices
+    `;
+    packages = pkgRows.map((p) => ({
+      ...p,
+      durationDays: p.duration_days,
+      isActive: p.is_active,
+      priceByCountry: p.price_by_country,
+      fixedPrice: p.fixed_price != null ? Number(p.fixed_price) : null,
+      visaPrices: visaRows
+        .filter((v) => v.package_id === p.id)
+        .map((v) => ({ country: v.country, price: Number(v.price) })),
+    }));
   } catch (err) {
     if (isDbConnectionError(err)) {
       return (
@@ -68,10 +93,13 @@ export default async function HajUmrahPackagesPage() {
                 <th className="px-4 py-3 text-left font-medium text-zinc-700 dark:text-zinc-300">Name</th>
                 <th className="px-4 py-3 text-left font-medium text-zinc-700 dark:text-zinc-300">Type</th>
                 <th className="px-4 py-3 text-left font-medium text-zinc-700 dark:text-zinc-300">Description</th>
-                <th className="px-4 py-3 text-right font-medium text-zinc-700 dark:text-zinc-300">Countries</th>
+                <th className="px-4 py-3 text-left font-medium text-zinc-700 dark:text-zinc-300">
+                  Price
+                  <span className="block text-xs font-normal text-zinc-500 dark:text-zinc-400">by country or fixed</span>
+                </th>
                 <th className="px-4 py-3 text-center font-medium text-zinc-700 dark:text-zinc-300">Duration</th>
                 <th className="px-4 py-3 text-center font-medium text-zinc-700 dark:text-zinc-300">Active</th>
-                {canEdit && (
+                {(canEdit || canDelete) && (
                   <th className="px-4 py-3 text-right font-medium text-zinc-700 dark:text-zinc-300">Actions</th>
                 )}
               </tr>
@@ -79,7 +107,7 @@ export default async function HajUmrahPackagesPage() {
             <tbody>
               {packages.length === 0 ? (
                 <tr>
-                  <td colSpan={canEdit ? 7 : 6} className="px-4 py-8 text-center text-zinc-500">
+                  <td colSpan={canEdit || canDelete ? 7 : 6} className="px-4 py-8 text-center text-zinc-500">
                     No packages yet. Add a package to use in bookings.
                   </td>
                 </tr>
@@ -94,8 +122,24 @@ export default async function HajUmrahPackagesPage() {
                     <td className="max-w-xs truncate px-4 py-3 text-zinc-600 dark:text-zinc-400" title={p.description ?? undefined}>
                       {p.description || "—"}
                     </td>
-                    <td className="px-4 py-3 text-right text-zinc-600 dark:text-zinc-400">
-                      {p.visaPrices?.length ? `${p.visaPrices.length} countries` : "—"}
+                    <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400">
+                      {p.priceByCountry && p.visaPrices?.length ? (
+                        <ul className="divide-y divide-zinc-200 dark:divide-zinc-700">
+                          {p.visaPrices.map((v) => (
+                            <li key={v.country} className="flex justify-between gap-4 py-1 text-sm first:pt-0 last:pb-0">
+                              <span>{v.country}</span>
+                              <span className="font-medium tabular-nums">${Number(v.price).toLocaleString()}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : p.fixedPrice != null ? (
+                        <span>
+                          <span className="font-medium tabular-nums">${Number(p.fixedPrice).toLocaleString()}</span>
+                          <span className="ml-1 text-xs text-zinc-500">(fixed)</span>
+                        </span>
+                      ) : (
+                        "—"
+                      )}
                     </td>
                     <td className="px-4 py-3 text-center text-zinc-600 dark:text-zinc-400">
                       {p.durationDays != null ? `${p.durationDays} days` : "—"}
@@ -111,15 +155,22 @@ export default async function HajUmrahPackagesPage() {
                         {p.isActive ? "Yes" : "No"}
                       </span>
                     </td>
-                    {canEdit && (
+                    {(canEdit || canDelete) && (
                       <td className="px-4 py-3 text-right">
-                        <Link
-                          href={`/haj-umrah/packages/${p.id}/edit`}
-                          className="inline-flex items-center gap-1.5 text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
-                        >
-                          <PencilIcon className="size-4" />
-                          Edit
-                        </Link>
+                        <div className="flex items-center justify-end gap-3">
+                          {canEdit && (
+                            <Link
+                              href={`/haj-umrah/packages/${p.id}/edit`}
+                              className="inline-flex items-center gap-1.5 text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
+                            >
+                              <PencilIcon className="size-4" />
+                              Edit
+                            </Link>
+                          )}
+                          {canDelete && (
+                            <PackageDeleteButton packageId={p.id} packageName={p.name} />
+                          )}
+                        </div>
                       </td>
                     )}
                   </tr>

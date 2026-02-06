@@ -29,7 +29,7 @@ export async function GET(
         leader: { select: { id: true, name: true, email: true } },
         bookings: {
           where: { canceledAt: null },
-          include: { customer: true, packages: { include: { package: true } } },
+          include: { customer: true, packages: true },
           orderBy: { createdAt: "asc" },
         },
       },

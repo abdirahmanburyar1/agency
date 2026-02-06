@@ -20,7 +20,7 @@ export default async function EditHajUmrahBookingPage({
 
   const booking = await prisma.hajUmrahBooking.findUnique({
     where: { id },
-    include: { customer: true, campaign: true, packages: { include: { package: true } } },
+    include: { customer: true, campaign: true, packages: true },
   });
   if (!booking) notFound();
   if (booking.canceledAt) {
@@ -66,7 +66,7 @@ export default async function EditHajUmrahBookingPage({
     passportCountry: booking.passportCountry ?? "",
     packages: booking.packages.map((bp) => ({
       packageId: bp.packageId,
-      packageName: bp.package.name,
+      packageName: bp.packageName ?? "Package",
       amount: Number(bp.amount),
     })),
   };
