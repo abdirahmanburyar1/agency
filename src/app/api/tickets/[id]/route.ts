@@ -130,6 +130,7 @@ export async function PATCH(
           data: {
             date: body.date ? new Date(body.date) : ticket.date,
             month: body.month ?? ticket.month,
+            paymentDate: body.date ? new Date(body.date) : ticket.date,
             status: "pending",
             name: (body.airline ?? ticket.airline)
               ? `Ticket: ${body.airline ?? ticket.airline}`

@@ -38,6 +38,7 @@ export async function POST(request: Request) {
       data: {
         date: new Date(body.date),
         month: body.month,
+        paymentDate: body.paymentDate ? new Date(body.paymentDate) : new Date(body.date),
         status: body.status ?? "pending",
         name: body.name,
         description: body.description,

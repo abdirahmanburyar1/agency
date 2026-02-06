@@ -155,15 +155,15 @@ export async function getReportData(filter?: ReportFilters): Promise<ReportData>
   const from = startOfDay(fromDate);
   const to = endOfDay(toDate);
   const dateRange = { date: { gte: from, lte: to } };
-  /** Payments: filter by when the payment was created, not source date */
+  /** Payments: filter by payment_date (departure date for Haj & Umrah, creation for others) */
   const paymentDateRange = { paymentDate: { gte: from, lte: to } };
+  const paymentWhere = { ...paymentDateRange, canceledAt: null, status: { not: "refunded" } };
+  const hajPaymentWhere = { ...paymentWhere, hajUmrahBookingId: { not: null }, status: { not: "refunded" } };
 
   const ticketWhere = { ...dateRange, canceledAt: null };
   const visaWhere = { ...dateRange, canceledAt: null };
   const expenseWhere = { ...dateRange, status: "approved" };
-  const paymentWhere = { ...paymentDateRange, canceledAt: null, status: { not: "refunded" } };
   const payableWhere = { ...dateRange, canceledAt: null };
-  const hajPaymentWhere = { ...paymentWhere, hajUmrahBookingId: { not: null }, status: { not: "refunded" } };
   const receiptWhere = { date: { gte: from, lte: to }, payment: { status: { not: "refunded" } } };
 
   const [

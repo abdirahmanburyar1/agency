@@ -69,6 +69,7 @@ export async function POST(request: Request) {
           data: {
             date: booking.date,
             month: booking.month,
+            paymentDate: booking.date,
             status: "pending",
             name: trackDisplay ? `Haj & Umrah #${trackDisplay}` : "Haj & Umrah",
             description: booking.customer.name ? `Customer: ${booking.customer.name}` : null,
