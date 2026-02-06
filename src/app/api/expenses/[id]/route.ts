@@ -40,8 +40,7 @@ export async function PATCH(
       ...(body.category != null && { category: body.category?.trim() || null }),
       ...(body.employeeId != null && { employeeId: body.employeeId || null }),
       ...(body.pMethod != null && { pMethod: body.pMethod?.trim() || null }),
-      ...(body.paidBy != null && { paidBy: body.paidBy?.trim() || null }),
-      ...(body.receivedBy != null && { receivedBy: body.receivedBy?.trim() || null }),
+      ...(body.currency != null && { currency: body.currency || "USD" }),
     },
   });
   return NextResponse.json(expense);

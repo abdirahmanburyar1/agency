@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { getCurrencySymbol } from "@/lib/currencies";
 
 type SerializedExpense = {
   id: string;
@@ -9,6 +10,7 @@ type SerializedExpense = {
   description: string | null;
   category: string | null;
   amount: number;
+  currency: string;
   pMethod: string | null;
   status: string;
   employee: { name: string; role: string | null; phone: string | null } | null;
@@ -124,6 +126,7 @@ export default function ExpensesTableWithFilters({
               <option value="">All</option>
               <option value="pending">Pending</option>
               <option value="approved">Approved</option>
+              <option value="paid">Paid</option>
               <option value="rejected">Rejected</option>
             </select>
           </div>
@@ -157,6 +160,7 @@ export default function ExpensesTableWithFilters({
               <th className="px-4 py-3 text-left font-medium text-zinc-900 dark:text-white">Category</th>
               <th className="px-4 py-3 text-left font-medium text-zinc-900 dark:text-white">Status</th>
               <th className="px-4 py-3 text-left font-medium text-zinc-900 dark:text-white">Employee</th>
+              <th className="px-4 py-3 text-left font-medium text-zinc-900 dark:text-white">Currency</th>
               <th className="px-4 py-3 text-right font-medium text-zinc-900 dark:text-white">Amount</th>
               <th className="px-4 py-3 text-left font-medium text-zinc-900 dark:text-white">P Method</th>
             </tr>
@@ -164,7 +168,7 @@ export default function ExpensesTableWithFilters({
           <tbody>
             {filteredExpenses.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-zinc-500">
+                <td colSpan={8} className="px-4 py-8 text-center text-zinc-500">
                   No expenses found
                 </td>
               </tr>
@@ -184,11 +188,13 @@ export default function ExpensesTableWithFilters({
                   <td className="px-4 py-3">
                     <span
                       className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                        e.status === "approved"
-                          ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300"
-                          : e.status === "rejected"
-                            ? "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300"
-                            : "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300"
+                        e.status === "paid"
+                          ? "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300"
+                          : e.status === "approved"
+                            ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300"
+                            : e.status === "rejected"
+                              ? "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300"
+                              : "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300"
                       }`}
                     >
                       {e.status}
@@ -201,8 +207,11 @@ export default function ExpensesTableWithFilters({
                         : e.employee.name
                       : "—"}
                   </td>
+                  <td className="px-4 py-3 text-zinc-700 dark:text-zinc-300">
+                    {e.currency ?? "USD"}
+                  </td>
                   <td className="px-4 py-3 text-right font-medium text-red-600 dark:text-red-400">
-                    ${e.amount.toLocaleString()}
+                    {getCurrencySymbol(e.currency ?? "USD")}{e.amount.toLocaleString()}
                   </td>
                   <td className="px-4 py-3 text-zinc-700 dark:text-zinc-300">{e.pMethod ?? "—"}</td>
                 </tr>

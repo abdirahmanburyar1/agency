@@ -208,6 +208,7 @@ model Expense {
   date         DateTime  @map("date")
   month        String    @map("month")
   amount       Decimal   @map("amount") @db.Decimal(12, 2)
+  currency     String    @default("USD") @map("currency") // USD, EUR, GBP, SAR, AED, EGP, etc.
   description  String?   @map("description")
   category     String?   @map("category") // Employees, Utilities, Rent, etc.
   employeeId   String?   @map("employee_id") // when category is Employees
@@ -215,7 +216,7 @@ model Expense {
   receivedBy   String?   @map("received_by")
   pMethod      String?   @map("p_method")
   account      String?   @map("account")
-  status       String    @default("pending") @map("status") // pending | approved | rejected
+  status       String    @default("pending") @map("status") // pending | approved | rejected | paid
   approvedAt   DateTime? @map("approved_at")
   approvedById String?   @map("approved_by_id")
   createdAt    DateTime  @default(now()) @map("created_at")

@@ -3,11 +3,14 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requirePermission, canAccess } from "@/lib/permissions";
 import { PERMISSION } from "@/lib/permissions";
+import { getCurrencySymbol } from "@/lib/currencies";
 import ExpenseApproveButton from "./ExpenseApproveButton";
+import ExpenseMarkPaidButton from "./ExpenseMarkPaidButton";
 
 const STATUS_STYLES: Record<string, string> = {
   pending: "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300",
   approved: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300",
+  paid: "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300",
   rejected: "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300",
 };
 
@@ -45,12 +48,14 @@ export default async function ExpenseDetailPage({
 
   if (!expense) notFound();
 
-  const [canEdit, canApprove] = await Promise.all([
+  const [canEdit, canApprove, canMarkPaid] = await Promise.all([
     canAccess(PERMISSION.EXPENSES_EDIT),
     canAccess(PERMISSION.EXPENSES_APPROVE),
+    canAccess(PERMISSION.EXPENSES_PAID),
   ]);
 
   const isPending = expense.status === "pending";
+  const isApproved = expense.status === "approved";
 
   return (
     <main className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6">
@@ -61,8 +66,9 @@ export default async function ExpenseDetailPage({
         >
           ← Back to Expenses
         </Link>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           {isPending && canApprove && <ExpenseApproveButton expenseId={id} />}
+          {isApproved && canMarkPaid && <ExpenseMarkPaidButton expenseId={id} />}
           {canEdit && isPending && (
             <Link
               href={`/expenses/${id}/edit`}
@@ -98,7 +104,8 @@ export default async function ExpenseDetailPage({
             Amount
           </p>
           <p className="mt-2 text-3xl font-bold text-red-800 dark:text-red-300">
-            ${Number(expense.amount).toLocaleString()}
+            {getCurrencySymbol(expense.currency ?? "USD")}{Number(expense.amount).toLocaleString()}{" "}
+            <span className="text-base font-normal text-red-600 dark:text-red-400">({expense.currency ?? "USD"})</span>
           </p>
         </div>
 
@@ -125,9 +132,11 @@ export default async function ExpenseDetailPage({
                     : undefined
                 }
               />
+              <InfoRow label="Currency" value={expense.currency ?? "USD"} />
               <InfoRow label="Payment method" value={expense.pMethod} />
-              <InfoRow label="Paid by" value={expense.paidBy} />
-              <InfoRow label="Received by" value={expense.receivedBy} />
+              {expense.status === "paid" && expense.paidBy && (
+                <InfoRow label="Paid by" value={expense.paidBy} />
+              )}
             </div>
           </div>
 

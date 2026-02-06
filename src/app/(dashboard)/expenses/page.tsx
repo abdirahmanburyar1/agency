@@ -36,6 +36,7 @@ export default async function ExpensesPage() {
     description: e.description,
     category: e.category,
     amount: Number(e.amount),
+    currency: e.currency ?? "USD",
     pMethod: e.pMethod,
     status: e.status,
     employee: e.employee

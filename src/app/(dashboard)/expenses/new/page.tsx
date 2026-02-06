@@ -7,8 +7,8 @@ export default async function NewExpensePage() {
   await requirePermission(PERMISSION.EXPENSES_CREATE, { redirectOnForbidden: true });
 
   return (
-    <main className="mx-auto max-w-2xl px-4 py-8 sm:px-6">
-      <div className="mb-6 flex items-center justify-between">
+    <main className="w-full py-6 sm:py-8">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <Link
           href="/expenses"
           className="text-sm text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"

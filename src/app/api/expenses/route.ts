@@ -21,20 +21,25 @@ export async function POST(request: Request) {
   await requirePermission(PERMISSION.EXPENSES_CREATE);
   try {
     const body = await request.json();
-    const expense = await prisma.expense.create({
-      data: {
-        date: new Date(body.date),
-        month: body.month,
-        amount: body.amount,
-        description: body.description,
-        category: body.category,
-        employeeId: body.employeeId || null,
-        paidBy: body.paidBy,
-        receivedBy: body.receivedBy,
-        pMethod: body.pMethod,
-        account: body.account,
-      },
-    });
+    const id = crypto.randomUUID().replace(/-/g, "").slice(0, 25);
+    const date = new Date(body.date);
+    const month = String(body.month);
+    const amount = Number(body.amount);
+    const currency = body.currency ?? "USD";
+    const description = body.description ?? null;
+    const category = body.category ?? null;
+    const employeeId = body.employeeId || null;
+    const paidBy = body.paidBy ?? null;
+    const receivedBy = body.receivedBy ?? null;
+    const pMethod = body.pMethod ?? null;
+    const account = body.account ?? null;
+
+    await prisma.$executeRaw`
+      INSERT INTO expenses (id, date, month, amount, currency, description, category, employee_id, paid_by, received_by, p_method, account, status)
+      VALUES (${id}, ${date}, ${month}, ${amount}, ${currency}, ${description}, ${category}, ${employeeId}, ${paidBy}, ${receivedBy}, ${pMethod}, ${account}, 'pending')
+    `;
+
+    const expense = await prisma.expense.findUniqueOrThrow({ where: { id } });
     trigger(EVENTS.EXPENSE_CREATED, { expense }).catch(() => {});
     return NextResponse.json(expense);
   } catch (error) {

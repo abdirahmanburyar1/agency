@@ -19,6 +19,7 @@ const PERMISSIONS = [
   { code: "expenses.edit", name: "Edit Expenses", resource: "expenses", action: "edit" },
   { code: "expenses.delete", name: "Delete Expenses", resource: "expenses", action: "delete" },
   { code: "expenses.approve", name: "Approve Expenses", resource: "expenses", action: "approve" },
+  { code: "expenses.paid", name: "Mark Expenses as Paid", resource: "expenses", action: "paid" },
   { code: "receivables.view", name: "View Receivables", resource: "receivables", action: "view" },
   { code: "receivables.create", name: "Create Receivables", resource: "receivables", action: "create" },
   { code: "receivables.edit", name: "Edit Receivables", resource: "receivables", action: "edit" },
@@ -105,6 +106,67 @@ async function main() {
       create: { roleId: campaignLeaderRole.id, permissionId: leaderPerm.id },
       update: {},
     });
+  }
+
+  // Expense Initiator: create expenses only
+  const expenseCreatePerm = await prisma.permission.findUnique({ where: { code: "expenses.create" } });
+  const expenseViewPerm = await prisma.permission.findUnique({ where: { code: "expenses.view" } });
+  if (expenseCreatePerm && expenseViewPerm) {
+    const expenseInitiatorRole = await prisma.role.upsert({
+      where: { name: "Expense Initiator" },
+      create: {
+        name: "Expense Initiator",
+        description: "Can create and view expenses. Cannot approve or mark as paid.",
+      },
+      update: {},
+    });
+    for (const perm of [expenseViewPerm, expenseCreatePerm]) {
+      await prisma.rolePermission.upsert({
+        where: { roleId_permissionId: { roleId: expenseInitiatorRole.id, permissionId: perm.id } },
+        create: { roleId: expenseInitiatorRole.id, permissionId: perm.id },
+        update: {},
+      });
+    }
+  }
+
+  // General Manager: approve expenses
+  const expenseApprovePerm = await prisma.permission.findUnique({ where: { code: "expenses.approve" } });
+  if (expenseApprovePerm && expenseViewPerm) {
+    const generalManagerRole = await prisma.role.upsert({
+      where: { name: "General Manager" },
+      create: {
+        name: "General Manager",
+        description: "Can view and approve expenses. Cannot mark as paid.",
+      },
+      update: {},
+    });
+    for (const perm of [expenseViewPerm!, expenseApprovePerm]) {
+      await prisma.rolePermission.upsert({
+        where: { roleId_permissionId: { roleId: generalManagerRole.id, permissionId: perm.id } },
+        create: { roleId: generalManagerRole.id, permissionId: perm.id },
+        update: {},
+      });
+    }
+  }
+
+  // Finance: mark expenses as paid
+  const expensePaidPerm = await prisma.permission.findUnique({ where: { code: "expenses.paid" } });
+  if (expensePaidPerm && expenseViewPerm) {
+    const financeRole = await prisma.role.upsert({
+      where: { name: "Finance" },
+      create: {
+        name: "Finance",
+        description: "Can view expenses and mark approved expenses as paid.",
+      },
+      update: {},
+    });
+    for (const perm of [expenseViewPerm!, expensePaidPerm]) {
+      await prisma.rolePermission.upsert({
+        where: { roleId_permissionId: { roleId: financeRole.id, permissionId: perm.id } },
+        create: { roleId: financeRole.id, permissionId: perm.id },
+        update: {},
+      });
+    }
   }
 
   // Optional: Create initial admin via env vars (e.g. for quick dev setup)

@@ -16,6 +16,7 @@ export const PERMISSION = {
   EXPENSES_EDIT: "expenses.edit",
   EXPENSES_DELETE: "expenses.delete",
   EXPENSES_APPROVE: "expenses.approve",
+  EXPENSES_PAID: "expenses.paid", // Finance: mark expense as paid
   RECEIVABLES_VIEW: "receivables.view",
   RECEIVABLES_CREATE: "receivables.create",
   RECEIVABLES_EDIT: "receivables.edit",

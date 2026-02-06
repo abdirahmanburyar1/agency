@@ -1,0 +1,41 @@
+export const CURRENCIES = [
+  { code: "USD", name: "US Dollar", symbol: "$" },
+  { code: "EUR", name: "Euro", symbol: "€" },
+  { code: "GBP", name: "British Pound", symbol: "£" },
+  { code: "SAR", name: "Saudi Riyal", symbol: "﷼" },
+  { code: "AED", name: "UAE Dirham", symbol: "د.إ" },
+  { code: "EGP", name: "Egyptian Pound", symbol: "E£" },
+  { code: "SDG", name: "Sudanese Pound", symbol: "SDG" },
+  { code: "TRY", name: "Turkish Lira", symbol: "₺" },
+  { code: "INR", name: "Indian Rupee", symbol: "₹" },
+  { code: "PKR", name: "Pakistani Rupee", symbol: "₨" },
+  { code: "BHD", name: "Bahraini Dinar", symbol: "BD" },
+  { code: "KWD", name: "Kuwaiti Dinar", symbol: "KD" },
+  { code: "QAR", name: "Qatari Riyal", symbol: "QR" },
+  { code: "OMR", name: "Omani Rial", symbol: "OMR" },
+  { code: "JOD", name: "Jordanian Dinar", symbol: "JOD" },
+  // African
+  { code: "XOF", name: "West African CFA Franc", symbol: "CFA" },
+  { code: "XAF", name: "Central African CFA Franc", symbol: "FCFA" },
+  { code: "NGN", name: "Nigerian Naira", symbol: "₦" },
+  { code: "GHS", name: "Ghanaian Cedi", symbol: "₵" },
+  { code: "KES", name: "Kenyan Shilling", symbol: "KSh" },
+  { code: "TZS", name: "Tanzanian Shilling", symbol: "TSh" },
+  { code: "UGX", name: "Ugandan Shilling", symbol: "USh" },
+  { code: "ZAR", name: "South African Rand", symbol: "R" },
+  { code: "MAD", name: "Moroccan Dirham", symbol: "DH" },
+  { code: "TND", name: "Tunisian Dinar", symbol: "DT" },
+  { code: "DZD", name: "Algerian Dinar", symbol: "DA" },
+  { code: "ETB", name: "Ethiopian Birr", symbol: "Br" },
+  { code: "RWF", name: "Rwandan Franc", symbol: "FRw" },
+  { code: "ZMW", name: "Zambian Kwacha", symbol: "ZK" },
+  { code: "BWP", name: "Botswanan Pula", symbol: "P" },
+  { code: "MUR", name: "Mauritian Rupee", symbol: "₨" },
+  { code: "LYD", name: "Libyan Dinar", symbol: "LD" },
+  { code: "GNF", name: "Guinean Franc", symbol: "FG" },
+  { code: "SLL", name: "Sierra Leonean Leone", symbol: "Le" },
+] as const;
+
+export function getCurrencySymbol(code: string): string {
+  return CURRENCIES.find((c) => c.code === code)?.symbol ?? code;
+}

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import SearchableEmployeeSelect from "@/components/SearchableEmployeeSelect";
 import SearchableCountrySelect from "@/components/SearchableCountrySelect";
+import SearchableCurrencySelect from "@/components/SearchableCurrencySelect";
 
 const MONTHS = [
   "January", "February", "March", "April", "May", "June",
@@ -21,9 +22,8 @@ type InitialData = {
   employeePhone: string | null;
   description: string;
   amount: string;
+  currency: string;
   pMethod: string;
-  paidBy: string;
-  receivedBy: string;
 };
 
 export default function EditExpenseForm({ initial }: { initial: InitialData }) {
@@ -45,9 +45,8 @@ export default function EditExpenseForm({ initial }: { initial: InitialData }) {
   const [monthValue, setMonthValue] = useState(initial.monthValue);
   const [description, setDescription] = useState(initial.description);
   const [amount, setAmount] = useState(initial.amount);
+  const [currency, setCurrency] = useState(initial.currency);
   const [pMethod, setPMethod] = useState(initial.pMethod);
-  const [paidBy, setPaidBy] = useState(initial.paidBy);
-  const [receivedBy, setReceivedBy] = useState(initial.receivedBy);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -170,12 +169,11 @@ export default function EditExpenseForm({ initial }: { initial: InitialData }) {
           date,
           month: monthToName(monthValue),
           amount: amt,
+          currency,
           description: description.trim() || null,
           category: category.trim() || null,
           employeeId: employeeId || null,
           pMethod: pMethod.trim() || null,
-          paidBy: paidBy.trim() || null,
-          receivedBy: receivedBy.trim() || null,
         }),
       });
       const data = await res.json();
@@ -268,6 +266,15 @@ export default function EditExpenseForm({ initial }: { initial: InitialData }) {
             />
           </div>
           <div>
+            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">Currency</label>
+            <SearchableCurrencySelect
+              value={currency}
+              onChange={setCurrency}
+              placeholder="Search currency by code or name..."
+              className="mt-1"
+            />
+          </div>
+          <div>
             <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">Payment method</label>
             <SearchableCountrySelect
               options={paymentMethods}
@@ -276,26 +283,6 @@ export default function EditExpenseForm({ initial }: { initial: InitialData }) {
               onAddNew={() => setShowAddPaymentMethodModal(true)}
               placeholder="Cash, Card, Transfer..."
               className="mt-1"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">Paid by</label>
-            <input
-              type="text"
-              value={paidBy}
-              onChange={(e) => setPaidBy(e.target.value)}
-              placeholder="Who paid"
-              className="mt-1 w-full rounded border border-zinc-300 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">Received by</label>
-            <input
-              type="text"
-              value={receivedBy}
-              onChange={(e) => setReceivedBy(e.target.value)}
-              placeholder="Who received"
-              className="mt-1 w-full rounded border border-zinc-300 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
             />
           </div>
         </div>

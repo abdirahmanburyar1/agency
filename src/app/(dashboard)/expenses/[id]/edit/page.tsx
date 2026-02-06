@@ -30,9 +30,8 @@ export default async function EditExpensePage({
     employeePhone: expense.employee?.phone ?? null,
     description: expense.description ?? "",
     amount: String(Number(expense.amount)),
+    currency: (expense as { currency?: string }).currency ?? "USD",
     pMethod: expense.pMethod ?? "",
-    paidBy: expense.paidBy ?? "",
-    receivedBy: expense.receivedBy ?? "",
   };
 
   return (

@@ -76,6 +76,7 @@ export default function CreateBookingForm({ nextTrackNumberDisplay, initialCusto
   const [newCustomerCountry, setNewCustomerCountry] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [duplicateWarning, setDuplicateWarning] = useState(false);
 
   useEffect(() => {
     fetch("/api/customers/for-select")
@@ -135,6 +136,25 @@ export default function CreateBookingForm({ nextTrackNumberDisplay, initialCusto
       .then((data) => setCountries(Array.isArray(data?.country) ? data.country : []))
       .catch(() => {});
   }, []);
+
+  // Check for duplicate: same customer already has a booking in this campaign
+  useEffect(() => {
+    if (!customerId || !campaignId) {
+      setDuplicateWarning(false);
+      return;
+    }
+    const ctrl = new AbortController();
+    const params = new URLSearchParams({
+      customerId,
+      campaignId,
+      ...(isEdit && initialBooking?.id ? { excludeBookingId: initialBooking.id } : {}),
+    });
+    fetch(`/api/haj-umrah/bookings/check-duplicate?${params}`, { signal: ctrl.signal })
+      .then((r) => r.json())
+      .then((data) => setDuplicateWarning(!!data.duplicate))
+      .catch(() => setDuplicateWarning(false));
+    return () => ctrl.abort();
+  }, [customerId, campaignId, isEdit, initialBooking?.id]);
 
   async function addPackage(pkg: PackageOption) {
     if (lines.some((l) => l.packageId === pkg.id)) return;
@@ -287,6 +307,11 @@ export default function CreateBookingForm({ nextTrackNumberDisplay, initialCusto
       {error && (
         <p className="rounded-lg bg-red-50 px-4 py-2 text-sm text-red-800 dark:bg-red-900/30 dark:text-red-300">
           {error}
+        </p>
+      )}
+      {duplicateWarning && (
+        <p className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
+          This customer already has a booking in the selected campaign. One customer cannot be added twice to the same campaign.
         </p>
       )}
 
@@ -511,7 +536,7 @@ export default function CreateBookingForm({ nextTrackNumberDisplay, initialCusto
       <div className="flex gap-3">
         <button
           type="submit"
-          disabled={!canSave || loading || lines.length === 0 || !customerId || (!isEdit && !campaignId)}
+          disabled={!canSave || loading || lines.length === 0 || !customerId || (!isEdit && !campaignId) || (!!campaignId && duplicateWarning)}
           className="rounded-lg bg-teal-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50 dark:bg-teal-500 dark:hover:bg-teal-600"
           title={isEdit && !allowSaveBeforeCampaignDate ? "Cannot save: campaign departure date has passed." : undefined}
         >

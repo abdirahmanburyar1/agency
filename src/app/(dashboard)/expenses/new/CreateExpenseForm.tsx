@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import SearchableEmployeeSelect from "@/components/SearchableEmployeeSelect";
 import SearchableCountrySelect from "@/components/SearchableCountrySelect";
+import SearchableCurrencySelect from "@/components/SearchableCurrencySelect";
 
 const MONTHS = [
   "January", "February", "March", "April", "May", "June",
@@ -18,6 +19,7 @@ export default function CreateExpenseForm() {
   const [paymentMethods, setPaymentMethods] = useState<string[]>([]);
   const [category, setCategory] = useState("");
   const [employeeId, setEmployeeId] = useState("");
+  const [currency, setCurrency] = useState("USD");
   const [showAddEmployeeModal, setShowAddEmployeeModal] = useState(false);
   const [newEmployeeName, setNewEmployeeName] = useState("");
   const [newEmployeeRole, setNewEmployeeRole] = useState("");
@@ -33,8 +35,6 @@ export default function CreateExpenseForm() {
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
   const [pMethod, setPMethod] = useState("");
-  const [paidBy, setPaidBy] = useState("");
-  const [receivedBy, setReceivedBy] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -141,12 +141,11 @@ export default function CreateExpenseForm() {
           date,
           month: monthToName(monthValue),
           amount: amt,
+          currency,
           description: description.trim() || null,
           category: category.trim() || null,
           employeeId: employeeId || null,
           pMethod: pMethod.trim() || null,
-          paidBy: paidBy.trim() || null,
-          receivedBy: receivedBy.trim() || null,
         }),
       });
       const data = await res.json();
@@ -164,17 +163,50 @@ export default function CreateExpenseForm() {
   }
 
   return (
-    <>
-      <form
-        onSubmit={handleSubmit}
-        className="rounded-lg border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900"
-      >
-        {error && (
-          <div className="mb-4 rounded bg-red-50 p-3 text-sm text-red-700 dark:bg-red-900/20 dark:text-red-400">
-            {error}
+    <form onSubmit={handleSubmit} className="space-y-8">
+      {error && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300">
+          {error}
+        </div>
+      )}
+
+      {/* Amount & Currency - prominent */}
+      <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+        <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+          Amount
+        </h2>
+        <div className="flex flex-wrap items-end gap-4">
+          <div className="min-w-[140px] flex-1">
+            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">Amount *</label>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              required
+              placeholder="0.00"
+              className="mt-1 w-full rounded-lg border border-zinc-300 px-4 py-3 text-lg font-semibold tabular-nums dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
+            />
           </div>
-        )}
-        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="w-full sm:w-64">
+            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">Currency</label>
+            <SearchableCurrencySelect
+              value={currency}
+              onChange={setCurrency}
+              placeholder="Search currency by code or name..."
+              className="mt-1"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Core details */}
+      <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+        <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+          Details
+        </h2>
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           <div>
             <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">Date *</label>
             <input
@@ -182,7 +214,7 @@ export default function CreateExpenseForm() {
               value={date}
               onChange={(e) => onDateChange(e.target.value)}
               required
-              className="mt-1 w-full rounded border border-zinc-300 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
+              className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
             />
           </div>
           <div>
@@ -191,10 +223,10 @@ export default function CreateExpenseForm() {
               type="month"
               value={monthValue}
               onChange={(e) => onMonthChange(e.target.value)}
-              className="mt-1 w-full rounded border border-zinc-300 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
+              className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
             />
           </div>
-          <div className="sm:col-span-2">
+          <div>
             <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">Category</label>
             <SearchableCountrySelect
               options={categories}
@@ -205,7 +237,17 @@ export default function CreateExpenseForm() {
               className="mt-1"
             />
           </div>
-          <div className="sm:col-span-2">
+          <div className="sm:col-span-2 lg:col-span-3">
+            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">Description</label>
+            <input
+              type="text"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="e.g. January salary, Electricity bill"
+              className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
+            />
+          </div>
+          <div className="sm:col-span-2 lg:col-span-3">
             <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">Employee (optional)</label>
             <SearchableEmployeeSelect
               employees={employees}
@@ -216,76 +258,45 @@ export default function CreateExpenseForm() {
               className="mt-1"
             />
           </div>
-          <div className="sm:col-span-2">
-            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">Description</label>
-            <input
-              type="text"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="e.g. January salary, Electricity bill"
-              className="mt-1 w-full rounded border border-zinc-300 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">Amount *</label>
-            <input
-              type="number"
-              step="0.01"
-              min="0"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              required
-              className="mt-1 w-full rounded border border-zinc-300 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">Payment method</label>
-            <SearchableCountrySelect
-              options={paymentMethods}
-              value={pMethod}
-              onChange={setPMethod}
-              onAddNew={() => setShowAddPaymentMethodModal(true)}
-              placeholder="Cash, Card, Transfer..."
-              className="mt-1"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">Paid by</label>
-            <input
-              type="text"
-              value={paidBy}
-              onChange={(e) => setPaidBy(e.target.value)}
-              placeholder="Who paid"
-              className="mt-1 w-full rounded border border-zinc-300 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">Received by</label>
-            <input
-              type="text"
-              value={receivedBy}
-              onChange={(e) => setReceivedBy(e.target.value)}
-              placeholder="Who received (e.g. employee name)"
-              className="mt-1 w-full rounded border border-zinc-300 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
-            />
-          </div>
         </div>
-        <div className="mt-6 flex gap-3">
-          <button
-            type="submit"
-            disabled={loading}
-            className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
-          >
-            {loading ? "Creating..." : "Create Expense"}
-          </button>
-          <Link
-            href="/expenses"
-            className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium hover:bg-zinc-50 dark:border-zinc-600 dark:hover:bg-zinc-800"
-          >
-            Cancel
-          </Link>
+      </div>
+
+      {/* Payment info */}
+      <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+        <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+          Payment
+        </h2>
+        <div>
+          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">Payment method</label>
+          <SearchableCountrySelect
+            options={paymentMethods}
+            value={pMethod}
+            onChange={setPMethod}
+            onAddNew={() => setShowAddPaymentMethodModal(true)}
+            placeholder="Cash, Card, Transfer..."
+            className="mt-1"
+          />
         </div>
-      </form>
+        <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">
+          Paid by is recorded automatically when Finance marks the expense as paid.
+        </p>
+      </div>
+
+      <div className="flex flex-wrap gap-3 border-t border-zinc-200 pt-6 dark:border-zinc-800">
+        <button
+          type="submit"
+          disabled={loading}
+          className="rounded-lg bg-zinc-900 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-zinc-800 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+        >
+          {loading ? "Creating..." : "Create Expense"}
+        </button>
+        <Link
+          href="/expenses"
+          className="rounded-lg border border-zinc-300 px-6 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50 dark:border-zinc-600 dark:text-zinc-300 dark:hover:bg-zinc-800"
+        >
+          Cancel
+        </Link>
+      </div>
 
       {showAddEmployeeModal && (
         <div
@@ -295,17 +306,17 @@ export default function CreateExpenseForm() {
           }
         >
           <div
-            className="w-full max-w-sm rounded-lg border border-zinc-200 bg-white p-6 shadow-xl dark:border-zinc-700 dark:bg-zinc-900"
+            className="w-full max-w-sm rounded-xl border border-zinc-200 bg-white p-6 shadow-xl dark:border-zinc-700 dark:bg-zinc-900"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="mb-4 text-lg font-medium text-zinc-900 dark:text-white">Add new employee</h3>
+            <h3 className="mb-4 text-lg font-semibold text-zinc-900 dark:text-white">Add new employee</h3>
             <div className="space-y-3">
               <input
                 type="text"
                 value={newEmployeeName}
                 onChange={(e) => setNewEmployeeName(e.target.value)}
                 placeholder="Name *"
-                className="w-full rounded border border-zinc-300 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
+                className="w-full rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
                 autoFocus
               />
               <input
@@ -313,14 +324,14 @@ export default function CreateExpenseForm() {
                 value={newEmployeeRole}
                 onChange={(e) => setNewEmployeeRole(e.target.value)}
                 placeholder="Role / Position"
-                className="w-full rounded border border-zinc-300 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
+                className="w-full rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
               />
               <input
                 type="text"
                 value={newEmployeePhone}
                 onChange={(e) => setNewEmployeePhone(e.target.value)}
                 placeholder="Phone"
-                className="w-full rounded border border-zinc-300 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
+                className="w-full rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
               />
             </div>
             <div className="mt-4 flex justify-end gap-2">
@@ -329,14 +340,14 @@ export default function CreateExpenseForm() {
                 onClick={() =>
                   (setShowAddEmployeeModal(false), setNewEmployeeName(""), setNewEmployeeRole(""), setNewEmployeePhone(""))
                 }
-                className="rounded border border-zinc-300 px-4 py-2 text-sm font-medium hover:bg-zinc-50 dark:border-zinc-600 dark:hover:bg-zinc-800"
+                className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium hover:bg-zinc-50 dark:border-zinc-600 dark:hover:bg-zinc-800"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={addNewEmployee}
-                className="rounded bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+                className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
               >
                 Add
               </button>
@@ -351,16 +362,16 @@ export default function CreateExpenseForm() {
           onClick={() => (setShowAddCategoryModal(false), setNewCategoryValue(""))}
         >
           <div
-            className="w-full max-w-sm rounded-lg border border-zinc-200 bg-white p-6 shadow-xl dark:border-zinc-700 dark:bg-zinc-900"
+            className="w-full max-w-sm rounded-xl border border-zinc-200 bg-white p-6 shadow-xl dark:border-zinc-700 dark:bg-zinc-900"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="mb-4 text-lg font-medium text-zinc-900 dark:text-white">Add new category</h3>
+            <h3 className="mb-4 text-lg font-semibold text-zinc-900 dark:text-white">Add new category</h3>
             <input
               type="text"
               value={newCategoryValue}
               onChange={(e) => setNewCategoryValue(e.target.value)}
               placeholder="e.g. Employees, Utilities, Rent"
-              className="mb-4 w-full rounded border border-zinc-300 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
+              className="mb-4 w-full rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
               autoFocus
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
@@ -373,14 +384,14 @@ export default function CreateExpenseForm() {
               <button
                 type="button"
                 onClick={() => (setShowAddCategoryModal(false), setNewCategoryValue(""))}
-                className="rounded border border-zinc-300 px-4 py-2 text-sm font-medium hover:bg-zinc-50 dark:border-zinc-600 dark:hover:bg-zinc-800"
+                className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium hover:bg-zinc-50 dark:border-zinc-600 dark:hover:bg-zinc-800"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={addNewCategory}
-                className="rounded bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+                className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
               >
                 Add
               </button>
@@ -395,16 +406,16 @@ export default function CreateExpenseForm() {
           onClick={() => (setShowAddPaymentMethodModal(false), setNewPaymentMethodValue(""))}
         >
           <div
-            className="w-full max-w-sm rounded-lg border border-zinc-200 bg-white p-6 shadow-xl dark:border-zinc-700 dark:bg-zinc-900"
+            className="w-full max-w-sm rounded-xl border border-zinc-200 bg-white p-6 shadow-xl dark:border-zinc-700 dark:bg-zinc-900"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="mb-4 text-lg font-medium text-zinc-900 dark:text-white">Add payment method</h3>
+            <h3 className="mb-4 text-lg font-semibold text-zinc-900 dark:text-white">Add payment method</h3>
             <input
               type="text"
               value={newPaymentMethodValue}
               onChange={(e) => setNewPaymentMethodValue(e.target.value)}
               placeholder="e.g. Cash, Card, Transfer"
-              className="mb-4 w-full rounded border border-zinc-300 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
+              className="mb-4 w-full rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
               autoFocus
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
@@ -417,14 +428,14 @@ export default function CreateExpenseForm() {
               <button
                 type="button"
                 onClick={() => (setShowAddPaymentMethodModal(false), setNewPaymentMethodValue(""))}
-                className="rounded border border-zinc-300 px-4 py-2 text-sm font-medium hover:bg-zinc-50 dark:border-zinc-600 dark:hover:bg-zinc-800"
+                className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium hover:bg-zinc-50 dark:border-zinc-600 dark:hover:bg-zinc-800"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={addNewPaymentMethod}
-                className="rounded bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+                className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
               >
                 Add
               </button>
@@ -432,6 +443,6 @@ export default function CreateExpenseForm() {
           </div>
         </div>
       )}
-    </>
+    </form>
   );
 }
