@@ -120,8 +120,10 @@ function toDayKey(d: Date): string {
   return toLocalDateKey(d);
 }
 
-function monthToYear(monthStr: string): string {
-  return monthStr.slice(0, 4);
+/** Month key YYYY-MM for grouping; derived from date to avoid DB month format mismatch */
+function toMonthKey(d: Date): string {
+  const x = new Date(d);
+  return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}`;
 }
 
 /** First day of month (00:00:00 local) */
@@ -172,9 +174,9 @@ export async function getReportData(filter?: ReportFilters): Promise<ReportData>
     payablesAgg,
     hajPaymentsAgg,
     receiptsAgg,
-    ticketByMonth,
-    visaByMonth,
-    expenseByMonth,
+    ticketsForGrouping,
+    visasForGrouping,
+    expensesForGrouping,
     hajPaymentsForGrouping,
     ticketsDaily,
     visasDaily,
@@ -190,17 +192,15 @@ export async function getReportData(filter?: ReportFilters): Promise<ReportData>
     prisma.payable.aggregate({ where: payableWhere, _sum: { balance: true } }),
     prisma.payment.aggregate({ where: hajPaymentWhere, _sum: { amount: true } }),
     prisma.receipt.aggregate({ where: receiptWhere, _sum: { amount: true } }),
-    prisma.ticket.groupBy({
-      by: ["month"],
-      where: { ...dateRange, canceledAt: null },
-      _sum: { netSales: true },
-    }),
-    prisma.visa.groupBy({ by: ["month"], where: visaWhere, _sum: { netSales: true } }),
-    prisma.expense.groupBy({
-      by: ["month"],
-      where: { ...dateRange, status: "approved" },
-      _sum: { amount: true },
-    }),
+    period === "monthly" || period === "yearly"
+      ? prisma.ticket.findMany({ where: ticketWhere, select: { date: true, netSales: true } })
+      : [],
+    period === "monthly" || period === "yearly"
+      ? prisma.visa.findMany({ where: visaWhere, select: { date: true, netSales: true } })
+      : [],
+    period === "monthly" || period === "yearly"
+      ? prisma.expense.findMany({ where: expenseWhere, select: { date: true, amount: true } })
+      : [],
     prisma.payment.findMany({
       where: hajPaymentWhere,
       select: { paymentDate: true, amount: true },
@@ -334,23 +334,23 @@ export async function getReportData(filter?: ReportFilters): Promise<ReportData>
       string,
       { ticketRevenue: number; visaRevenue: number; hajUmrahRevenue: number; expenses: number; incomeReceived: number }
     >();
-    for (const t of ticketByMonth) {
-      const y = monthToYear(t.month);
+    for (const t of ticketsForGrouping as { date: Date; netSales: unknown }[]) {
+      const y = String(new Date(t.date).getFullYear());
       let m = rowMap.get(y);
       if (!m) {
         m = { ticketRevenue: 0, visaRevenue: 0, hajUmrahRevenue: 0, expenses: 0, incomeReceived: 0 };
         rowMap.set(y, m);
       }
-      m.ticketRevenue += Number(t._sum.netSales ?? 0);
+      m.ticketRevenue += Number(t.netSales ?? 0);
     }
-    for (const v of visaByMonth) {
-      const y = monthToYear(v.month);
+    for (const v of visasForGrouping as { date: Date; netSales: unknown }[]) {
+      const y = String(new Date(v.date).getFullYear());
       let m = rowMap.get(y);
       if (!m) {
         m = { ticketRevenue: 0, visaRevenue: 0, hajUmrahRevenue: 0, expenses: 0, incomeReceived: 0 };
         rowMap.set(y, m);
       }
-      m.visaRevenue += Number(v._sum.netSales ?? 0);
+      m.visaRevenue += Number(v.netSales ?? 0);
     }
     for (const h of hajPaymentsForGrouping) {
       const y = String(new Date(h.paymentDate).getFullYear());
@@ -361,14 +361,14 @@ export async function getReportData(filter?: ReportFilters): Promise<ReportData>
       }
       m.hajUmrahRevenue += Number(h.amount ?? 0);
     }
-    for (const e of expenseByMonth) {
-      const y = monthToYear(e.month);
+    for (const e of expensesForGrouping as { date: Date; amount: unknown }[]) {
+      const y = String(new Date(e.date).getFullYear());
       let m = rowMap.get(y);
       if (!m) {
         m = { ticketRevenue: 0, visaRevenue: 0, hajUmrahRevenue: 0, expenses: 0, incomeReceived: 0 };
         rowMap.set(y, m);
       }
-      m.expenses += Number(e._sum.amount ?? 0);
+      m.expenses += Number(e.amount ?? 0);
     }
     for (const r of (receiptsForGrouping ?? []) as { date: Date; amount: unknown }[]) {
       const y = String(new Date(r.date).getFullYear());
@@ -403,25 +403,28 @@ export async function getReportData(filter?: ReportFilters): Promise<ReportData>
     for (const { periodKey } of chartMonths) {
       rowMap.set(periodKey, { ticketRevenue: 0, visaRevenue: 0, hajUmrahRevenue: 0, expenses: 0, incomeReceived: 0 });
     }
-    for (const t of ticketByMonth) {
-      const m = rowMap.get(t.month);
-      if (m) m.ticketRevenue = Number(t._sum.netSales ?? 0);
+    for (const t of ticketsForGrouping as { date: Date; netSales: unknown }[]) {
+      const monthKey = toMonthKey(t.date);
+      const m = rowMap.get(monthKey);
+      if (m) m.ticketRevenue += Number(t.netSales ?? 0);
     }
-    for (const v of visaByMonth) {
-      const m = rowMap.get(v.month);
-      if (m) m.visaRevenue = Number(v._sum.netSales ?? 0);
+    for (const v of visasForGrouping as { date: Date; netSales: unknown }[]) {
+      const monthKey = toMonthKey(v.date);
+      const m = rowMap.get(monthKey);
+      if (m) m.visaRevenue += Number(v.netSales ?? 0);
     }
     for (const h of hajPaymentsForGrouping) {
-      const monthKey = `${new Date(h.paymentDate).getFullYear()}-${String(new Date(h.paymentDate).getMonth() + 1).padStart(2, "0")}`;
+      const monthKey = toMonthKey(h.paymentDate);
       const m = rowMap.get(monthKey);
       if (m) m.hajUmrahRevenue += Number(h.amount ?? 0);
     }
-    for (const e of expenseByMonth) {
-      const m = rowMap.get(e.month);
-      if (m) m.expenses = Number(e._sum.amount ?? 0);
+    for (const e of expensesForGrouping as { date: Date; amount: unknown }[]) {
+      const monthKey = toMonthKey(e.date);
+      const m = rowMap.get(monthKey);
+      if (m) m.expenses += Number(e.amount ?? 0);
     }
     for (const r of (receiptsForGrouping ?? []) as { date: Date; amount: unknown }[]) {
-      const monthKey = `${new Date(r.date).getFullYear()}-${String(new Date(r.date).getMonth() + 1).padStart(2, "0")}`;
+      const monthKey = toMonthKey(r.date);
       const m = rowMap.get(monthKey);
       if (m) m.incomeReceived += Number(r.amount ?? 0);
     }
