@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-type Customer = { id: string; name: string; email: string | null; phone: string | null; country?: string | null };
+type Customer = { id: string; name: string; phone: string | null; whatsappNumber: string | null };
 
 const PER_PAGE_OPTIONS = [10, 25, 50, 100];
 
@@ -20,9 +20,8 @@ export default function CustomersTable({
   const [perPage, setPerPage] = useState(10);
   const [editCustomer, setEditCustomer] = useState<Customer | null>(null);
   const [editName, setEditName] = useState("");
-  const [editEmail, setEditEmail] = useState("");
   const [editPhone, setEditPhone] = useState("");
-  const [editCountry, setEditCountry] = useState("");
+  const [editWhatsappNumber, setEditWhatsappNumber] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -32,8 +31,8 @@ export default function CustomersTable({
     return customers.filter(
       (c) =>
         c.name.toLowerCase().includes(q) ||
-        (c.email?.toLowerCase().includes(q)) ||
-        (c.phone?.includes(q))
+        (c.phone?.includes(q)) ||
+        (c.whatsappNumber?.includes(q))
     );
   }, [customers, query]);
 
@@ -54,9 +53,8 @@ export default function CustomersTable({
   const openEdit = (c: Customer) => {
     setEditCustomer(c);
     setEditName(c.name);
-    setEditEmail(c.email ?? "");
     setEditPhone(c.phone ?? "");
-    setEditCountry(c.country ?? "");
+    setEditWhatsappNumber(c.whatsappNumber ?? "");
     setError("");
   };
 
@@ -76,9 +74,8 @@ export default function CustomersTable({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: editName.trim(),
-          email: editEmail.trim() || null,
           phone: editPhone.trim() || null,
-          country: editCountry.trim() || null,
+          whatsappNumber: editWhatsappNumber.trim() || null,
         }),
       });
       const data = await res.json();
@@ -105,7 +102,7 @@ export default function CustomersTable({
             setQuery(e.target.value);
             setPage(1);
           }}
-          placeholder="Search by name, email, or phone..."
+          placeholder="Search by name, phone, or WhatsApp..."
           className="w-full min-w-0 max-w-full rounded border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-white sm:max-w-md"
         />
         <div className="flex shrink-0 items-center gap-2 sm:ml-auto">
@@ -131,7 +128,7 @@ export default function CustomersTable({
           <thead>
             <tr className="border-b border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950">
               <th className="px-4 py-3 text-left font-medium text-zinc-900 dark:text-white">Customer</th>
-              <th className="px-4 py-3 text-left font-medium text-zinc-900 dark:text-white">Email</th>
+              <th className="px-4 py-3 text-left font-medium text-zinc-900 dark:text-white">WhatsApp</th>
               {canEdit && (
                 <th className="px-4 py-3 text-right font-medium text-zinc-900 dark:text-white">Actions</th>
               )}
@@ -150,7 +147,7 @@ export default function CustomersTable({
                   <td className="px-4 py-3 font-medium text-zinc-900 dark:text-white">
                     {c.phone?.trim() ? `${c.name} - ${c.phone}` : c.name}
                   </td>
-                  <td className="px-4 py-3 text-zinc-700 dark:text-zinc-300">{c.email ?? "—"}</td>
+                  <td className="px-4 py-3 text-zinc-700 dark:text-zinc-300">{c.whatsappNumber ?? "—"}</td>
                   {canEdit && (
                     <td className="px-4 py-3 text-right">
                       <button
@@ -204,17 +201,6 @@ export default function CustomersTable({
               </div>
               <div>
                 <label className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  value={editEmail}
-                  onChange={(e) => setEditEmail(e.target.value)}
-                  className="w-full rounded border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
                   Phone
                 </label>
                 <input
@@ -226,13 +212,13 @@ export default function CustomersTable({
               </div>
               <div>
                 <label className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                  Country
+                  WhatsApp number
                 </label>
                 <input
                   type="text"
-                  value={editCountry}
-                  onChange={(e) => setEditCountry(e.target.value)}
-                  placeholder="For Haj/Umrah visa price"
+                  value={editWhatsappNumber}
+                  onChange={(e) => setEditWhatsappNumber(e.target.value)}
+                  placeholder="e.g. +252612345678"
                   className="w-full rounded border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
                 />
               </div>

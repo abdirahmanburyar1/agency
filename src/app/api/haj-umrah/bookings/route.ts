@@ -41,7 +41,7 @@ export async function GET() {
             }
           : null,
         customerId: b.customerId,
-        customer: { id: b.customer.id, name: b.customer.name, email: b.customer.email, phone: b.customer.phone },
+        customer: { id: b.customer.id, name: b.customer.name, phone: b.customer.phone, whatsappNumber: b.customer.whatsappNumber },
         date: b.date.toISOString(),
         month: b.month,
         status: b.status,

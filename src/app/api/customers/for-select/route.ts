@@ -22,7 +22,7 @@ export async function GET() {
   try {
     const customers = await prisma.customer.findMany({
       orderBy: { name: "asc" },
-      select: { id: true, name: true, phone: true, country: true },
+      select: { id: true, name: true, phone: true, whatsappNumber: true },
     });
     return NextResponse.json(customers);
   } catch (error) {

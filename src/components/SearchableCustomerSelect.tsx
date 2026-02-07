@@ -2,10 +2,11 @@
 
 import { useState, useRef, useEffect } from "react";
 
-type Customer = { id: string; name: string; phone?: string | null };
+type Customer = { id: string; name: string; phone?: string | null; whatsappNumber?: string | null };
 
 function formatLabel(c: Customer): string {
-  return c.phone?.trim() ? `${c.name} - ${c.phone}` : c.name;
+  const contact = c.phone?.trim() || c.whatsappNumber?.trim();
+  return contact ? `${c.name} - ${contact}` : c.name;
 }
 
 type Props = {

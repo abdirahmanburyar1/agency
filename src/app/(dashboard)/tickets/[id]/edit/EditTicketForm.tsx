@@ -44,8 +44,8 @@ export default function EditTicketForm({
   const [customerId, setCustomerId] = useState(initial.customerId);
   const [showAddCustomerModal, setShowAddCustomerModal] = useState(false);
   const [newCustomerName, setNewCustomerName] = useState("");
-  const [newCustomerEmail, setNewCustomerEmail] = useState("");
   const [newCustomerPhone, setNewCustomerPhone] = useState("");
+  const [newCustomerWhatsappNumber, setNewCustomerWhatsappNumber] = useState("");
   const [date, setDate] = useState(initial.date);
   const [monthValue, setMonthValue] = useState(initial.monthValue);
   const [reference, setReference] = useState(initial.reference);
@@ -97,8 +97,8 @@ export default function EditTicketForm({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         name,
-        email: newCustomerEmail.trim() || null,
         phone: newCustomerPhone.trim() || null,
+        whatsappNumber: newCustomerWhatsappNumber.trim() || null,
       }),
     });
     if (res.ok) {
@@ -110,8 +110,8 @@ export default function EditTicketForm({
       );
       setCustomerId(created.id);
       setNewCustomerName("");
-      setNewCustomerEmail("");
       setNewCustomerPhone("");
+      setNewCustomerWhatsappNumber("");
       setShowAddCustomerModal(false);
     }
   }
@@ -455,7 +455,7 @@ export default function EditTicketForm({
           onClick={() =>
             (setShowAddCustomerModal(false),
             setNewCustomerName(""),
-            setNewCustomerEmail(""),
+            setNewCustomerWhatsappNumber(""),
             setNewCustomerPhone(""))
           }
         >
@@ -482,23 +482,23 @@ export default function EditTicketForm({
                   if (e.key === "Escape") {
                     setShowAddCustomerModal(false);
                     setNewCustomerName("");
-                    setNewCustomerEmail("");
                     setNewCustomerPhone("");
+                    setNewCustomerWhatsappNumber("");
                   }
                 }}
-              />
-              <input
-                type="email"
-                value={newCustomerEmail}
-                onChange={(e) => setNewCustomerEmail(e.target.value)}
-                placeholder="Email"
-                className="w-full rounded border border-zinc-300 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
               />
               <input
                 type="text"
                 value={newCustomerPhone}
                 onChange={(e) => setNewCustomerPhone(e.target.value)}
                 placeholder="Phone"
+                className="w-full rounded border border-zinc-300 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
+              />
+              <input
+                type="text"
+                value={newCustomerWhatsappNumber}
+                onChange={(e) => setNewCustomerWhatsappNumber(e.target.value)}
+                placeholder="WhatsApp number"
                 className="w-full rounded border border-zinc-300 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
               />
             </div>
@@ -508,8 +508,8 @@ export default function EditTicketForm({
                 onClick={() =>
                   (setShowAddCustomerModal(false),
                   setNewCustomerName(""),
-                  setNewCustomerEmail(""),
-                  setNewCustomerPhone(""))
+                  setNewCustomerPhone(""),
+                  setNewCustomerWhatsappNumber(""))
                 }
                 className="rounded border border-zinc-300 px-4 py-2 text-sm font-medium hover:bg-zinc-50 dark:border-zinc-600 dark:hover:bg-zinc-800"
               >

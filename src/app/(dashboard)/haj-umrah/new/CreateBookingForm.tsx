@@ -8,7 +8,7 @@ import "sweetalert2/dist/sweetalert2.min.css";
 import SearchableCustomerSelect from "@/components/SearchableCustomerSelect";
 import SearchableCountrySelect from "@/components/SearchableCountrySelect";
 
-type Customer = { id: string; name: string; phone?: string | null; country?: string | null };
+type Customer = { id: string; name: string; phone?: string | null };
 type PackageOption = {
   id: string;
   name: string;
@@ -71,9 +71,8 @@ export default function CreateBookingForm({ nextTrackNumberDisplay, initialCusto
   const [showAddPackage, setShowAddPackage] = useState(false);
   const [showAddCustomerModal, setShowAddCustomerModal] = useState(false);
   const [newCustomerName, setNewCustomerName] = useState("");
-  const [newCustomerEmail, setNewCustomerEmail] = useState("");
   const [newCustomerPhone, setNewCustomerPhone] = useState("");
-  const [newCustomerCountry, setNewCustomerCountry] = useState("");
+  const [newCustomerWhatsappNumber, setNewCustomerWhatsappNumber] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [duplicateWarning, setDuplicateWarning] = useState(false);
@@ -109,15 +108,6 @@ export default function CreateBookingForm({ nextTrackNumberDisplay, initialCusto
     }
   }, [initialBooking?.id]);
 
-  // Default passport country from customer when customer changes
-  useEffect(() => {
-    if (customerId && customers.length > 0) {
-      const c = customers.find((x) => x.id === customerId);
-      if (c?.country?.trim()) {
-        setPassportCountry((prev) => (prev ? prev : c.country!.trim()));
-      }
-    }
-  }, [customerId, customers]);
   useEffect(() => {
     fetch("/api/haj-umrah/packages?active=true")
       .then((r) => r.json())
@@ -164,7 +154,7 @@ export default function CreateBookingForm({ nextTrackNumberDisplay, initialCusto
       pkg.priceByCountry === false ||
       (pkg.fixedPrice != null && pkg.fixedPrice > 0 && (!pkg.visaPrices?.length || pkg.visaPrices.length === 0));
     if (!isFixedPrice) {
-      const countryForVisa = passportCountry.trim() || customers.find((c) => c.id === customerId)?.country?.trim() || null;
+      const countryForVisa = passportCountry.trim() || null;
       if (!countryForVisa) {
         await Swal.fire({
           icon: "warning",
@@ -206,9 +196,8 @@ export default function CreateBookingForm({ nextTrackNumberDisplay, initialCusto
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name,
-          email: newCustomerEmail.trim() || null,
           phone: newCustomerPhone.trim() || null,
-          country: newCustomerCountry.trim() || null,
+          whatsappNumber: newCustomerWhatsappNumber.trim() || null,
         }),
       });
       const data = await res.json();
@@ -221,9 +210,8 @@ export default function CreateBookingForm({ nextTrackNumberDisplay, initialCusto
       setCustomers(Array.isArray(list) ? list : []);
       setCustomerId(data.id);
       setNewCustomerName("");
-      setNewCustomerEmail("");
       setNewCustomerPhone("");
-      setNewCustomerCountry("");
+      setNewCustomerWhatsappNumber("");
       setShowAddCustomerModal(false);
     } catch {
       setError("Failed to create customer");
@@ -556,8 +544,8 @@ export default function CreateBookingForm({ nextTrackNumberDisplay, initialCusto
           onClick={() => {
             setShowAddCustomerModal(false);
             setNewCustomerName("");
-            setNewCustomerEmail("");
             setNewCustomerPhone("");
+            setNewCustomerWhatsappNumber("");
             setNewCustomerCountry("");
             setError("");
           }}
@@ -585,18 +573,11 @@ export default function CreateBookingForm({ nextTrackNumberDisplay, initialCusto
                   if (e.key === "Escape") {
                     setShowAddCustomerModal(false);
                     setNewCustomerName("");
-                    setNewCustomerEmail("");
                     setNewCustomerPhone("");
+                    setNewCustomerWhatsappNumber("");
                     setError("");
                   }
                 }}
-              />
-              <input
-                type="email"
-                value={newCustomerEmail}
-                onChange={(e) => setNewCustomerEmail(e.target.value)}
-                placeholder="Email"
-                className="w-full rounded border border-zinc-300 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
               />
               <input
                 type="text"
@@ -607,9 +588,9 @@ export default function CreateBookingForm({ nextTrackNumberDisplay, initialCusto
               />
               <input
                 type="text"
-                value={newCustomerCountry}
-                onChange={(e) => setNewCustomerCountry(e.target.value)}
-                placeholder="Country (for visa price)"
+                value={newCustomerWhatsappNumber}
+                onChange={(e) => setNewCustomerWhatsappNumber(e.target.value)}
+                placeholder="WhatsApp number"
                 className="w-full rounded border border-zinc-300 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
               />
             </div>
@@ -619,8 +600,8 @@ export default function CreateBookingForm({ nextTrackNumberDisplay, initialCusto
                 onClick={() => {
                   setShowAddCustomerModal(false);
                   setNewCustomerName("");
-                  setNewCustomerEmail("");
                   setNewCustomerPhone("");
+                  setNewCustomerWhatsappNumber("");
                   setError("");
                 }}
                 className="rounded border border-zinc-300 px-4 py-2 text-sm font-medium hover:bg-zinc-50 dark:border-zinc-600 dark:hover:bg-zinc-800"

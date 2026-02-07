@@ -65,8 +65,8 @@ export default async function VisaDetailPage({
   const customer = visa.customerRelation;
   const customerName = customer?.name ?? visa.customer ?? null;
   const customerPhone = customer?.phone ?? null;
-  const customerEmail =
-    customer && "email" in customer ? (customer as { email?: string }).email : null;
+  const customerWhatsappNumber =
+    customer && "whatsappNumber" in customer ? (customer as { whatsappNumber?: string }).whatsappNumber : null;
 
   const visaNumberDisplay =
     visa.visaNumber != null ? String(visa.visaNumber).padStart(3, "0") : null;
@@ -145,7 +145,7 @@ export default async function VisaDetailPage({
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             <InfoRow label="Name" value={customerName} />
             <InfoRow label="Phone" value={customerPhone} />
-            <InfoRow label="Email" value={customerEmail ?? undefined} />
+            <InfoRow label="WhatsApp" value={customerWhatsappNumber ?? undefined} />
           </div>
         </section>
 

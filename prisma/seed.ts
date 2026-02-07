@@ -6,6 +6,7 @@ const prisma = new PrismaClient();
 // All system permissions - every feature has view/create/edit/delete
 const PERMISSIONS = [
   { code: "dashboard.view", name: "View Dashboard", resource: "dashboard", action: "view" },
+  { code: "reports.view", name: "View Reports", resource: "reports", action: "view" },
   { code: "tickets.view", name: "View Tickets", resource: "tickets", action: "view" },
   { code: "tickets.create", name: "Create Tickets", resource: "tickets", action: "create" },
   { code: "tickets.edit", name: "Edit Tickets", resource: "tickets", action: "edit" },

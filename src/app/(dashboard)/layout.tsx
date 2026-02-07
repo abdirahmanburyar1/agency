@@ -34,6 +34,8 @@ export default async function DashboardLayout({
     (item) => isAdmin || perms.length === 0 || perms.includes(item.perm)
   );
 
+  const canViewReports = isAdmin || perms.length === 0 || perms.includes(PERMISSION.REPORTS_VIEW);
+
   const adminItems: { href: string; label: string }[] = [];
   if (isAdmin || perms.includes(PERMISSION.SETTINGS_VIEW)) {
     adminItems.push({ href: "/admin/settings", label: "Settings" });
@@ -49,6 +51,7 @@ export default async function DashboardLayout({
     <DashboardShell
       navItems={navItems}
       adminItems={adminItems}
+      showReports={canViewReports}
       userEmail={session.user.email ?? ""}
       userName={session.user.name ?? null}
       roleName={roleName || "User"}

@@ -13,7 +13,7 @@ export default async function ReportsPage({
 }: {
   searchParams: Promise<{ from?: string; to?: string; period?: string }>;
 }) {
-  await requirePermission(PERMISSION.DASHBOARD_VIEW, { redirectOnForbidden: true });
+  await requirePermission(PERMISSION.REPORTS_VIEW, { redirectOnForbidden: true });
 
   const params = await searchParams;
   const fromStr = params.from ?? "";

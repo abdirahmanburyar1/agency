@@ -112,15 +112,14 @@ model Document {
 // --- Customer (shared by tickets, visas, haj-umrah) ---
 
 model Customer {
-  id        String   @id @default(cuid())
-  name      String   @map("name")
-  email     String?  @map("email")
-  phone     String?  @map("phone")
-  country   String?  @map("country")
-  createdAt DateTime @default(now()) @map("created_at")
+  id             String   @id @default(cuid())
+  name           String   @map("name")
+  phone          String?  @map("phone")
+  whatsappNumber String?  @map("whatsapp_number")
+  createdAt      DateTime @default(now()) @map("created_at")
 
-  tickets       Ticket[]
-  visas         Visa[]
+  tickets         Ticket[]
+  visas           Visa[]
   hajUmrahBookings HajUmrahBooking[]
 
   @@map("customers")

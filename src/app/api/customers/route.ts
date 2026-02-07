@@ -40,9 +40,8 @@ export async function POST(request: Request) {
     const customer = await prisma.customer.create({
       data: {
         name,
-        email: body.email ? String(body.email).trim() || null : null,
         phone: body.phone ? String(body.phone).trim() || null : null,
-        country: body.country ? String(body.country).trim() || null : null,
+        whatsappNumber: body.whatsappNumber ? String(body.whatsappNumber).trim() || null : null,
       },
     });
     return NextResponse.json(customer);

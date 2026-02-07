@@ -15,6 +15,7 @@ type DashboardShellProps = {
   children: React.ReactNode;
   navItems: NavItem[];
   adminItems: { href: string; label: string }[];
+  showReports?: boolean;
   userEmail: string;
   userName: string | null;
   roleName: string;
@@ -24,6 +25,7 @@ export default function DashboardShell({
   children,
   navItems,
   adminItems,
+  showReports = true,
   userEmail,
   userName,
   roleName,
@@ -43,6 +45,7 @@ export default function DashboardShell({
       <Sidebar
         navItems={navItems}
         adminItems={adminItems}
+        showReports={showReports}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
       />

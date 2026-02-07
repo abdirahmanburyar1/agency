@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 
 export const PERMISSION = {
   DASHBOARD_VIEW: "dashboard.view",
+  REPORTS_VIEW: "reports.view",
   TICKETS_VIEW: "tickets.view",
   TICKETS_CREATE: "tickets.create",
   TICKETS_EDIT: "tickets.edit",
@@ -59,6 +60,7 @@ export type PermissionCode = (typeof PERMISSION)[keyof typeof PERMISSION];
 // Permissions to allow when JWT has no permissions (stale JWT / Admin created before RBAC)
 const STALE_JWT_ALLOWED: PermissionCode[] = [
   PERMISSION.DASHBOARD_VIEW,
+  PERMISSION.REPORTS_VIEW,
   PERMISSION.SETTINGS_VIEW,
   PERMISSION.SETTINGS_EDIT,
   PERMISSION.USERS_VIEW,

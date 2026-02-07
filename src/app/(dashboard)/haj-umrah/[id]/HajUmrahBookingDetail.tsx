@@ -22,7 +22,7 @@ type Booking = {
   campaign: { id: string; date: string; month: string; name: string | null; type: string | null; leader: { id: string; name: string | null; email: string } | null } | null;
   campaignDisplay: string | null;
   customerId: string;
-  customer: { id: string; name: string; email: string | null; phone: string | null };
+  customer: { id: string; name: string; phone: string | null; whatsappNumber: string | null };
   date: string;
   month: string;
   status: string;
@@ -330,8 +330,8 @@ export default function HajUmrahBookingDetail({ booking, canEdit }: Props) {
         {booking.customer.phone && (
           <p className="text-sm text-zinc-600 dark:text-zinc-400">{booking.customer.phone}</p>
         )}
-        {booking.customer.email && (
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">{booking.customer.email}</p>
+        {booking.customer.whatsappNumber && (
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">WhatsApp: {booking.customer.whatsappNumber}</p>
         )}
         <Link
           href={`/customers?highlight=${booking.customerId}`}

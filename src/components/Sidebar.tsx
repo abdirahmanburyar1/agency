@@ -14,6 +14,7 @@ type NavItem = {
 type SidebarProps = {
   navItems: NavItem[];
   adminItems: { href: string; label: string }[];
+  showReports?: boolean;
   isOpen: boolean;
   onClose: () => void;
 };
@@ -142,7 +143,7 @@ function NavLink({
   );
 }
 
-export default function Sidebar({ navItems, adminItems, isOpen, onClose }: SidebarProps) {
+export default function Sidebar({ navItems, adminItems, showReports = true, isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
   const [adminExpanded, setAdminExpanded] = useState(false);
 
@@ -182,9 +183,11 @@ export default function Sidebar({ navItems, adminItems, isOpen, onClose }: Sideb
               <li>
                 <NavLink href="/" label="Dashboard" iconKey="dashboard" isActive={pathname === "/"} onClick={onClose} />
               </li>
-              <li>
-                <NavLink href="/reports" label="Reports" iconKey="reports" isActive={pathname === "/reports"} onClick={onClose} />
-              </li>
+              {showReports && (
+                <li>
+                  <NavLink href="/reports" label="Reports" iconKey="reports" isActive={pathname === "/reports"} onClick={onClose} />
+                </li>
+              )}
             </ul>
 
             <p className="mb-2 mt-6 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">

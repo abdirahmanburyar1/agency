@@ -25,8 +25,8 @@ export default function CreateVisaForm({
   const [customerId, setCustomerId] = useState("");
   const [showAddCustomerModal, setShowAddCustomerModal] = useState(false);
   const [newCustomerName, setNewCustomerName] = useState("");
-  const [newCustomerEmail, setNewCustomerEmail] = useState("");
   const [newCustomerPhone, setNewCustomerPhone] = useState("");
+  const [newCustomerWhatsappNumber, setNewCustomerWhatsappNumber] = useState("");
   const [options, setOptions] = useState<{ country: string[] }>({ country: [] });
   const [showAddCountryModal, setShowAddCountryModal] = useState(false);
   const [newCountryValue, setNewCountryValue] = useState("");
@@ -84,8 +84,8 @@ export default function CreateVisaForm({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         name,
-        email: newCustomerEmail.trim() || null,
         phone: newCustomerPhone.trim() || null,
+        whatsappNumber: newCustomerWhatsappNumber.trim() || null,
       }),
     });
     if (res.ok) {
@@ -93,8 +93,8 @@ export default function CreateVisaForm({
       setCustomers((prev) => [...prev, { id: created.id, name: created.name, phone: created.phone }].sort((a, b) => a.name.localeCompare(b.name)));
       setCustomerId(created.id);
       setNewCustomerName("");
-      setNewCustomerEmail("");
       setNewCustomerPhone("");
+      setNewCustomerWhatsappNumber("");
       setShowAddCustomerModal(false);
     }
   }
@@ -312,7 +312,7 @@ export default function CreateVisaForm({
       {showAddCustomerModal && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-          onClick={() => (setShowAddCustomerModal(false), setNewCustomerName(""), setNewCustomerEmail(""), setNewCustomerPhone(""))}
+          onClick={() => (setShowAddCustomerModal(false), setNewCustomerName(""), setNewCustomerPhone(""), setNewCustomerWhatsappNumber(""), setNewCustomerCountry(""))}
         >
           <div
             className="w-full max-w-sm rounded-lg border border-zinc-200 bg-white p-6 shadow-xl dark:border-zinc-700 dark:bg-zinc-900"
@@ -331,15 +331,8 @@ export default function CreateVisaForm({
                 autoFocus
                 onKeyDown={(e) => {
                   if (e.key === "Enter") { e.preventDefault(); addNewCustomer(); }
-                  if (e.key === "Escape") { setShowAddCustomerModal(false); setNewCustomerName(""); setNewCustomerEmail(""); setNewCustomerPhone(""); }
+                  if (e.key === "Escape") { setShowAddCustomerModal(false); setNewCustomerName(""); setNewCustomerPhone(""); setNewCustomerWhatsappNumber(""); }
                 }}
-              />
-              <input
-                type="email"
-                value={newCustomerEmail}
-                onChange={(e) => setNewCustomerEmail(e.target.value)}
-                placeholder="Email"
-                className="w-full rounded border border-zinc-300 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
               />
               <input
                 type="text"
@@ -348,11 +341,18 @@ export default function CreateVisaForm({
                 placeholder="Phone"
                 className="w-full rounded border border-zinc-300 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
               />
+              <input
+                type="text"
+                value={newCustomerWhatsappNumber}
+                onChange={(e) => setNewCustomerWhatsappNumber(e.target.value)}
+                placeholder="WhatsApp number"
+                className="w-full rounded border border-zinc-300 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
+              />
             </div>
             <div className="mt-4 flex justify-end gap-2">
               <button
                 type="button"
-                onClick={() => (setShowAddCustomerModal(false), setNewCustomerName(""), setNewCustomerEmail(""), setNewCustomerPhone(""))}
+                onClick={() => (setShowAddCustomerModal(false), setNewCustomerName(""), setNewCustomerPhone(""), setNewCustomerWhatsappNumber(""))}
                 className="rounded border border-zinc-300 px-4 py-2 text-sm font-medium hover:bg-zinc-50 dark:border-zinc-600 dark:hover:bg-zinc-800"
               >
                 Cancel

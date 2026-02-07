@@ -86,8 +86,8 @@ export default async function HajUmrahBookingPage({
     customer: {
       id: booking.customer.id,
       name: booking.customer.name,
-      email: booking.customer.email,
       phone: booking.customer.phone,
+      whatsappNumber: booking.customer.whatsappNumber,
     },
     date: booking.date.toISOString(),
     month: booking.month,

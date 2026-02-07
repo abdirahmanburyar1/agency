@@ -41,7 +41,7 @@ export default async function PaymentReceiptPage({
         ? String(payment.hajUmrahBooking.trackNumber).padStart(3, "0")
         : String(payment.hajUmrahBooking.trackNumber))
     : null;
-  const customerEmail = customer && "email" in customer ? (customer as { email?: string }).email : null;
+  const customerWhatsappNumber = customer && "whatsappNumber" in customer ? (customer as { whatsappNumber?: string }).whatsappNumber : null;
 
   const singleReceipt = receiptId
     ? payment.receipts.find((r) => r.id === receiptId)
@@ -115,7 +115,7 @@ export default async function PaymentReceiptPage({
             />
             <div className="shrink-0 text-right text-sm">
               <p className="font-medium text-zinc-700">{customerName}</p>
-              {customerEmail && <p className="text-xs text-zinc-500">{customerEmail}</p>}
+              {customerWhatsappNumber && <p className="text-xs text-zinc-500">WhatsApp: {customerWhatsappNumber}</p>}
             </div>
           </div>
 

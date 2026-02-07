@@ -7,9 +7,8 @@ import { useRouter } from "next/navigation";
 export default function CreateCustomerForm() {
   const router = useRouter();
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [country, setCountry] = useState("");
+  const [whatsappNumber, setWhatsappNumber] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -23,9 +22,8 @@ export default function CreateCustomerForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: name.trim(),
-          email: email.trim() || null,
           phone: phone.trim() || null,
-          country: country.trim() || null,
+          whatsappNumber: whatsappNumber.trim() || null,
         }),
       });
       const data = await res.json();
@@ -67,15 +65,6 @@ export default function CreateCustomerForm() {
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">Email</label>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="mt-1 w-full rounded border border-zinc-300 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
-          />
-        </div>
-        <div>
           <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">Phone</label>
           <input
             type="text"
@@ -85,12 +74,12 @@ export default function CreateCustomerForm() {
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">Country</label>
+          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">WhatsApp number</label>
           <input
             type="text"
-            value={country}
-            onChange={(e) => setCountry(e.target.value)}
-            placeholder="Used for Haj/Umrah visa price"
+            value={whatsappNumber}
+            onChange={(e) => setWhatsappNumber(e.target.value)}
+            placeholder="e.g. +252612345678"
             className="mt-1 w-full rounded border border-zinc-300 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
           />
         </div>

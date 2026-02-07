@@ -1,5 +1,5 @@
 export default function CustomersLoading() {
-  const cols = 3; // Customer, Email, Actions
+  const cols = 3; // Customer, WhatsApp, Actions
   const rows = 10;
 
   return (
