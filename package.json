@@ -20,15 +20,16 @@
     "seed": "npx tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@imagekit/nodejs": "^7.0.0",
     "@prisma/client": "^6",
     "bcryptjs": "^2",
-    "@imagekit/nodejs": "^7.0.0",
     "jspdf": "^4.1.0",
     "jspdf-autotable": "^5.0.7",
     "next": "16.1.6",
     "next-auth": "4.24.13",
     "pusher": "^5",
     "pusher-js": "^8",
+    "qrcode.react": "^4.2.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "recharts": "^3.7.0",

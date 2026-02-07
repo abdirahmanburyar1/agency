@@ -12,6 +12,8 @@ const TYPES = [
   { type: "payment_status", label: "Payment Statuses" },
   { type: "country", label: "Countries" },
   { type: "expense_category", label: "Expense Categories" },
+  { type: "cargo_location", label: "Locations" },
+  { type: "cargo_carrier", label: "Carriers" },
 ] as const;
 
 export default async function SettingsPage() {
@@ -41,7 +43,7 @@ export default async function SettingsPage() {
         </div>
       </div>
       <p className="mb-6 text-sm text-zinc-500 dark:text-zinc-400">
-        Configure airlines, payment methods, flights, payment statuses, countries, expense categories, and currency rates. Currency rates are used in reports and dashboard to convert multi-currency expenses to USD.
+        Configure airlines, payment methods, flights, payment statuses, countries, expense categories, locations, carriers, and currency rates. Currency rates are used in reports and dashboard to convert multi-currency expenses to USD.
       </p>
       <div className="space-y-8">
         <CurrencyRatesForm canEdit={canEdit} />

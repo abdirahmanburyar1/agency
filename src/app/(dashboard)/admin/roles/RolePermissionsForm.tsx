@@ -71,6 +71,7 @@ export default function RolePermissionsForm({
     documents: "Documents",
     settings: "Settings",
     customers: "Customers",
+    cargo: "Cargo",
   };
 
   return (

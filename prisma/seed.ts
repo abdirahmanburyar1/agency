@@ -56,6 +56,10 @@ const PERMISSIONS = [
   { code: "haj_umrah.edit", name: "Edit Haj & Umrah", resource: "haj_umrah", action: "edit" },
   { code: "haj_umrah.delete", name: "Delete Haj & Umrah", resource: "haj_umrah", action: "delete" },
   { code: "haj_umrah.leader", name: "Campaign Leader", resource: "haj_umrah", action: "leader" },
+  { code: "cargo.view", name: "View Cargo", resource: "cargo", action: "view" },
+  { code: "cargo.create", name: "Create Cargo", resource: "cargo", action: "create" },
+  { code: "cargo.edit", name: "Edit Cargo", resource: "cargo", action: "edit" },
+  { code: "cargo.delete", name: "Delete Cargo", resource: "cargo", action: "delete" },
 ];
 
 async function main() {

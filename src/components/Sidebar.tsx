@@ -30,6 +30,7 @@ const ICON_COLORS: Record<string, string> = {
   receivables: "bg-green-500/15 text-green-600 dark:bg-green-400/20 dark:text-green-400",
   payables: "bg-rose-500/15 text-rose-600 dark:bg-rose-400/20 dark:text-rose-400",
   payments: "bg-indigo-500/15 text-indigo-600 dark:bg-indigo-400/20 dark:text-indigo-400",
+  cargo: "bg-amber-600/15 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400",
   settings: "bg-slate-500/15 text-slate-600 dark:bg-slate-400/20 dark:text-slate-400",
   users: "bg-cyan-500/15 text-cyan-600 dark:bg-cyan-400/20 dark:text-cyan-400",
   roles: "bg-fuchsia-500/15 text-fuchsia-600 dark:bg-fuchsia-400/20 dark:text-fuchsia-400",
@@ -82,6 +83,11 @@ const ICONS: Record<string, React.ReactNode> = {
   payments: (
     <svg className="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+    </svg>
+  ),
+  cargo: (
+    <svg className="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
     </svg>
   ),
   settings: (

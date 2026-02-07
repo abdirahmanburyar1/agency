@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { href: "/receivables", label: "Receivables", icon: "receivables", perm: PERMISSION.RECEIVABLES_VIEW },
   { href: "/payables", label: "Payables", icon: "payables", perm: PERMISSION.PAYABLES_VIEW },
   { href: "/payments", label: "Payments", icon: "payments", perm: PERMISSION.PAYMENTS_VIEW },
+  { href: "/cargo", label: "Cargo", icon: "cargo", perm: PERMISSION.CARGO_VIEW },
 ];
 
 export default async function DashboardLayout({

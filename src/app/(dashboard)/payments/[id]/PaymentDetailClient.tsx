@@ -8,17 +8,23 @@ import "sweetalert2/dist/sweetalert2.min.css";
 type PaymentDetailClientProps = {
   paymentId: string;
   balance: number;
+  balanceCurrency: string;
   customerName: string;
   canRecordReceipt: boolean;
   canEditStatus: boolean;
+  isCargo?: boolean;
+  currencies: string[];
 };
 
 export default function PaymentDetailClient({
   paymentId,
   balance,
+  balanceCurrency,
   customerName,
   canRecordReceipt,
   canEditStatus,
+  isCargo = false,
+  currencies = ["USD"],
 }: PaymentDetailClientProps) {
   const router = useRouter();
   const [paymentMethods, setPaymentMethods] = useState<string[]>([]);
@@ -35,17 +41,28 @@ export default function PaymentDetailClient({
     const options = paymentMethods
       .map((m) => `<option value="${m.replace(/"/g, "&quot;")}">${m}</option>`)
       .join("");
+    const currencyOptions = currencies
+      .map((c) => `<option value="${c}">${c}</option>`)
+      .join("");
+    const collectionOptions = ""; // Cargo payment is always at shipment; no need to ask
 
     const { value: formValues } = await Swal.fire({
       title: "Record payment received",
       html: `
-        <p class="text-left text-sm text-zinc-600 mb-4">${customerName} — Balance due: $${balance.toLocaleString()}</p>
+        <p class="text-left text-sm text-zinc-600 mb-4">${customerName} — Balance due: ${balanceCurrency === "USD" ? "$" : ""}${balance.toLocaleString()} ${balanceCurrency}</p>
         <div class="text-left space-y-3">
           <div>
             <label class="block text-xs font-medium text-zinc-500 mb-1">Amount *</label>
-            <input id="record-amount" type="number" step="0.01" min="0" max="${balance}" placeholder="0.00" 
+            <input id="record-amount" type="number" step="0.01" min="0" placeholder="0.00" 
               class="swal2-input w-full" style="margin: 0; width: 100%; box-sizing: border-box;">
           </div>
+          <div>
+            <label class="block text-xs font-medium text-zinc-500 mb-1">Currency *</label>
+            <select id="record-currency" class="swal2-input w-full" style="margin: 0; width: 100%; box-sizing: border-box;">
+              ${currencyOptions}
+            </select>
+          </div>
+          ${collectionOptions}
           <div>
             <label class="block text-xs font-medium text-zinc-500 mb-1">Payment method *</label>
             <select id="record-pmethod" class="swal2-input w-full" style="margin: 0; width: 100%; box-sizing: border-box;">
@@ -62,22 +79,20 @@ export default function PaymentDetailClient({
       focusConfirm: false,
       preConfirm: () => {
         const amountEl = document.getElementById("record-amount") as HTMLInputElement;
+        const currencyEl = document.getElementById("record-currency") as HTMLSelectElement;
         const pMethodEl = document.getElementById("record-pmethod") as HTMLSelectElement;
         const amt = Number(amountEl?.value ?? 0);
+        const curr = currencyEl?.value?.trim() ?? "USD";
         const pMethod = pMethodEl?.value?.trim() ?? "";
         if (!amt || amt <= 0) {
           Swal.showValidationMessage("Enter a valid amount");
-          return false;
-        }
-        if (amt > balance) {
-          Swal.showValidationMessage(`Amount cannot exceed $${balance.toLocaleString()}`);
           return false;
         }
         if (!pMethod) {
           Swal.showValidationMessage("Select a payment method");
           return false;
         }
-        return { amount: amt, pMethod };
+        return { amount: amt, currency: curr, pMethod };
       },
     });
 
@@ -90,6 +105,7 @@ export default function PaymentDetailClient({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           amount: formValues.amount,
+          currency: formValues.currency,
           pMethod: formValues.pMethod,
         }),
       });
@@ -193,7 +209,7 @@ export default function PaymentDetailClient({
       <div className="flex flex-wrap items-center gap-4 px-6 py-4">
         {balance < 0 && (
           <p className="text-sm text-blue-600 dark:text-blue-400">
-            Refund due: ${Math.abs(balance).toLocaleString()} — customer overpaid after adjustment. Process refund separately.
+            Refund due: {balanceCurrency === "USD" ? "$" : ""}{Math.abs(balance).toLocaleString()} {balanceCurrency} — customer overpaid after adjustment. Process refund separately.
           </p>
         )}
         {canRecordReceipt && balance > 0 && (

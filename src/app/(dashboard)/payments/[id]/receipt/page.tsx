@@ -3,7 +3,15 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requirePermission } from "@/lib/permissions";
 import { PERMISSION } from "@/lib/permissions";
+import { getCurrencyRates } from "@/lib/currency-rates";
+import { getCurrencySymbol } from "@/lib/currencies";
 import { PrintButton } from "@/components/PrintButton";
+
+function toUsd(amount: number, currency: string, rates: Record<string, number>): number {
+  const rate = rates[currency] ?? 1;
+  if (currency === "USD" || rate === 1) return amount;
+  return amount / rate;
+}
 
 export default async function PaymentReceiptPage({
   params,
@@ -16,26 +24,41 @@ export default async function PaymentReceiptPage({
   const { id: paymentId } = await params;
   const { r: receiptId } = await searchParams;
 
-  const payment = await prisma.payment.findUnique({
-    where: { id: paymentId },
-    include: {
-      ticket: { include: { customer: true } },
-      visa: { include: { customerRelation: true } },
-      hajUmrahBooking: { include: { customer: true } },
-      receipts: { orderBy: { date: "asc" } },
-    },
-  });
+  const [payment, rates] = await Promise.all([
+    prisma.payment.findUnique({
+      where: { id: paymentId },
+      include: {
+        ticket: { include: { customer: true } },
+        visa: { include: { customerRelation: true } },
+        hajUmrahBooking: { include: { customer: true } },
+        cargoShipment: true,
+        receipts: { orderBy: { date: "asc" } },
+      },
+    }),
+    getCurrencyRates(),
+  ]);
 
   if (!payment) notFound();
 
-  const totalReceived = payment.receipts.reduce((s, r) => s + Number(r.amount), 0);
-  const balance = Number(payment.amount) - totalReceived;
+  const paymentCurrency = (payment as { currency?: string }).currency ?? "USD";
   const expectedAmount = Number(payment.amount);
+  const totalReceivedUsd = payment.receipts.reduce((sum, r) => {
+    const rAmount = Number(r.amount);
+    const rCurrency = (r as { currency?: string }).currency ?? "USD";
+    const rRate = (r as { rateToBase?: number | null }).rateToBase;
+    const amtUsd = rRate != null ? rAmount * Number(rRate) : toUsd(rAmount, rCurrency, rates);
+    return sum + amtUsd;
+  }, 0);
+  const totalReceivedInPaymentCurrency =
+    paymentCurrency === "USD" ? totalReceivedUsd : totalReceivedUsd * (rates[paymentCurrency] ?? 1);
+  const balance = expectedAmount - totalReceivedInPaymentCurrency;
   const customer =
     payment.ticket?.customer ?? payment.visa?.customerRelation ?? payment.hajUmrahBooking?.customer;
   const customerName = customer
     ? (customer.phone ? `${customer.name} - ${customer.phone}` : customer.name)
-    : (payment.ticket?.customerName ?? payment.visa?.customer ?? "Customer");
+    : payment.cargoShipment
+      ? `${payment.cargoShipment.senderName} → ${payment.cargoShipment.receiverName}`
+      : (payment.ticket?.customerName ?? payment.visa?.customer ?? "Customer");
   const hajTrackDisplay = payment.hajUmrahBooking?.trackNumber != null
     ? (payment.hajUmrahBooking.trackNumber < 1000
         ? String(payment.hajUmrahBooking.trackNumber).padStart(3, "0")
@@ -61,13 +84,27 @@ export default async function PaymentReceiptPage({
     );
   }
 
-  const amountPaid = receipt ? Number(receipt.amount) : 0;
   const receiptsBeforeThis = receipt
     ? payment.receipts.filter((r) => r.id !== receipt.id && new Date(r.date) <= new Date(receipt.date))
     : [];
-  const totalExcludingThis = receiptsBeforeThis.reduce((s, r) => s + Number(r.amount), 0);
+  const totalExcludingThisUsd = receiptsBeforeThis.reduce((sum, r) => {
+    const rAmount = Number(r.amount);
+    const rCurrency = (r as { currency?: string }).currency ?? "USD";
+    const rRate = (r as { rateToBase?: number | null }).rateToBase;
+    const amtUsd = rRate != null ? rAmount * Number(rRate) : toUsd(rAmount, rCurrency, rates);
+    return sum + amtUsd;
+  }, 0);
+  const totalExcludingThis = paymentCurrency === "USD" ? totalExcludingThisUsd : totalExcludingThisUsd * (rates[paymentCurrency] ?? 1);
+  const receiptAmtInPaymentCurrency = receipt
+    ? (() => {
+        const rCurrency = (receipt as { currency?: string }).currency ?? "USD";
+        const rRate = (receipt as { rateToBase?: number | null }).rateToBase;
+        const amtUsd = rRate != null ? Number(receipt.amount) * Number(rRate) : toUsd(Number(receipt.amount), rCurrency, rates);
+        return paymentCurrency === "USD" ? amtUsd : amtUsd * (rates[paymentCurrency] ?? 1);
+      })()
+    : 0;
   const previousBalance = expectedAmount - totalExcludingThis;
-  const newBalance = receipt ? previousBalance - amountPaid : balance;
+  const newBalance = receipt ? previousBalance - receiptAmtInPaymentCurrency : balance;
 
   return (
     <main className="min-h-screen bg-white p-4 print:p-0">
@@ -143,7 +180,7 @@ export default async function PaymentReceiptPage({
                 <div>
                   <dt className="text-xs text-zinc-500">Reference</dt>
                   <dd className="text-sm font-medium">
-                    {payment.ticket?.reference ?? payment.name ?? (payment.hajUmrahBooking && hajTrackDisplay ? `Haj & Umrah #${hajTrackDisplay}` : null) ?? "—"}
+                    {payment.ticket?.reference ?? payment.name ?? (payment.hajUmrahBooking && hajTrackDisplay ? `Haj & Umrah #${hajTrackDisplay}` : null) ?? (payment.cargoShipment ? payment.cargoShipment.trackingNumber : null) ?? "—"}
                   </dd>
                 </div>
                 {payment.hajUmrahBooking && hajTrackDisplay && (
@@ -187,12 +224,12 @@ export default async function PaymentReceiptPage({
               <div className="space-y-1">
                 <div className="flex justify-between py-0.5">
                   <span className="text-zinc-600">Expected amount</span>
-                  <span className="font-medium">${expectedAmount.toLocaleString()}</span>
+                  <span className="font-medium">{getCurrencySymbol(paymentCurrency)}{expectedAmount.toLocaleString()} {paymentCurrency}</span>
                 </div>
                 {isSingleReceiptView && receipt && (
                   <div className="flex justify-between border-t border-zinc-200 py-2">
                     <span className="font-semibold text-zinc-900">Remaining balance</span>
-                    <span className="font-bold">${newBalance.toLocaleString()}</span>
+                    <span className="font-bold">{getCurrencySymbol(paymentCurrency)}{newBalance.toLocaleString()} {paymentCurrency}</span>
                   </div>
                 )}
               </div>
@@ -213,23 +250,26 @@ export default async function PaymentReceiptPage({
                     </tr>
                   </thead>
                   <tbody>
-                    {payment.receipts.map((r) => (
+                    {payment.receipts.map((r) => {
+                      const rCurrency = (r as { currency?: string }).currency ?? "USD";
+                      const rCollection = (r as { collectionPoint?: string | null }).collectionPoint;
+                      return (
                       <tr key={r.id} className="border-b border-zinc-100">
                         <td className="py-1.5">{new Date(r.date).toLocaleDateString()}</td>
-                        <td className="py-1.5">{r.pMethod ?? "—"}</td>
+                        <td className="py-1.5">{r.pMethod ?? "—"}{rCollection ? ` (${rCollection})` : ""}</td>
                         <td className="py-1.5">{"receivedBy" in r ? (r.receivedBy ?? "—") : "—"}</td>
-                        <td className="py-1.5 text-right font-medium">${Number(r.amount).toLocaleString()}</td>
+                        <td className="py-1.5 text-right font-medium">{getCurrencySymbol(rCurrency)}{Number(r.amount).toLocaleString()} {rCurrency}</td>
                       </tr>
-                    ))}
+                    );})}
                   </tbody>
                   <tfoot>
                     <tr className="border-t-2 border-zinc-200 font-semibold">
                       <td className="py-2" colSpan={3}>Total received</td>
-                      <td className="py-2 text-right">${totalReceived.toLocaleString()}</td>
+                      <td className="py-2 text-right">{getCurrencySymbol(paymentCurrency)}{totalReceivedInPaymentCurrency.toLocaleString()} {paymentCurrency}</td>
                     </tr>
                     <tr>
                       <td className="py-1.5" colSpan={3}>Remaining balance</td>
-                      <td className="py-1.5 text-right font-bold">${balance.toLocaleString()}</td>
+                      <td className="py-1.5 text-right font-bold">{getCurrencySymbol(paymentCurrency)}{balance.toLocaleString()} {paymentCurrency}</td>
                     </tr>
                   </tfoot>
                 </table>

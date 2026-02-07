@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "cargo_items" ADD COLUMN "unit_price" DOUBLE PRECISION NOT NULL DEFAULT 5;

@@ -4,7 +4,7 @@ import { requirePermission } from "@/lib/permissions";
 import { PERMISSION } from "@/lib/permissions";
 import { handleAuthError } from "@/lib/api-auth";
 
-const TYPES = ["airline", "payment_method", "flight", "payment_status", "country", "expense_category"] as const;
+const TYPES = ["airline", "payment_method", "flight", "payment_status", "country", "expense_category", "cargo_location", "cargo_carrier"] as const;
 
 export async function GET(request: Request) {
   try {
@@ -37,7 +37,7 @@ export async function POST(request: Request) {
   const { type, value } = await request.json();
   if (!type || !value || !TYPES.includes(type)) {
     return NextResponse.json(
-      { error: "Invalid type or value. Type must be: airline, payment_method, flight, payment_status, country, expense_category" },
+      { error: "Invalid type or value. Type must be: airline, payment_method, flight, payment_status, country, expense_category, cargo_location, cargo_carrier" },
       { status: 400 }
     );
   }
@@ -63,6 +63,14 @@ export async function POST(request: Request) {
     } else if (type === "expense_category") {
       try {
         await requirePermission(PERMISSION.EXPENSES_CREATE);
+      } catch (e) {
+        const res = handleAuthError(e);
+        if (res) return res;
+        throw e;
+      }
+    } else if (type === "cargo_location" || type === "cargo_carrier") {
+      try {
+        await requirePermission(PERMISSION.CARGO_CREATE);
       } catch (e) {
         const res = handleAuthError(e);
         if (res) return res;

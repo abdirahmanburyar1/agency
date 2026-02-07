@@ -5,6 +5,15 @@ import { requirePermission } from "@/lib/permissions";
 import { PERMISSION } from "@/lib/permissions";
 import { handleAuthError } from "@/lib/api-auth";
 import { auth } from "@/auth";
+import { getCurrencyRates } from "@/lib/currency-rates";
+
+/** Convert amount to USD. rateToUsd = units per 1 USD, so amountUsd = amount / rate. */
+function toUsd(amount: number, currency: string, rates: Record<string, number>): number {
+  const rate = rates[currency] ?? 1;
+  if (currency === "USD" || rate === 1) return amount;
+  return amount / rate;
+}
+
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -20,7 +29,10 @@ export async function POST(
     const { id: paymentId } = await params;
     const body = await request.json();
     const amount = Number(body.amount ?? 0);
+    const currency = String(body.currency ?? "USD").trim().toUpperCase() || "USD";
     const pMethod = body.pMethod?.trim();
+    const collectionPoint = body.collectionPoint?.trim() || null; // "shipment" | "delivery" for cargo
+
     if (amount <= 0) {
       return NextResponse.json({ error: "Amount must be positive" }, { status: 400 });
     }
@@ -36,26 +48,44 @@ export async function POST(
       return NextResponse.json({ error: "Payment not found" }, { status: 404 });
     }
 
-    const totalReceived = payment.receipts.reduce(
-      (sum, r) => sum + Number(r.amount),
-      0
-    );
-    const expectedAmount = Number(payment.amount);
-    const balance = expectedAmount - totalReceived;
-    if (amount > balance) {
+    const rates = await getCurrencyRates();
+    const paymentCurrency = (payment as { currency?: string }).currency ?? "USD";
+    const expectedUsd = toUsd(Number(payment.amount), paymentCurrency, rates);
+
+    const totalReceivedUsd = payment.receipts.reduce((sum, r) => {
+      const rAmount = Number(r.amount);
+      const rCurrency = (r as { currency?: string }).currency ?? "USD";
+      const rRate = (r as { rateToBase?: number | null }).rateToBase;
+      const amtUsd = rRate != null ? rAmount * Number(rRate) : toUsd(rAmount, rCurrency, rates);
+      return sum + amtUsd;
+    }, 0);
+
+    const receiptRateToUsd = rates[currency];
+    if (currency !== "USD" && (receiptRateToUsd == null || receiptRateToUsd <= 0)) {
       return NextResponse.json(
-        { error: `Paid amount cannot exceed expected amount. Balance remaining: $${balance.toLocaleString()}` },
+        { error: `No exchange rate configured for ${currency}. Add it in Admin → Settings → Currency rates.` },
+        { status: 400 }
+      );
+    }
+    const rateToBase = currency === "USD" ? 1 : 1 / (receiptRateToUsd ?? 1); // USD per 1 unit of receipt currency
+    const amountUsd = amount * rateToBase;
+
+    const balanceUsd = expectedUsd - totalReceivedUsd;
+    if (amountUsd > balanceUsd) {
+      return NextResponse.json(
+        {
+          error: `Paid amount (${amount} ${currency} ≈ $${amountUsd.toFixed(2)} USD) exceeds balance remaining ($${balanceUsd.toFixed(2)} USD)`,
+        },
         { status: 400 }
       );
     }
 
     const receiptDate = body.date ? new Date(body.date) : new Date();
-    const newTotalReceived = totalReceived + amount;
-    const newBalance = expectedAmount - newTotalReceived;
+    const newTotalReceivedUsd = totalReceivedUsd + amountUsd;
+    const newBalanceUsd = expectedUsd - newTotalReceivedUsd;
     const newStatus =
-      newBalance <= 0 ? "paid" : newBalance < expectedAmount ? "partial" : "pending";
+      newBalanceUsd <= 0 ? "paid" : newTotalReceivedUsd > 0 ? "partial" : "pending";
 
-    // Clear expected date when payment is received; status becomes paid/partial
     const updateData: { status: string; expectedDate?: null } = { status: newStatus };
     updateData.expectedDate = null;
 
@@ -64,11 +94,16 @@ export async function POST(
     const userEmail = session?.user?.email;
     const receivedBy = userName || userEmail || body.receivedBy || null;
 
+    const cargoShipmentId = (payment as { cargoShipmentId?: string | null }).cargoShipmentId;
+
     const [receipt] = await prisma.$transaction([
       prisma.receipt.create({
         data: {
           date: receiptDate,
           amount,
+          currency,
+          rateToBase,
+          collectionPoint: !cargoShipmentId && ["shipment", "delivery"].includes(collectionPoint ?? "") ? collectionPoint : null,
           pMethod,
           account: body.account ?? null,
           receivedBy,

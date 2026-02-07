@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { getCurrencySymbol } from "@/lib/currencies";
 
 export type SerializedPayment = {
   id: string;
@@ -11,11 +12,13 @@ export type SerializedPayment = {
   name: string | null;
   description: string | null;
   amount: number;
+  currency?: string;
   expectedDate: string | null;
-  source: "ticket" | "visa" | "haj_umrah" | null;
+  source: "ticket" | "visa" | "haj_umrah" | "cargo" | null;
   ticketId: string | null;
   visaId: string | null;
   hajUmrahBookingId: string | null;
+  cargoShipmentId: string | null;
   customerName: string;
   totalReceived: number;
   balance: number;
@@ -53,6 +56,7 @@ const SOURCE_OPTIONS = [
   { value: "ticket", label: "Ticket" },
   { value: "visa", label: "Visa" },
   { value: "haj_umrah", label: "Haj & Umrah" },
+  { value: "cargo", label: "Cargo" },
 ];
 
 export default function PaymentsTableWithFilters({ payments: allPayments }: PaymentsTableWithFiltersProps) {
@@ -234,6 +238,13 @@ export default function PaymentsTableWithFilters({ payments: allPayments }: Paym
                       >
                         Haj & Umrah
                       </Link>
+                    ) : p.source === "cargo" && p.cargoShipmentId ? (
+                      <Link
+                        href={`/cargo/${p.cargoShipmentId}`}
+                        className="text-blue-600 hover:underline dark:text-blue-400"
+                      >
+                        Cargo
+                      </Link>
                     ) : (
                       "—"
                     )}
@@ -243,27 +254,27 @@ export default function PaymentsTableWithFilters({ payments: allPayments }: Paym
                   <td className="px-4 py-3 text-right font-medium text-zinc-900 dark:text-white">
                     {p.status === "refunded" ? (
                       <span className="cursor-not-allowed text-zinc-500 dark:text-zinc-400">
-                        ${p.amount.toLocaleString()}
+                        {getCurrencySymbol(p.currency ?? "USD")}{p.amount.toLocaleString()} {p.currency ?? "USD"}
                       </span>
                     ) : (
                       <Link
                         href={`/payments/${p.id}`}
                         className="text-blue-600 hover:underline dark:text-blue-400"
                       >
-                        ${p.amount.toLocaleString()}
+                        {getCurrencySymbol(p.currency ?? "USD")}{p.amount.toLocaleString()} {p.currency ?? "USD"}
                       </Link>
                     )}
                   </td>
                   <td className="px-4 py-3 text-right text-zinc-700 dark:text-zinc-300">
-                    ${p.totalReceived.toLocaleString()}
+                    {getCurrencySymbol(p.currency ?? "USD")}{p.totalReceived.toLocaleString()} {p.currency ?? "USD"}
                   </td>
                   <td className="px-4 py-3 text-right font-medium text-zinc-900 dark:text-white">
                     {p.balance < 0 ? (
                       <span className="text-blue-600 dark:text-blue-400" title="Refund due to customer">
-                        Refund ${Math.abs(p.balance).toLocaleString()}
+                        Refund {getCurrencySymbol(p.currency ?? "USD")}{Math.abs(p.balance).toLocaleString()} {p.currency ?? "USD"}
                       </span>
                     ) : (
-                      `$${p.balance.toLocaleString()}`
+                      `${getCurrencySymbol(p.currency ?? "USD")}${p.balance.toLocaleString()} ${p.currency ?? "USD"}`
                     )}
                   </td>
                   <td className="px-4 py-3">

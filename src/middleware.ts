@@ -11,9 +11,10 @@ export async function middleware(req: NextRequest) {
   const isLoggedIn = !!token;
   const isLoginPage = req.nextUrl.pathname.startsWith("/login");
   const isSetupPage = req.nextUrl.pathname.startsWith("/setup");
+  const isTrackPage = req.nextUrl.pathname.startsWith("/track");
 
-  if (isLoginPage || isSetupPage) {
-    if (isLoggedIn && !isSetupPage) {
+  if (isLoginPage || isSetupPage || isTrackPage) {
+    if (isLoggedIn && !isSetupPage && !isTrackPage) {
       const perms = (token?.permissions as string[] | undefined) ?? [];
       const hasLeader = perms.includes("haj_umrah.leader");
       const hasView = perms.includes("haj_umrah.view");

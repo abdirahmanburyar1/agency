@@ -17,6 +17,7 @@ export default async function PaymentsPage() {
         ticket: { include: { customer: true } },
         visa: { include: { customerRelation: true } },
         hajUmrahBooking: { include: { customer: true } },
+        cargoShipment: true,
         receipts: true,
       },
     });
@@ -39,20 +40,45 @@ export default async function PaymentsPage() {
     throw err;
   }
 
+  const rates = await (await import("@/lib/currency-rates")).getCurrencyRates();
+
+  function toUsd(amount: number, currency: string): number {
+    const rate = rates[currency] ?? 1;
+    if (currency === "USD" || rate === 1) return amount;
+    return amount / rate;
+  }
+
   const serializedPayments: SerializedPayment[] = payments.map((p) => {
-    const totalReceived = p.receipts.reduce((s, r) => s + Number(r.amount), 0);
-    const balance = Number(p.amount) - totalReceived;
+    const paymentCurrency = (p as { currency?: string }).currency ?? "USD";
+    const expectedUsd = toUsd(Number(p.amount), paymentCurrency);
+    const totalReceivedUsd = p.receipts.reduce((sum, r) => {
+      const rAmount = Number(r.amount);
+      const rCurrency = (r as { currency?: string }).currency ?? "USD";
+      const rRate = (r as { rateToBase?: number | null }).rateToBase;
+      const amtUsd = rRate != null ? rAmount * Number(rRate) : toUsd(rAmount, rCurrency);
+      return sum + amtUsd;
+    }, 0);
+    const totalReceivedInPaymentCurrency =
+      paymentCurrency === "USD"
+        ? totalReceivedUsd
+        : totalReceivedUsd * (rates[paymentCurrency] ?? 1);
+    const balance = Number(p.amount) - totalReceivedInPaymentCurrency;
+
     const customer = p.ticket?.customer ?? p.visa?.customerRelation ?? p.hajUmrahBooking?.customer;
     const customerName = customer
       ? (customer.phone ? `${customer.name} - ${customer.phone}` : customer.name)
-      : (p.ticket?.customerName ?? p.visa?.customer ?? "—");
+      : p.cargoShipment
+        ? `${p.cargoShipment.senderName} → ${p.cargoShipment.receiverName}`
+        : (p.ticket?.customerName ?? p.visa?.customer ?? "—");
     const source: SerializedPayment["source"] = p.ticket
       ? "ticket"
       : p.visa
         ? "visa"
         : p.hajUmrahBooking
           ? "haj_umrah"
-          : null;
+          : p.cargoShipment
+            ? "cargo"
+            : null;
     return {
       id: p.id,
       date: p.date.toISOString(),
@@ -61,13 +87,15 @@ export default async function PaymentsPage() {
       name: p.name,
       description: p.description,
       amount: Number(p.amount),
+      currency: paymentCurrency,
       expectedDate: p.expectedDate?.toISOString() ?? null,
       source,
       ticketId: p.ticketId,
       visaId: p.visaId,
       hajUmrahBookingId: p.hajUmrahBookingId,
+      cargoShipmentId: p.cargoShipmentId,
       customerName,
-      totalReceived,
+      totalReceived: totalReceivedInPaymentCurrency,
       balance,
     };
   });

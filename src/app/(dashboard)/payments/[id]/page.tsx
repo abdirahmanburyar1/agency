@@ -3,7 +3,15 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requirePermission, canAccess } from "@/lib/permissions";
 import { PERMISSION } from "@/lib/permissions";
+import { getCurrencyRates } from "@/lib/currency-rates";
+import { getCurrencySymbol } from "@/lib/currencies";
 import PaymentDetailClient from "./PaymentDetailClient";
+
+function toUsd(amount: number, currency: string, rates: Record<string, number>): number {
+  const rate = rates[currency] ?? 1;
+  if (currency === "USD" || rate === 1) return amount;
+  return amount / rate;
+}
 
 export default async function PaymentDetailPage({
   params,
@@ -13,34 +21,54 @@ export default async function PaymentDetailPage({
   await requirePermission(PERMISSION.PAYMENTS_VIEW, { redirectOnForbidden: true });
   const { id } = await params;
 
-  const payment = await prisma.payment.findUnique({
-    where: { id },
-    include: {
-      ticket: { include: { customer: true } },
-      visa: { include: { customerRelation: true } },
-      hajUmrahBooking: { include: { customer: true } },
-      receipts: { orderBy: { date: "desc" } },
-    },
-  });
+  const [payment, rates] = await Promise.all([
+    prisma.payment.findUnique({
+      where: { id },
+      include: {
+        ticket: { include: { customer: true } },
+        visa: { include: { customerRelation: true } },
+        hajUmrahBooking: { include: { customer: true } },
+        cargoShipment: true,
+        receipts: { orderBy: { date: "desc" } },
+      },
+    }),
+    getCurrencyRates(),
+  ]);
 
   if (!payment) notFound();
 
-  const totalReceived = payment.receipts.reduce(
-    (s, r) => s + Number(r.amount),
-    0
-  );
-  const balance = Number(payment.amount) - totalReceived;
+  const paymentCurrency = (payment as { currency?: string }).currency ?? "USD";
+  const expectedUsd = toUsd(Number(payment.amount), paymentCurrency, rates);
+
+  const totalReceivedUsd = payment.receipts.reduce((sum, r) => {
+    const rAmount = Number(r.amount);
+    const rCurrency = (r as { currency?: string }).currency ?? "USD";
+    const rRate = (r as { rateToBase?: number | null }).rateToBase;
+    const amtUsd = rRate != null ? rAmount * Number(rRate) : toUsd(rAmount, rCurrency, rates);
+    return sum + amtUsd;
+  }, 0);
+
+  const balanceUsd = expectedUsd - totalReceivedUsd;
+  const totalReceivedInPaymentCurrency = paymentCurrency === "USD"
+    ? totalReceivedUsd
+    : totalReceivedUsd * (rates[paymentCurrency] ?? 1);
+  const balanceInPaymentCurrency = Number(payment.amount) - totalReceivedInPaymentCurrency;
+
   const customer = payment.ticket?.customer ?? payment.visa?.customerRelation ?? payment.hajUmrahBooking?.customer;
   const customerName = customer
     ? (customer.phone?.trim()
         ? `${customer.name} - ${customer.phone}`
         : customer.name)
-    : (payment.ticket?.customerName ?? payment.visa?.customer ?? "—");
+    : payment.cargoShipment
+      ? `${payment.cargoShipment.senderName} → ${payment.cargoShipment.receiverName}`
+      : (payment.ticket?.customerName ?? payment.visa?.customer ?? "—");
   const trackDisplay = payment.hajUmrahBooking?.trackNumber != null
     ? (payment.hajUmrahBooking.trackNumber < 1000
         ? String(payment.hajUmrahBooking.trackNumber).padStart(3, "0")
         : String(payment.hajUmrahBooking.trackNumber))
     : null;
+
+  const currencies = ["USD", ...Object.keys(rates).filter((c) => c !== "USD")].sort();
 
   const [canRecordReceipt, canEditStatus] = await Promise.all([
     canAccess(PERMISSION.PAYMENTS_CREATE),
@@ -91,7 +119,7 @@ export default async function PaymentDetailPage({
               Expected amount
             </p>
             <p className="mt-2 text-2xl font-bold text-zinc-900 dark:text-white">
-              ${Number(payment.amount).toLocaleString()}
+              {getCurrencySymbol(paymentCurrency)}{Number(payment.amount).toLocaleString()} {paymentCurrency}
             </p>
           </div>
           <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-6 shadow-sm dark:border-emerald-900/50 dark:bg-emerald-950/30">
@@ -99,17 +127,19 @@ export default async function PaymentDetailPage({
               Received
             </p>
             <p className="mt-2 text-2xl font-bold text-emerald-700 dark:text-emerald-400">
-              ${totalReceived.toLocaleString()}
+              {getCurrencySymbol(paymentCurrency)}{totalReceivedInPaymentCurrency.toLocaleString()} {paymentCurrency}
             </p>
           </div>
           <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
             <p className="text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-              {balance < 0 ? "Refund due" : "Balance"}
+              {balanceInPaymentCurrency < 0 ? "Refund due" : "Balance"}
             </p>
-            <p className={`mt-2 text-2xl font-bold ${balance < 0 ? "text-blue-600 dark:text-blue-400" : "text-zinc-900 dark:text-white"}`}>
-              {balance < 0 ? `$${Math.abs(balance).toLocaleString()}` : `$${balance.toLocaleString()}`}
+            <p className={`mt-2 text-2xl font-bold ${balanceInPaymentCurrency < 0 ? "text-blue-600 dark:text-blue-400" : "text-zinc-900 dark:text-white"}`}>
+              {balanceInPaymentCurrency < 0
+                ? `${getCurrencySymbol(paymentCurrency)}${Math.abs(balanceInPaymentCurrency).toLocaleString()} ${paymentCurrency}`
+                : `${getCurrencySymbol(paymentCurrency)}${balanceInPaymentCurrency.toLocaleString()} ${paymentCurrency}`}
             </p>
-            {balance < 0 && (
+            {balanceInPaymentCurrency < 0 && (
               <p className="mt-1 text-xs text-blue-600 dark:text-blue-400">Customer overpaid; refund owed</p>
             )}
           </div>
@@ -172,6 +202,13 @@ export default async function PaymentDetailPage({
                     >
                       Haj & Umrah{trackDisplay ? ` #${trackDisplay}` : ""}
                     </Link>
+                  ) : payment.cargoShipment ? (
+                    <Link
+                      href={`/cargo/${payment.cargoShipment.id}`}
+                      className="text-blue-600 hover:underline dark:text-blue-400"
+                    >
+                      Cargo · {payment.cargoShipment.trackingNumber}
+                    </Link>
                   ) : (
                     "—"
                   )
@@ -184,10 +221,13 @@ export default async function PaymentDetailPage({
             <div className="lg:col-span-1">
               <PaymentDetailClient
                 paymentId={payment.id}
-                balance={balance}
+                balance={balanceInPaymentCurrency}
+                balanceCurrency={paymentCurrency}
                 customerName={customerName}
                 canRecordReceipt={canRecordReceipt}
                 canEditStatus={canEditStatus}
+                isCargo={!!payment.cargoShipment}
+                currencies={currencies}
               />
             </div>
           )}
@@ -219,14 +259,19 @@ export default async function PaymentDetailPage({
             </div>
           ) : (
             <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
-              {payment.receipts.map((r) => (
+              {payment.receipts.map((r) => {
+                const rCurrency = (r as { currency?: string }).currency ?? "USD";
+                return (
                 <div
                   key={r.id}
                   className="flex items-center justify-between px-6 py-4 transition hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
                 >
                   <div>
                     <p className="font-medium text-zinc-900 dark:text-white">
-                      ${Number(r.amount).toLocaleString()}
+                      {getCurrencySymbol(rCurrency)}{Number(r.amount).toLocaleString()} {rCurrency}
+                      {(r as { collectionPoint?: string | null }).collectionPoint && (
+                        <span className="ml-2 text-xs text-zinc-500">({(r as { collectionPoint: string }).collectionPoint})</span>
+                      )}
                     </p>
                     <p className="text-sm text-zinc-500 dark:text-zinc-400">
                       {new Date(r.date).toLocaleDateString()}
@@ -243,7 +288,8 @@ export default async function PaymentDetailPage({
                     Print
                   </Link>
                 </div>
-              ))}
+              );
+              })}
             </div>
           )}
         </div>

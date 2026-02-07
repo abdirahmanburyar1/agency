@@ -53,6 +53,10 @@ export const PERMISSION = {
   HAJ_UMRAH_EDIT: "haj_umrah.edit",
   HAJ_UMRAH_DELETE: "haj_umrah.delete",
   HAJ_UMRAH_LEADER: "haj_umrah.leader", // Campaign leader: see only campaigns where they are assigned as leader (no sidebar/dashboard)
+  CARGO_VIEW: "cargo.view",
+  CARGO_CREATE: "cargo.create",
+  CARGO_EDIT: "cargo.edit",
+  CARGO_DELETE: "cargo.delete",
 } as const;
 
 export type PermissionCode = (typeof PERMISSION)[keyof typeof PERMISSION];
@@ -79,6 +83,9 @@ const STALE_JWT_ALLOWED: PermissionCode[] = [
   PERMISSION.HAJ_UMRAH_EDIT,
   PERMISSION.HAJ_UMRAH_DELETE,
   PERMISSION.HAJ_UMRAH_LEADER,
+  PERMISSION.CARGO_VIEW,
+  PERMISSION.CARGO_CREATE,
+  PERMISSION.CARGO_EDIT,
   PERMISSION.DOCUMENTS_VIEW,
   PERMISSION.DOCUMENTS_UPLOAD,
   PERMISSION.DOCUMENTS_DELETE,

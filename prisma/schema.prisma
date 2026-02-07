@@ -300,32 +300,39 @@ model Payment {
   name         String?   @map("name")
   description String?  @map("description")
   amount      Decimal  @map("amount") @db.Decimal(12, 2)
+  currency    String    @default("USD") @map("currency") // expected amount currency: USD, KES, AED, etc.
   ticketId          String?   @map("ticket_id")
   visaId            String?   @map("visa_id")
   hajUmrahBookingId String?   @map("haj_umrah_booking_id")
+  cargoShipmentId   String?   @map("cargo_shipment_id")
   createdAt         DateTime  @default(now()) @map("created_at")
   canceledAt        DateTime? @map("canceled_at")
 
   ticket          Ticket?          @relation(fields: [ticketId], references: [id], onDelete: SetNull)
   visa            Visa?            @relation(fields: [visaId], references: [id], onDelete: SetNull)
   hajUmrahBooking HajUmrahBooking? @relation(fields: [hajUmrahBookingId], references: [id], onDelete: SetNull)
+  cargoShipment   CargoShipment?   @relation(fields: [cargoShipmentId], references: [id], onDelete: SetNull)
   receipts        Receipt[]
 
   @@index([ticketId])
   @@index([visaId])
   @@index([hajUmrahBookingId])
+  @@index([cargoShipmentId])
   @@map("payments")
 }
 
 model Receipt {
-  id         String   @id @default(cuid())
-  date       DateTime @map("date")
-  amount     Decimal  @map("amount") @db.Decimal(12, 2)
-  pMethod    String?  @map("p_method")
-  account    String?  @map("account")
-  receivedBy String?  @map("received_by")
-  paymentId  String   @map("payment_id")
-  createdAt  DateTime @default(now()) @map("created_at")
+  id             String    @id @default(cuid())
+  date           DateTime  @map("date")
+  amount         Decimal   @map("amount") @db.Decimal(12, 2)
+  currency       String    @default("USD") @map("currency") // actual currency received: USD, KES, AED, etc.
+  rateToBase     Decimal?  @map("rate_to_base") @db.Decimal(12, 8) // 1 unit of currency = X USD (snapshot at receipt time)
+  collectionPoint String?  @map("collection_point") // for cargo: "shipment" | "delivery"
+  pMethod        String?   @map("p_method")
+  account        String?   @map("account")
+  receivedBy     String?   @map("received_by")
+  paymentId      String    @map("payment_id")
+  createdAt      DateTime  @default(now()) @map("created_at")
 
   payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
 
@@ -434,4 +441,67 @@ model HajUmrahBookingPackage {
   @@index([bookingId])
   @@index([packageId])
   @@map("haj_umrah_booking_packages")
+}
+
+// --- Cargo ---
+
+model CargoShipment {
+  id             String   @id @default(uuid())
+  trackingNumber String   @unique @map("tracking_number")
+  senderName     String   @map("sender_name")
+  senderPhone    String   @map("sender_phone")
+  receiverName   String   @map("receiver_name")
+  receiverPhone  String   @map("receiver_phone")
+  source         String   @map("source")   // from
+  destination    String   @map("destination") // to
+  transportMode  String   @default("air") @map("transport_mode") // air | road | sea
+  carrier        String   @default("") @map("carrier") // e.g. Daallo Airline, Doontii hebel, Bus
+  totalWeight    Float    @map("total_weight")
+  price          Float
+  currency       String   @default("USD") @map("currency") // quoted fee currency: USD, KES, AED, etc.
+  status         String
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  items    CargoItem[]
+  logs     CargoTrackingLog[]
+  payments Payment[]
+
+  @@index([status])
+  @@index([createdAt])
+  @@map("cargo_shipments")
+}
+
+model CargoItem {
+  id              String  @id @default(uuid())
+  cargoShipmentId String  @map("cargo_shipment_id")
+  description     String
+  quantity        Int
+  weight          Float
+  unitPrice       Float   @map("unit_price") @default(0) // $/kg
+
+  shipment CargoShipment @relation(fields: [cargoShipmentId], references: [id], onDelete: Cascade)
+
+  @@index([cargoShipmentId])
+  @@map("cargo_items")
+}
+
+model CargoTrackingLog {
+  id              String   @id @default(uuid())
+  cargoShipmentId String   @map("cargo_shipment_id")
+  status          String
+  note            String?
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  shipment CargoShipment @relation(fields: [cargoShipmentId], references: [id], onDelete: Cascade)
+
+  @@index([cargoShipmentId])
+  @@map("cargo_tracking_logs")
+}
+
+model CargoSequence {
+  year      Int      @id // e.g. 2026
+  lastValue Int      @default(0) @map("last_value")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("cargo_sequences")
 }
