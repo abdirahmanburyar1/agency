@@ -92,7 +92,7 @@ export default function DashboardDateFilter() {
         )}
       </div>
       <p className="w-full text-xs text-slate-500 dark:text-slate-400 sm:w-auto">
-        {hasFilter ? "Cards and chart show data for the selected date range only." : "Default: current month. Set From/To to filter by a custom range."}
+        {hasFilter ? "Charts show data for the selected date range only." : "Default: current month. Set From/To to filter by a custom range."}
       </p>
     </div>
   );
