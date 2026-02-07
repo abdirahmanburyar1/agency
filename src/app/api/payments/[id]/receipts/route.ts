@@ -1,11 +1,16 @@
 import { NextResponse } from "next/server";
+import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { trigger, EVENTS } from "@/lib/pusher";
 import { requirePermission } from "@/lib/permissions";
 import { PERMISSION } from "@/lib/permissions";
+import { getPaymentVisibilityWhere } from "@/lib/cargo";
 import { handleAuthError } from "@/lib/api-auth";
-import { auth } from "@/auth";
 import { getCurrencyRates } from "@/lib/currency-rates";
+
+function hasCargoPermission(permissions: string[]): boolean {
+  return permissions.some((p) => p.startsWith("cargo."));
+}
 
 /** Convert amount to USD. rateToUsd = units per 1 USD, so amountUsd = amount / rate. */
 function toUsd(amount: number, currency: string, rates: Record<string, number>): number {
@@ -40,8 +45,15 @@ export async function POST(
       return NextResponse.json({ error: "Payment method is required" }, { status: 400 });
     }
 
-    const payment = await prisma.payment.findUnique({
-      where: { id: paymentId },
+    const session = await auth();
+    const permissions = (session?.user as { permissions?: string[] })?.permissions ?? [];
+    const roleName = String((session?.user as { roleName?: string })?.roleName ?? "").trim();
+    const locationId = (session?.user as { locationId?: string | null })?.locationId ?? null;
+    const isAdminOrViewAll = roleName.toLowerCase() === "admin" || permissions.includes(PERMISSION.CARGO_VIEW_ALL);
+    const paymentWhere = getPaymentVisibilityWhere(isAdminOrViewAll, hasCargoPermission(permissions), locationId);
+
+    const payment = await prisma.payment.findFirst({
+      where: { id: paymentId, ...paymentWhere },
       include: { receipts: true },
     });
     if (!payment) {
@@ -88,8 +100,6 @@ export async function POST(
 
     const updateData: { status: string; expectedDate?: null } = { status: newStatus };
     updateData.expectedDate = null;
-
-    const session = await auth();
     const userName = session?.user?.name?.trim();
     const userEmail = session?.user?.email;
     const receivedBy = userName || userEmail || body.receivedBy || null;

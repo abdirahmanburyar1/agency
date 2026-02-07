@@ -1,20 +1,34 @@
 import { NextResponse } from "next/server";
+import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { trigger, EVENTS } from "@/lib/pusher";
 import { requirePermission } from "@/lib/permissions";
 import { PERMISSION } from "@/lib/permissions";
+import { getPaymentVisibilityWhere } from "@/lib/cargo";
 import { handleAuthError } from "@/lib/api-auth";
 
+function hasCargoPermission(permissions: string[]): boolean {
+  return permissions.some((p) => p.startsWith("cargo."));
+}
+
 export async function GET() {
+  let session;
   try {
-    await requirePermission(PERMISSION.PAYMENTS_VIEW);
+    session = await requirePermission(PERMISSION.PAYMENTS_VIEW);
   } catch (e) {
     const res = handleAuthError(e);
     if (res) return res;
     throw e;
   }
   try {
+    const permissions = (session.user as { permissions?: string[] }).permissions ?? [];
+    const roleName = String((session.user as { roleName?: string }).roleName ?? "").trim();
+    const locationId = (session.user as { locationId?: string | null }).locationId ?? null;
+    const isAdminOrViewAll = roleName.toLowerCase() === "admin" || permissions.includes(PERMISSION.CARGO_VIEW_ALL);
+    const paymentWhere = getPaymentVisibilityWhere(isAdminOrViewAll, hasCargoPermission(permissions), locationId);
+
     const payments = await prisma.payment.findMany({
+      where: paymentWhere,
       orderBy: { date: "desc" },
     });
     return NextResponse.json(payments);

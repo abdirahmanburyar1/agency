@@ -16,10 +16,14 @@ export async function middleware(req: NextRequest) {
   if (isLoginPage || isSetupPage || isTrackPage) {
     if (isLoggedIn && !isSetupPage && !isTrackPage) {
       const perms = (token?.permissions as string[] | undefined) ?? [];
+      const roleName = String((token?.roleName as string) ?? "").trim().toLowerCase();
       const hasLeader = perms.includes("haj_umrah.leader");
       const hasView = perms.includes("haj_umrah.view");
       if (hasLeader && !hasView) {
         return NextResponse.redirect(new URL("/leader", req.url));
+      }
+      if (roleName === "cargo section") {
+        return NextResponse.redirect(new URL("/cargo", req.url));
       }
       return NextResponse.redirect(new URL("/", req.url));
     }
@@ -33,10 +37,14 @@ export async function middleware(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
   if (pathname === "/") {
     const perms = (token?.permissions as string[] | undefined) ?? [];
+    const roleName = String((token?.roleName as string) ?? "").trim().toLowerCase();
     const hasLeader = perms.includes("haj_umrah.leader");
     const hasView = perms.includes("haj_umrah.view");
     if (hasLeader && !hasView) {
       return NextResponse.redirect(new URL("/leader", req.url));
+    }
+    if (roleName === "cargo section") {
+      return NextResponse.redirect(new URL("/cargo", req.url));
     }
   }
 

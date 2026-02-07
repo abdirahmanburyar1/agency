@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { QRCodeSVG } from "qrcode.react";
 import Swal from "sweetalert2";
 import "sweetalert2/dist/sweetalert2.min.css";
-import { CARGO_STATUSES, type CargoStatus } from "@/lib/cargo";
 import { getCurrencySymbol } from "@/lib/currencies";
 
 type Log = { id: string; status: string; note: string | null; createdAt: string };
@@ -31,31 +30,24 @@ type Shipment = {
   logs: Log[];
 };
 
-const NEXT_STATUS: Record<string, CargoStatus | null> = {
-  PENDING: "WAREHOUSE",
-  WAREHOUSE: "ASSIGNED_TO_MANIFEST",
-  ASSIGNED_TO_MANIFEST: "DISPATCHED",
-  DISPATCHED: "ARRIVED",
-  ARRIVED: "DELIVERED",
-  DELIVERED: null,
-};
-
 export default function CargoDetailClient({
   shipment,
-  canEdit,
+  canShowStatusActions,
+  allowedNextStatuses,
   statusStyles,
   paymentId,
   canViewPayments,
 }: {
   shipment: Shipment;
-  canEdit: boolean;
+  canShowStatusActions: boolean;
+  allowedNextStatuses: string[];
   statusStyles: Record<string, string>;
   paymentId: string | null;
   canViewPayments: boolean;
 }) {
   const router = useRouter();
   const [updating, setUpdating] = useState<string | null>(null);
-  const nextStatus = NEXT_STATUS[shipment.status] ?? null;
+  const nextStatus = allowedNextStatuses[0] ?? null;
 
   async function confirmAndUpdateStatus(status: string) {
     const statusLabel = status.replace(/_/g, " ");
@@ -271,7 +263,7 @@ export default function CargoDetailClient({
             </a>
           </div>
 
-          {canEdit && nextStatus && (
+          {canShowStatusActions && nextStatus && (
             <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:p-6">
               <h2 className="mb-4 font-semibold text-zinc-900 dark:text-white">Update Status</h2>
               <button
@@ -282,10 +274,10 @@ export default function CargoDetailClient({
               >
                 {updating ? "Updating..." : `Mark as ${nextStatus.replace(/_/g, " ")}`}
               </button>
-              {CARGO_STATUSES.filter((s) => s !== shipment.status && s !== nextStatus).length > 0 && (
+              {allowedNextStatuses.length > 1 && (
                 <div className="mt-3 space-y-2">
                   <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Or set directly:</p>
-                  {CARGO_STATUSES.filter((s) => s !== shipment.status).map((s) => (
+                  {allowedNextStatuses.slice(1).map((s) => (
                     <button
                       key={s}
                       type="button"

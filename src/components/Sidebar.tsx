@@ -14,7 +14,9 @@ type NavItem = {
 type SidebarProps = {
   navItems: NavItem[];
   adminItems: { href: string; label: string }[];
+  showDashboard?: boolean;
   showReports?: boolean;
+  homeHref?: string;
   isOpen: boolean;
   onClose: () => void;
 };
@@ -149,7 +151,7 @@ function NavLink({
   );
 }
 
-export default function Sidebar({ navItems, adminItems, showReports = true, isOpen, onClose }: SidebarProps) {
+export default function Sidebar({ navItems, adminItems, showDashboard = true, showReports = true, homeHref = "/", isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
   const [adminExpanded, setAdminExpanded] = useState(false);
 
@@ -171,7 +173,7 @@ export default function Sidebar({ navItems, adminItems, showReports = true, isOp
         <div className="flex h-full flex-col">
           {/* Brand */}
           <div className="border-b border-slate-200 px-5 py-5 dark:border-slate-700/80">
-            <Link href="/" className="flex items-center justify-center" onClick={onClose}>
+            <Link href={homeHref} className="flex items-center justify-center" onClick={onClose}>
               <img
                 src="/logo.png"
                 alt=""
@@ -186,9 +188,11 @@ export default function Sidebar({ navItems, adminItems, showReports = true, isOp
               Main
             </p>
             <ul className="space-y-1">
-              <li>
-                <NavLink href="/" label="Dashboard" iconKey="dashboard" isActive={pathname === "/"} onClick={onClose} />
-              </li>
+              {showDashboard && (
+                <li>
+                  <NavLink href="/" label="Dashboard" iconKey="dashboard" isActive={pathname === "/"} onClick={onClose} />
+                </li>
+              )}
               {showReports && (
                 <li>
                   <NavLink href="/reports" label="Reports" iconKey="reports" isActive={pathname === "/reports"} onClick={onClose} />

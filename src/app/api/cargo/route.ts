@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { requirePermission } from "@/lib/permissions";
 import { PERMISSION } from "@/lib/permissions";
@@ -21,25 +22,44 @@ export async function GET() {
 export async function POST(request: Request) {
   await requirePermission(PERMISSION.CARGO_CREATE);
   try {
+    const session = await auth();
+    const user = session?.user as { branchId?: string | null } | undefined;
+    const userBranchId = user?.branchId ?? null;
+
     const body = await request.json();
     const senderName = String(body.senderName ?? "").trim();
     const senderPhone = String(body.senderPhone ?? "").trim();
     const receiverName = String(body.receiverName ?? "").trim();
     const receiverPhone = String(body.receiverPhone ?? "").trim();
-    const source = String(body.source ?? "").trim();
-    const destination = String(body.destination ?? "").trim();
+    const sourceBranchId = body.sourceBranchId?.trim();
+    const destinationBranchId = body.destinationBranchId?.trim();
     const rawMode = String(body.transportMode ?? "air").toLowerCase();
     const transportMode = ["air", "road", "sea"].includes(rawMode) ? rawMode : "air";
     const carrier = String(body.carrier ?? "").trim();
     const currency = String(body.currency ?? "USD").trim().toUpperCase() || "USD";
     const items = Array.isArray(body.items) ? body.items : [];
 
-    if (!senderName || !receiverName || !source || !destination) {
+    if (!senderName || !receiverName || !sourceBranchId || !destinationBranchId) {
       return NextResponse.json(
-        { error: "Sender name, receiver name, source (from), and destination (to) are required" },
+        { error: "Sender name, receiver name, source, and destination are required" },
         { status: 400 }
       );
     }
+    if (!userBranchId || sourceBranchId !== userBranchId) {
+      return NextResponse.json(
+        { error: "Source must be your assigned branch" },
+        { status: 403 }
+      );
+    }
+    const [sourceBranch, destBranch] = await Promise.all([
+      prisma.branch.findUnique({ where: { id: sourceBranchId }, include: { location: true } }),
+      prisma.branch.findUnique({ where: { id: destinationBranchId }, include: { location: true } }),
+    ]);
+    if (!sourceBranch || !destBranch) {
+      return NextResponse.json({ error: "Invalid source or destination branch" }, { status: 400 });
+    }
+    const source = `${sourceBranch.location.name} - ${sourceBranch.name}`;
+    const destination = `${destBranch.location.name} - ${destBranch.name}`;
     if (items.length === 0) {
       return NextResponse.json({ error: "At least one item is required" }, { status: 400 });
     }
@@ -76,6 +96,8 @@ export async function POST(request: Request) {
           receiverPhone,
           source,
           destination,
+          sourceBranchId,
+          destinationBranchId,
           transportMode,
           carrier,
           totalWeight,

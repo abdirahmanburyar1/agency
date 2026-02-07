@@ -7,69 +7,82 @@ import SearchableCurrencySelect from "@/components/SearchableCurrencySelect";
 import { getCurrencySymbol } from "@/lib/currencies";
 
 type ItemRow = { id: string; description: string; quantity: string; weight: string; unitPrice: string };
+type Location = { id: string; name: string; branches: { id: string; name: string }[] };
 
-export default function CreateCargoForm() {
+type Props = {
+  userLocationId?: string | null;
+  userBranchId?: string | null;
+  userLocationName?: string | null;
+  userBranchName?: string | null;
+};
+
+export default function CreateCargoForm({
+  userLocationId: propLocationId,
+  userBranchId: propBranchId,
+  userLocationName: propLocationName,
+  userBranchName: propBranchName,
+}: Props) {
   const router = useRouter();
   const [senderName, setSenderName] = useState("");
   const [senderPhone, setSenderPhone] = useState("");
   const [receiverName, setReceiverName] = useState("");
   const [receiverPhone, setReceiverPhone] = useState("");
-  const [source, setSource] = useState("");
-  const [destination, setDestination] = useState("");
+  const [sourceLocationId, setSourceLocationId] = useState(propLocationId ?? "");
+  const [sourceBranchId, setSourceBranchId] = useState(propBranchId ?? "");
+  const [destLocationId, setDestLocationId] = useState("");
+  const [destBranchId, setDestBranchId] = useState("");
   const [transportMode, setTransportMode] = useState<"air" | "road" | "sea">("air");
   const [carrier, setCarrier] = useState("");
   const [currency, setCurrency] = useState("USD");
-  const [locations, setLocations] = useState<string[]>([]);
-  const [carriers, setCarriers] = useState<string[]>([]);
-  const [showAddLocationModal, setShowAddLocationModal] = useState(false);
-  const [addLocationTarget, setAddLocationTarget] = useState<"from" | "to" | null>(null);
-  const [newLocationValue, setNewLocationValue] = useState("");
+  const [locations, setLocations] = useState<Location[]>([]);
+  const [carriersByMode, setCarriersByMode] = useState<{ air: string[]; road: string[]; sea: string[] }>({
+    air: [],
+    road: [],
+    sea: [],
+  });
   const [showAddCarrierModal, setShowAddCarrierModal] = useState(false);
   const [newCarrierValue, setNewCarrierValue] = useState("");
+
+  const carriers = carriersByMode[transportMode] ?? [];
 
   useEffect(() => {
     fetch("/api/cargo/options")
       .then((r) => r.json())
       .then((data) => {
         setLocations(Array.isArray(data?.locations) ? data.locations : []);
-        setCarriers(Array.isArray(data?.carriers) ? data.carriers : []);
+        setCarriersByMode(data?.carriersByMode ?? { air: [], road: [], sea: [] });
       })
       .catch(() => {});
   }, []);
 
-  function openAddLocationModal(target: "from" | "to") {
-    setAddLocationTarget(target);
-    setShowAddLocationModal(true);
-  }
+  useEffect(() => {
+    if (propLocationId) setSourceLocationId(propLocationId);
+    if (propBranchId) setSourceBranchId(propBranchId);
+  }, [propLocationId, propBranchId]);
 
-  async function addNewLocation() {
-    const v = newLocationValue.trim();
-    if (!v) return;
-    const res = await fetch("/api/settings", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ type: "cargo_location", value: v }),
-    });
-    if (res.ok) {
-      setLocations((prev) => [...prev, v].sort());
-      setNewLocationValue("");
-      setShowAddLocationModal(false);
-      if (addLocationTarget === "from") setSource(v);
-      else if (addLocationTarget === "to") setDestination(v);
-      setAddLocationTarget(null);
-    }
-  }
+  const hasUserLocation = !!(propLocationId && propBranchId);
+
+  const sourceBranches = sourceLocationId
+    ? (locations.find((l) => l.id === sourceLocationId)?.branches ?? [])
+    : [];
+  const destBranches = destLocationId
+    ? (locations.find((l) => l.id === destLocationId)?.branches ?? [])
+    : [];
 
   async function addNewCarrier() {
     const v = newCarrierValue.trim();
     if (!v) return;
+    const type = `cargo_carrier_${transportMode}`;
     const res = await fetch("/api/settings", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ type: "cargo_carrier", value: v }),
+      body: JSON.stringify({ type, value: v }),
     });
     if (res.ok) {
-      setCarriers((prev) => [...prev, v].sort());
+      setCarriersByMode((prev) => ({
+        ...prev,
+        [transportMode]: [...(prev[transportMode] ?? []), v].sort(),
+      }));
       setNewCarrierValue("");
       setShowAddCarrierModal(false);
       setCarrier(v);
@@ -112,6 +125,10 @@ export default function CreateCargoForm() {
     e.preventDefault();
     setError("");
 
+    if (!hasUserLocation) {
+      setError("Your account must have a location and branch assigned to create cargo. Contact your administrator.");
+      return;
+    }
     if (!senderName.trim()) {
       setError("Sender name is required");
       return;
@@ -120,12 +137,8 @@ export default function CreateCargoForm() {
       setError("Receiver name is required");
       return;
     }
-    if (!source.trim()) {
-      setError("Source (from) is required");
-      return;
-    }
-    if (!destination.trim()) {
-      setError("Destination (to) is required");
+    if (!destLocationId || !destBranchId) {
+      setError("Destination location and branch are required");
       return;
     }
     if (!carrier.trim()) {
@@ -157,8 +170,8 @@ export default function CreateCargoForm() {
           senderPhone: senderPhone.trim(),
           receiverName: receiverName.trim(),
           receiverPhone: receiverPhone.trim(),
-          source: source.trim(),
-          destination: destination.trim(),
+          sourceBranchId,
+          destinationBranchId: destBranchId,
           transportMode,
           carrier: carrier.trim(),
           currency,
@@ -245,33 +258,61 @@ export default function CreateCargoForm() {
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-              From *
+              From * (your branch)
             </label>
-            <SearchableOptionSelect
-              options={locations}
-              value={source}
-              onChange={setSource}
-              onAddNew={() => openAddLocationModal("from")}
-              placeholder="Search or select location..."
-              emptyLabel="No locations yet"
-              addNewLabel="+ Add new location"
-              className="rounded-xl border border-zinc-300 px-4 py-3 text-base dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
-            />
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={propLocationName ?? locations.find((l) => l.id === sourceLocationId)?.name ?? "—"}
+                readOnly
+                disabled
+                className="flex-1 cursor-not-allowed rounded-xl border border-zinc-300 bg-zinc-100 px-4 py-3 text-base dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
+              />
+              <input
+                type="text"
+                value={propBranchName ?? sourceBranches.find((b) => b.id === sourceBranchId)?.name ?? "—"}
+                readOnly
+                disabled
+                className="flex-1 cursor-not-allowed rounded-xl border border-zinc-300 bg-zinc-100 px-4 py-3 text-base dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
+              />
+            </div>
+            {!hasUserLocation && (
+              <p className="mt-1 text-sm text-amber-600 dark:text-amber-400">
+                You need a location and branch assigned to create cargo. Contact your administrator.
+              </p>
+            )}
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
               To *
             </label>
-            <SearchableOptionSelect
-              options={locations}
-              value={destination}
-              onChange={setDestination}
-              onAddNew={() => openAddLocationModal("to")}
-              placeholder="Search or select location..."
-              emptyLabel="No locations yet"
-              addNewLabel="+ Add new location"
-              className="rounded-xl border border-zinc-300 px-4 py-3 text-base dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
-            />
+            <div className="flex gap-2">
+              <select
+                value={destLocationId}
+                onChange={(e) => {
+                  setDestLocationId(e.target.value);
+                  setDestBranchId("");
+                }}
+                required
+                className="flex-1 rounded-xl border border-zinc-300 px-4 py-3 text-base dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
+              >
+                <option value="">Location</option>
+                {locations.map((l) => (
+                  <option key={l.id} value={l.id}>{l.name}</option>
+                ))}
+              </select>
+              <select
+                value={destBranchId}
+                onChange={(e) => setDestBranchId(e.target.value)}
+                required
+                className="flex-1 rounded-xl border border-zinc-300 px-4 py-3 text-base dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
+              >
+                <option value="">Branch</option>
+                {destBranches.map((b) => (
+                  <option key={b.id} value={b.id}>{b.name}</option>
+                ))}
+              </select>
+            </div>
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
@@ -279,7 +320,11 @@ export default function CreateCargoForm() {
             </label>
             <select
               value={transportMode}
-              onChange={(e) => setTransportMode(e.target.value as "air" | "road" | "sea")}
+              onChange={(e) => {
+                const mode = e.target.value as "air" | "road" | "sea";
+                setTransportMode(mode);
+                setCarrier("");
+              }}
               className="w-full rounded-xl border border-zinc-300 px-4 py-3 text-base dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
             >
               <option value="air">Airline</option>
@@ -289,16 +334,16 @@ export default function CreateCargoForm() {
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-              Carrier *
+              Carrier * ({transportMode === "air" ? "Airline" : transportMode === "road" ? "Road" : "Sea"})
             </label>
             <SearchableOptionSelect
               options={carriers}
               value={carrier}
               onChange={setCarrier}
               onAddNew={() => setShowAddCarrierModal(true)}
-              placeholder="e.g. Daallo Airline, Doontii hebel, Bus"
-              emptyLabel="No carriers yet"
-              addNewLabel="+ Add new carrier"
+              placeholder={transportMode === "air" ? "e.g. Daallo Airline" : transportMode === "road" ? "e.g. Bus company" : "e.g. Shipping line"}
+              emptyLabel={`No ${transportMode} carriers yet`}
+              addNewLabel={`+ Add ${transportMode} carrier`}
               className="rounded-xl border border-zinc-300 px-4 py-3 text-base dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
             />
           </div>
@@ -425,7 +470,7 @@ export default function CreateCargoForm() {
       <div className="flex flex-col gap-3 sm:flex-row">
         <button
           type="submit"
-          disabled={loading}
+          disabled={loading || !hasUserLocation}
           className="flex-1 rounded-xl bg-amber-600 px-6 py-4 text-base font-semibold text-white shadow-sm transition hover:bg-amber-700 disabled:opacity-70 dark:bg-amber-500 dark:hover:bg-amber-600"
         >
           {loading ? "Creating..." : "Create Shipment"}
@@ -439,57 +484,6 @@ export default function CreateCargoForm() {
         </button>
       </div>
 
-      {showAddLocationModal && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-          onClick={() => (setShowAddLocationModal(false), setNewLocationValue(""), setAddLocationTarget(null))}
-        >
-          <div
-            className="w-full max-w-sm rounded-lg border border-zinc-200 bg-white p-6 shadow-xl dark:border-zinc-700 dark:bg-zinc-900"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 className="mb-4 text-lg font-medium text-zinc-900 dark:text-white">
-              Add new location
-            </h3>
-            <input
-              type="text"
-              value={newLocationValue}
-              onChange={(e) => setNewLocationValue(e.target.value)}
-              placeholder="e.g. Nairobi, Dubai"
-              className="mb-4 w-full rounded border border-zinc-300 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
-              autoFocus
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  addNewLocation();
-                }
-                if (e.key === "Escape") {
-                  setShowAddLocationModal(false);
-                  setNewLocationValue("");
-                  setAddLocationTarget(null);
-                }
-              }}
-            />
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => (setShowAddLocationModal(false), setNewLocationValue(""), setAddLocationTarget(null))}
-                className="rounded border border-zinc-300 px-4 py-2 text-sm font-medium hover:bg-zinc-50 dark:border-zinc-600 dark:hover:bg-zinc-800"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={addNewLocation}
-                className="rounded bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
-              >
-                Add
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {showAddCarrierModal && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
@@ -500,13 +494,13 @@ export default function CreateCargoForm() {
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="mb-4 text-lg font-medium text-zinc-900 dark:text-white">
-              Add new carrier
+              Add {transportMode === "air" ? "airline" : transportMode === "road" ? "road" : "sea"} carrier
             </h3>
             <input
               type="text"
               value={newCarrierValue}
               onChange={(e) => setNewCarrierValue(e.target.value)}
-              placeholder="e.g. Daallo Airline, Doontii hebel, Bus"
+              placeholder={transportMode === "air" ? "e.g. Daallo Airline" : transportMode === "road" ? "e.g. Bus company" : "e.g. Shipping line"}
               className="mb-4 w-full rounded border border-zinc-300 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
               autoFocus
               onKeyDown={(e) => {

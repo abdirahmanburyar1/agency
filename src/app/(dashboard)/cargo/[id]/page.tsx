@@ -1,9 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { requirePermission, canAccess } from "@/lib/permissions";
 import { PERMISSION } from "@/lib/permissions";
+import { getCargoStatusActions } from "@/lib/cargo";
 import CargoDetailClient from "./CargoDetailClient";
+import CargoImages from "./CargoImages";
 
 const STATUS_STYLES: Record<string, string> = {
   PENDING: "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300",
@@ -19,7 +22,7 @@ export default async function CargoDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  await requirePermission(PERMISSION.CARGO_VIEW, { redirectOnForbidden: true });
+  const session = await requirePermission(PERMISSION.CARGO_VIEW, { redirectOnForbidden: true });
   const { id } = await params;
 
   const [shipment, payment] = await Promise.all([
@@ -36,6 +39,21 @@ export default async function CargoDetailPage({
 
   const canEdit = await canAccess(PERMISSION.CARGO_EDIT);
   const canViewPayments = await canAccess(PERMISSION.PAYMENTS_VIEW);
+
+  const permissions = (session.user as { permissions?: string[] }).permissions ?? [];
+  const roleName = String((session.user as { roleName?: string }).roleName ?? "").trim();
+  const userBranchId = (session.user as { branchId?: string | null }).branchId ?? null;
+  const isAdminOrViewAll = roleName.toLowerCase() === "admin" || permissions.includes(PERMISSION.CARGO_VIEW_ALL);
+
+  const { canShowActions, allowedNextStatuses } = getCargoStatusActions(
+    userBranchId,
+    shipment.sourceBranchId,
+    shipment.destinationBranchId,
+    shipment.status,
+    isAdminOrViewAll
+  );
+
+  const canShowStatusActions = canEdit && canShowActions;
 
   const serialized = {
     ...shipment,
@@ -58,11 +76,19 @@ export default async function CargoDetailPage({
       </div>
       <CargoDetailClient
         shipment={serialized}
-        canEdit={canEdit}
+        canShowStatusActions={canShowStatusActions}
+        allowedNextStatuses={allowedNextStatuses}
         statusStyles={STATUS_STYLES}
         paymentId={payment?.id ?? null}
         canViewPayments={canViewPayments}
       />
+      <div className="mt-6">
+        <CargoImages
+          shipmentId={id}
+          canUpload={canEdit && canShowActions}
+          canDelete={canEdit && canShowActions}
+        />
+      </div>
     </main>
   );
 }

@@ -64,7 +64,8 @@ export default function CreatePackageForm() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error ?? "Failed to create package");
+        const msg = data.details ?? data.error ?? "Failed to create package";
+        setError(msg);
         return;
       }
       router.push("/haj-umrah/packages");

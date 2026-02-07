@@ -31,11 +31,18 @@ export default async function DashboardLayout({
     redirect("/leader");
   }
 
-  const navItems = NAV_ITEMS.filter(
-    (item) => isAdmin || perms.length === 0 || perms.includes(item.perm)
-  );
+  const navItems = NAV_ITEMS.filter((item) => {
+    if (isAdmin || perms.length === 0) return true;
+    if (item.perm && perms.includes(item.perm)) return true;
+    // Cargo: show if user has any cargo permission (view, create, edit, delete)
+    if (item.href === "/cargo") {
+      return perms.some((p) => p.startsWith("cargo."));
+    }
+    return false;
+  });
 
   const canViewReports = isAdmin || perms.length === 0 || perms.includes(PERMISSION.REPORTS_VIEW);
+  const canViewDashboard = isAdmin || perms.length === 0 || perms.includes(PERMISSION.DASHBOARD_VIEW);
 
   const adminItems: { href: string; label: string }[] = [];
   if (isAdmin || perms.includes(PERMISSION.SETTINGS_VIEW)) {
@@ -52,7 +59,9 @@ export default async function DashboardLayout({
     <DashboardShell
       navItems={navItems}
       adminItems={adminItems}
+      showDashboard={canViewDashboard}
       showReports={canViewReports}
+      homeHref={canViewDashboard ? "/" : "/cargo"}
       userEmail={session.user.email ?? ""}
       userName={session.user.name ?? null}
       roleName={roleName || "User"}

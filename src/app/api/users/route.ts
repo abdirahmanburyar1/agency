@@ -14,12 +14,36 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { email, password, name, roleId, userType } = await request.json();
+    const { email, password, name, roleId, userType, locationId, branchId } = await request.json();
     if (!email || !password || !roleId) {
       return NextResponse.json(
         { error: "Email, password, and role are required" },
         { status: 400 }
       );
+    }
+    if (locationId && !branchId) {
+      return NextResponse.json(
+        { error: "Branch is required when location is selected" },
+        { status: 400 }
+      );
+    }
+    if (!locationId && branchId) {
+      return NextResponse.json(
+        { error: "Location must be selected when assigning a branch" },
+        { status: 400 }
+      );
+    }
+    if (locationId && branchId) {
+      const branch = await prisma.branch.findUnique({
+        where: { id: branchId },
+        include: { location: true },
+      });
+      if (!branch || branch.locationId !== locationId) {
+        return NextResponse.json(
+          { error: "Branch does not belong to the selected location" },
+          { status: 400 }
+        );
+      }
     }
     const normalizedUserType =
       userType != null && userType !== ""
@@ -49,6 +73,8 @@ export async function POST(request: Request) {
         name: name || null,
         roleId,
         userType: normalizedUserType,
+        locationId: locationId || null,
+        branchId: locationId ? branchId : null,
       },
     });
 

@@ -8,6 +8,10 @@ declare module "next-auth" {
       roleId?: string;
       roleName?: string;
       permissions?: string[];
+      locationId?: string | null;
+      branchId?: string | null;
+      locationName?: string | null;
+      branchName?: string | null;
     };
   }
 }
@@ -18,5 +22,9 @@ declare module "next-auth/jwt" {
     roleId?: string;
     roleName?: string;
     permissions?: string[];
+    locationId?: string | null;
+    branchId?: string | null;
+    locationName?: string | null;
+    branchName?: string | null;
   }
 }

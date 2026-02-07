@@ -1,14 +1,15 @@
 import { NextResponse } from "next/server";
+import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { requirePermission } from "@/lib/permissions";
 import { PERMISSION } from "@/lib/permissions";
-import { CARGO_STATUSES } from "@/lib/cargo";
+import { CARGO_STATUSES, getCargoStatusActions } from "@/lib/cargo";
 
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  await requirePermission(PERMISSION.CARGO_EDIT);
+  const session = await requirePermission(PERMISSION.CARGO_EDIT);
   try {
     const { id } = await params;
     const body = await request.json();
@@ -25,6 +26,26 @@ export async function PATCH(
     const shipment = await prisma.cargoShipment.findUnique({ where: { id } });
     if (!shipment) {
       return NextResponse.json({ error: "Shipment not found" }, { status: 404 });
+    }
+
+    const userBranchId = (session.user as { branchId?: string | null }).branchId ?? null;
+    const permissions = (session.user as { permissions?: string[] }).permissions ?? [];
+    const roleName = String((session.user as { roleName?: string }).roleName ?? "").trim();
+    const isAdminOrViewAll = roleName.toLowerCase() === "admin" || permissions.includes(PERMISSION.CARGO_VIEW_ALL);
+
+    const { allowedNextStatuses } = getCargoStatusActions(
+      userBranchId,
+      shipment.sourceBranchId,
+      shipment.destinationBranchId,
+      shipment.status,
+      isAdminOrViewAll
+    );
+
+    if (!(allowedNextStatuses as readonly string[]).includes(status)) {
+      return NextResponse.json(
+        { error: "Your branch is not allowed to perform this status change" },
+        { status: 403 }
+      );
     }
 
     const previousStatus = shipment.status;

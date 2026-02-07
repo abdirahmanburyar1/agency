@@ -26,6 +26,8 @@ export const authOptions: NextAuthOptions = {
                 permissions: { include: { permission: true } },
               },
             },
+            location: true,
+            branch: true,
           },
         });
 
@@ -44,6 +46,10 @@ export const authOptions: NextAuthOptions = {
           roleId: user.roleId,
           roleName: user.role.name,
           permissions: user.role.permissions.map((rp) => rp.permission.code),
+          locationId: user.locationId ?? null,
+          branchId: user.branchId ?? null,
+          locationName: user.location?.name ?? null,
+          branchName: user.branch?.name ?? null,
         };
       },
     }),
@@ -57,6 +63,10 @@ export const authOptions: NextAuthOptions = {
         token.roleId = (user as { roleId?: string }).roleId;
         token.roleName = (user as { roleName?: string }).roleName;
         token.permissions = (user as { permissions?: string[] }).permissions ?? [];
+        token.locationId = (user as { locationId?: string | null }).locationId ?? null;
+        token.branchId = (user as { branchId?: string | null }).branchId ?? null;
+        token.locationName = (user as { locationName?: string | null }).locationName ?? null;
+        token.branchName = (user as { branchName?: string | null }).branchName ?? null;
       }
       return token;
     },
@@ -67,6 +77,14 @@ export const authOptions: NextAuthOptions = {
         (session.user as { roleName?: string }).roleName = token.roleName as string;
         (session.user as { permissions?: string[] }).permissions =
           (token.permissions as string[]) ?? [];
+        (session.user as { locationId?: string | null }).locationId =
+          (token.locationId as string | null) ?? null;
+        (session.user as { branchId?: string | null }).branchId =
+          (token.branchId as string | null) ?? null;
+        (session.user as { locationName?: string | null }).locationName =
+          (token.locationName as string | null) ?? null;
+        (session.user as { branchName?: string | null }).branchName =
+          (token.branchName as string | null) ?? null;
       }
       return session;
     },

@@ -37,9 +37,33 @@ export async function PUT(
 
   try {
     const body = await request.json();
-    const { name, roleId, isActive, password, userType } = body;
+    const { name, roleId, isActive, password, userType, locationId, branchId } = body;
 
-    const data: { name?: string | null; roleId?: string; isActive?: boolean; userType?: string | null; passwordHash?: string } = {};
+    if (locationId && !branchId) {
+      return NextResponse.json(
+        { error: "Branch is required when location is selected" },
+        { status: 400 }
+      );
+    }
+    if (!locationId && branchId) {
+      return NextResponse.json(
+        { error: "Location must be selected when assigning a branch" },
+        { status: 400 }
+      );
+    }
+    if (locationId && branchId) {
+      const branch = await prisma.branch.findUnique({
+        where: { id: branchId },
+      });
+      if (!branch || branch.locationId !== locationId) {
+        return NextResponse.json(
+          { error: "Branch does not belong to the selected location" },
+          { status: 400 }
+        );
+      }
+    }
+
+    const data: { name?: string | null; roleId?: string; isActive?: boolean; userType?: string | null; locationId?: string | null; branchId?: string | null; passwordHash?: string } = {};
     if (name !== undefined) data.name = name?.trim() || null;
     if (isActive !== undefined) data.isActive = Boolean(isActive);
     if (userType !== undefined) {
@@ -62,6 +86,8 @@ export async function PUT(
     if (password && String(password).length >= 8) {
       data.passwordHash = await bcrypt.hash(String(password), 12);
     }
+    if (locationId !== undefined) data.locationId = locationId || null;
+    if (branchId !== undefined) data.branchId = locationId ? (branchId || null) : null;
 
     const user = await prisma.user.update({
       where: { id },

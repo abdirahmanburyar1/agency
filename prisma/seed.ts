@@ -57,6 +57,7 @@ const PERMISSIONS = [
   { code: "haj_umrah.delete", name: "Delete Haj & Umrah", resource: "haj_umrah", action: "delete" },
   { code: "haj_umrah.leader", name: "Campaign Leader", resource: "haj_umrah", action: "leader" },
   { code: "cargo.view", name: "View Cargo", resource: "cargo", action: "view" },
+  { code: "cargo.view_all", name: "View All Cargo", resource: "cargo", action: "view_all" },
   { code: "cargo.create", name: "Create Cargo", resource: "cargo", action: "create" },
   { code: "cargo.edit", name: "Edit Cargo", resource: "cargo", action: "edit" },
   { code: "cargo.delete", name: "Delete Cargo", resource: "cargo", action: "delete" },
@@ -149,6 +150,31 @@ async function main() {
       await prisma.rolePermission.upsert({
         where: { roleId_permissionId: { roleId: generalManagerRole.id, permissionId: perm.id } },
         create: { roleId: generalManagerRole.id, permissionId: perm.id },
+        update: {},
+      });
+    }
+  }
+
+  // Cargo Section: cargo ops in assigned location only; sees only own location's cargo payments
+  const cargoViewPerm = await prisma.permission.findUnique({ where: { code: "cargo.view" } });
+  const cargoCreatePerm = await prisma.permission.findUnique({ where: { code: "cargo.create" } });
+  const cargoEditPerm = await prisma.permission.findUnique({ where: { code: "cargo.edit" } });
+  const paymentsViewPerm = await prisma.permission.findUnique({ where: { code: "payments.view" } });
+  if (cargoViewPerm && cargoCreatePerm && cargoEditPerm && paymentsViewPerm) {
+    const cargoSectionRole = await prisma.role.upsert({
+      where: { name: "Cargo Section" },
+      create: {
+        name: "Cargo Section",
+        description: "Cargo operations for assigned branch. Sees only cargo and cargo payments in their location.",
+      },
+      update: {},
+    });
+    for (const perm of [cargoViewPerm, cargoCreatePerm, cargoEditPerm, paymentsViewPerm]) {
+      await prisma.rolePermission.upsert({
+        where: {
+          roleId_permissionId: { roleId: cargoSectionRole.id, permissionId: perm.id },
+        },
+        create: { roleId: cargoSectionRole.id, permissionId: perm.id },
         update: {},
       });
     }

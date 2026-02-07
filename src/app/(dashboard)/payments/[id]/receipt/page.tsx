@@ -3,9 +3,14 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requirePermission } from "@/lib/permissions";
 import { PERMISSION } from "@/lib/permissions";
+import { getPaymentVisibilityWhere } from "@/lib/cargo";
 import { getCurrencyRates } from "@/lib/currency-rates";
 import { getCurrencySymbol } from "@/lib/currencies";
 import { PrintButton } from "@/components/PrintButton";
+
+function hasCargoPermission(permissions: string[]): boolean {
+  return permissions.some((p) => p.startsWith("cargo."));
+}
 
 function toUsd(amount: number, currency: string, rates: Record<string, number>): number {
   const rate = rates[currency] ?? 1;
@@ -20,13 +25,19 @@ export default async function PaymentReceiptPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ r?: string }>;
 }) {
-  await requirePermission(PERMISSION.PAYMENTS_VIEW, { redirectOnForbidden: true });
+  const session = await requirePermission(PERMISSION.PAYMENTS_VIEW, { redirectOnForbidden: true });
   const { id: paymentId } = await params;
   const { r: receiptId } = await searchParams;
 
+  const permissions = (session.user as { permissions?: string[] }).permissions ?? [];
+  const roleName = String((session.user as { roleName?: string }).roleName ?? "").trim();
+  const locationId = (session.user as { locationId?: string | null }).locationId ?? null;
+  const isAdminOrViewAll = roleName.toLowerCase() === "admin" || permissions.includes(PERMISSION.CARGO_VIEW_ALL);
+  const paymentWhere = getPaymentVisibilityWhere(isAdminOrViewAll, hasCargoPermission(permissions), locationId);
+
   const [payment, rates] = await Promise.all([
-    prisma.payment.findUnique({
-      where: { id: paymentId },
+    prisma.payment.findFirst({
+      where: { id: paymentId, ...paymentWhere },
       include: {
         ticket: { include: { customer: true } },
         visa: { include: { customerRelation: true } },

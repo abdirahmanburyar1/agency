@@ -2,7 +2,12 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requirePermission } from "@/lib/permissions";
 import { PERMISSION } from "@/lib/permissions";
+import { getPaymentVisibilityWhere } from "@/lib/cargo";
 import { handleAuthError } from "@/lib/api-auth";
+
+function hasCargoPermission(permissions: string[]): boolean {
+  return permissions.some((p) => p.startsWith("cargo."));
+}
 
 // Only credit/pending can be manually set; paid/partial are determined by receipts
 const VALID_MANUAL_STATUS = ["pending", "credit"] as const;
@@ -11,8 +16,9 @@ export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  let session;
   try {
-    await requirePermission(PERMISSION.PAYMENTS_EDIT);
+    session = await requirePermission(PERMISSION.PAYMENTS_EDIT);
   } catch (e) {
     const res = handleAuthError(e);
     if (res) return res;
@@ -27,6 +33,19 @@ export async function PATCH(
         { error: `Status can only be set to: ${VALID_MANUAL_STATUS.join(", ")}. Paid and partial are determined by receipts.` },
         { status: 400 }
       );
+    }
+
+    const permissions = (session.user as { permissions?: string[] }).permissions ?? [];
+    const roleName = String((session.user as { roleName?: string }).roleName ?? "").trim();
+    const locationId = (session.user as { locationId?: string | null }).locationId ?? null;
+    const isAdminOrViewAll = roleName.toLowerCase() === "admin" || permissions.includes(PERMISSION.CARGO_VIEW_ALL);
+    const paymentWhere = getPaymentVisibilityWhere(isAdminOrViewAll, hasCargoPermission(permissions), locationId);
+
+    const existing = await prisma.payment.findFirst({
+      where: { id, ...paymentWhere },
+    });
+    if (!existing) {
+      return NextResponse.json({ error: "Payment not found" }, { status: 404 });
     }
 
     const data: { status: string; expectedDate?: Date | null } = { status };

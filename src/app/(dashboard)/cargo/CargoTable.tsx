@@ -41,15 +41,6 @@ export default function CargoTable({ shipments, canCreate }: { shipments: Shipme
   const [destinationFilter, setDestinationFilter] = useState("");
   const [perPage, setPerPage] = useState(25);
   const [page, setPage] = useState(1);
-  const [locations, setLocations] = useState<string[]>([]);
-
-  useEffect(() => {
-    fetch("/api/cargo/options")
-      .then((r) => r.json())
-      .then((data) => setLocations(Array.isArray(data?.locations) ? data.locations : []))
-      .catch(() => {});
-  }, []);
-
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return shipments.filter((s) => {
@@ -73,8 +64,8 @@ export default function CargoTable({ shipments, canCreate }: { shipments: Shipme
   const end = Math.min(currentPage * perPage, filtered.length);
 
   const statuses = [...new Set(shipments.map((s) => s.status))].sort();
-  const fromOptions = ["All from", ...locations.filter((l) => l !== "All from")];
-  const toOptions = ["All to", ...locations.filter((l) => l !== "All to")];
+  const fromOptions = ["All from", ...[...new Set(shipments.map((s) => s.source))].filter(Boolean).sort()];
+  const toOptions = ["All to", ...[...new Set(shipments.map((s) => s.destination))].filter(Boolean).sort()];
 
   const paginationBlock =
     filtered.length > 0 ? (
@@ -132,7 +123,7 @@ export default function CargoTable({ shipments, canCreate }: { shipments: Shipme
             value={sourceFilter || "All from"}
             onChange={(v) => { setSourceFilter(v === "All from" ? "" : v); setPage(1); }}
             placeholder="All from"
-            emptyLabel="No locations yet"
+            emptyLabel="No source yet"
             showAddNew={false}
             className="w-full min-w-0 sm:w-52"
           />
@@ -141,7 +132,7 @@ export default function CargoTable({ shipments, canCreate }: { shipments: Shipme
             value={destinationFilter || "All to"}
             onChange={(v) => { setDestinationFilter(v === "All to" ? "" : v); setPage(1); }}
             placeholder="All to"
-            emptyLabel="No locations yet"
+            emptyLabel="No destination yet"
             showAddNew={false}
             className="w-full min-w-0 sm:w-52"
           />

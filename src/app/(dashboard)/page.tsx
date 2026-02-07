@@ -31,6 +31,10 @@ export default async function Home({
   const perms = (session.user as { permissions?: string[] })?.permissions ?? [];
   const roleName = String((session.user as { roleName?: string })?.roleName ?? "").trim();
   const isAdmin = roleName.toLowerCase() === "admin";
+
+  if (roleName.toLowerCase() === "cargo section") {
+    redirect("/cargo");
+  }
   const filteredNav = NAV_ITEMS.filter(
     (item) => isAdmin || perms.length === 0 || perms.includes(item.perm)
   );

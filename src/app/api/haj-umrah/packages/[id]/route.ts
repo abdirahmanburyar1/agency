@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { requirePermission } from "@/lib/permissions";
 import { PERMISSION } from "@/lib/permissions";
@@ -80,52 +79,60 @@ export async function PATCH(
       return NextResponse.json({ error: "Enter a valid fixed price when price does not depend on country" }, { status: 400 });
     }
 
-    // Use raw SQL to bypass outdated Prisma client (avoids "Unknown argument priceByCountry" when prisma generate wasn't run)
-    await prisma.$transaction(async (tx) => {
-      const updateParts: Prisma.Sql[] = [];
-      if (name !== undefined) updateParts.push(Prisma.sql`name = ${name}`);
-      if (type !== undefined) updateParts.push(Prisma.sql`type = ${type}`);
-      if (body.description !== undefined)
-        updateParts.push(Prisma.sql`description = ${body.description ? String(body.description).trim() : null}`);
-      if (body.durationDays !== undefined)
-        updateParts.push(Prisma.sql`duration_days = ${body.durationDays != null ? Number(body.durationDays) : null}`);
-      if (body.isActive !== undefined) updateParts.push(Prisma.sql`is_active = ${Boolean(body.isActive)}`);
-      if (priceByCountry !== undefined) updateParts.push(Prisma.sql`price_by_country = ${priceByCountry}`);
-      if (priceByCountry === true) updateParts.push(Prisma.sql`fixed_price = NULL`);
-      else if (priceByCountry === false && fixedPrice != null) updateParts.push(Prisma.sql`fixed_price = ${fixedPrice}`);
+    const updateData: {
+      name?: string;
+      type?: string;
+      description?: string | null;
+      durationDays?: number | null;
+      isActive?: boolean;
+      priceByCountry?: boolean;
+      fixedPrice?: number | null;
+    } = {};
+    if (name !== undefined) updateData.name = name;
+    if (type !== undefined) updateData.type = type;
+    if (body.description !== undefined)
+      updateData.description = body.description ? String(body.description).trim() || null : null;
+    if (body.durationDays !== undefined)
+      updateData.durationDays = body.durationDays != null ? Number(body.durationDays) : null;
+    if (body.isActive !== undefined) updateData.isActive = Boolean(body.isActive);
+    if (priceByCountry !== undefined) {
+      updateData.priceByCountry = priceByCountry;
+      updateData.fixedPrice = priceByCountry ? null : (fixedPrice ?? null);
+    }
 
-      if (updateParts.length > 0) {
-        const setClause = Prisma.join(updateParts, ", ");
-        await tx.$executeRaw(Prisma.sql`UPDATE haj_umrah_packages SET ${setClause} WHERE id = ${id}`);
+    // Sequential ops (no transaction) to avoid "Transaction not found" with serverless DBs
+    if (Object.keys(updateData).length > 0) {
+      await prisma.hajUmrahPackage.update({
+        where: { id },
+        data: updateData,
+      });
+    }
+    if (visaPrices !== undefined) {
+      await prisma.hajUmrahPackageVisaPrice.deleteMany({ where: { packageId: id } });
+      if (visaPrices.length > 0) {
+        await prisma.hajUmrahPackageVisaPrice.createMany({
+          data: visaPrices.map((v: { country: string; price: number }) => ({ packageId: id, country: v.country, price: v.price })),
+        });
       }
+    }
 
-      if (visaPrices !== undefined) {
-        await tx.hajUmrahPackageVisaPrice.deleteMany({ where: { packageId: id } });
-        if (visaPrices.length > 0) {
-          await tx.hajUmrahPackageVisaPrice.createMany({
-            data: visaPrices.map((v: { country: string; price: number }) => ({ packageId: id, country: v.country, price: v.price })),
-          });
-        }
-      }
+    const pkg = await prisma.hajUmrahPackage.findUnique({
+      where: { id },
+      include: { visaPrices: true },
     });
+    if (!pkg) return NextResponse.json({ error: "Package not found" }, { status: 404 });
 
-    const [pkgRow] = await prisma.$queryRaw<
-      { id: string; name: string; type: string; description: string | null; duration_days: number | null; is_active: boolean; price_by_country: boolean; fixed_price: unknown; updated_at: Date }[]
-    >(Prisma.sql`SELECT id, name, type, description, duration_days, is_active, price_by_country, fixed_price, updated_at FROM haj_umrah_packages WHERE id = ${id}`);
-    if (!pkgRow) return NextResponse.json({ error: "Package not found" }, { status: 404 });
-
-    const visaPriceRows = await prisma.hajUmrahPackageVisaPrice.findMany({ where: { packageId: id } });
     return NextResponse.json({
-      id: pkgRow.id,
-      name: pkgRow.name,
-      type: pkgRow.type,
-      description: pkgRow.description,
-      durationDays: pkgRow.duration_days,
-      isActive: pkgRow.is_active,
-      priceByCountry: pkgRow.price_by_country,
-      fixedPrice: pkgRow.fixed_price != null ? Number(pkgRow.fixed_price) : null,
-      updatedAt: pkgRow.updated_at.toISOString(),
-      visaPrices: visaPriceRows.map((v) => ({ country: v.country, price: Number(v.price) })),
+      id: pkg.id,
+      name: pkg.name,
+      type: pkg.type,
+      description: pkg.description,
+      durationDays: pkg.durationDays,
+      isActive: pkg.isActive,
+      priceByCountry: pkg.priceByCountry,
+      fixedPrice: pkg.fixedPrice != null ? Number(pkg.fixedPrice) : null,
+      updatedAt: pkg.updatedAt.toISOString(),
+      visaPrices: pkg.visaPrices.map((v) => ({ country: v.country, price: Number(v.price) })),
     });
   } catch (error) {
     console.error("Haj Umrah package PATCH error:", error);

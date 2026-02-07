@@ -3,14 +3,19 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
+type Location = { id: string; name: string; branches: { id: string; name: string }[] };
+
 export default function CreateUserForm() {
   const router = useRouter();
   const [roles, setRoles] = useState<{ id: string; name: string }[]>([]);
+  const [locations, setLocations] = useState<Location[]>([]);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [roleId, setRoleId] = useState("");
   const [userType, setUserType] = useState<"officer" | "leader" | "">("officer");
+  const [locationId, setLocationId] = useState("");
+  const [branchId, setBranchId] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
@@ -24,15 +29,36 @@ export default function CreateUserForm() {
       });
   }, []);
 
+  useEffect(() => {
+    fetch("/api/cargo/locations")
+      .then((r) => r.json())
+      .then((data) => setLocations(Array.isArray(data) ? data : []))
+      .catch(() => setLocations([]));
+  }, []);
+
+  const branches = locationId ? (locations.find((l) => l.id === locationId)?.branches ?? []) : [];
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    if (locationId && !branchId) {
+      setError("Please select a branch when location is selected");
+      return;
+    }
     setLoading(true);
     try {
       const res = await fetch("/api/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, name, roleId, userType: userType || null }),
+        body: JSON.stringify({
+          email,
+          password,
+          name,
+          roleId,
+          userType: userType || null,
+          locationId: locationId || null,
+          branchId: locationId ? branchId : null,
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -43,6 +69,8 @@ export default function CreateUserForm() {
       setEmail("");
       setPassword("");
       setName("");
+      setLocationId("");
+      setBranchId("");
       router.refresh();
     } catch {
       setError("Something went wrong");
@@ -122,6 +150,38 @@ export default function CreateUserForm() {
                   <option value="leader">Leader</option>
                 </select>
               </div>
+              <div>
+                <label className="block text-sm font-medium">Location (optional)</label>
+                <select
+                  value={locationId}
+                  onChange={(e) => {
+                    setLocationId(e.target.value);
+                    setBranchId("");
+                  }}
+                  className="mt-1 w-full rounded border px-3 py-2 dark:bg-zinc-800 dark:text-white"
+                >
+                  <option value="">— No location —</option>
+                  {locations.map((l) => (
+                    <option key={l.id} value={l.id}>{l.name}</option>
+                  ))}
+                </select>
+              </div>
+              {locationId && (
+                <div>
+                  <label className="block text-sm font-medium">Branch *</label>
+                  <select
+                    value={branchId}
+                    onChange={(e) => setBranchId(e.target.value)}
+                    required
+                    className="mt-1 w-full rounded border px-3 py-2 dark:bg-zinc-800 dark:text-white"
+                  >
+                    <option value="">Select branch</option>
+                    {branches.map((b) => (
+                      <option key={b.id} value={b.id}>{b.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <div className="flex gap-2">
                 <button
                   type="submit"

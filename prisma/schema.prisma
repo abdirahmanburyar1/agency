@@ -3,7 +3,6 @@
 
 generator client {
   provider = "prisma-client-js"
-  output   = "../generated/prisma"
 }
 
 datasource db {
@@ -20,11 +19,15 @@ model User {
   name         String?
   roleId       String    @map("role_id")
   userType     String?   @map("user_type") // officer | leader
+  locationId   String?   @map("location_id") // cargo location (optional)
+  branchId     String?   @map("branch_id")   // branch in that location (required if location set)
   isActive     Boolean   @default(true) @map("is_active")
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
 
-  role   Role   @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  role     Role          @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  location CargoLocation? @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  branch   Branch?       @relation(fields: [branchId], references: [id], onDelete: SetNull)
   documents Document[]
   approvedExpenses Expense[]
   ledCampaigns HajUmrahCampaign[]
@@ -443,17 +446,53 @@ model HajUmrahBookingPackage {
   @@map("haj_umrah_booking_packages")
 }
 
+// --- Cargo: Location → Branch hierarchy ---
+
+model CargoLocation {
+  id        String   @id @default(cuid())
+  name      String   @unique @map("name") // e.g. Nairobi, Mombasa
+  createdAt DateTime @default(now()) @map("created_at")
+
+  branches Branch[]
+  users    User[]
+
+  @@map("cargo_locations")
+}
+
+model Branch {
+  id          String   @id @default(cuid())
+  locationId  String   @map("location_id")
+  name        String   @map("name") // e.g. Westlands Branch, Eastleigh Branch
+  address     String?  @map("address")
+  email       String?  @map("email")
+  phone       String?  @map("phone")
+  whatsapp    String?  @map("whatsapp")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  location         CargoLocation    @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  users            User[]
+  sourceShipments  CargoShipment[]  @relation("SourceBranch")
+  destShipments    CargoShipment[]  @relation("DestinationBranch")
+
+  @@unique([locationId, name])
+  @@index([locationId])
+  @@map("branches")
+}
+
 // --- Cargo ---
 
 model CargoShipment {
-  id             String   @id @default(uuid())
-  trackingNumber String   @unique @map("tracking_number")
-  senderName     String   @map("sender_name")
-  senderPhone    String   @map("sender_phone")
-  receiverName   String   @map("receiver_name")
-  receiverPhone  String   @map("receiver_phone")
-  source         String   @map("source")   // from
-  destination    String   @map("destination") // to
+  id                String   @id @default(uuid())
+  trackingNumber    String   @unique @map("tracking_number")
+  senderName        String   @map("sender_name")
+  senderPhone       String   @map("sender_phone")
+  receiverName      String   @map("receiver_name")
+  receiverPhone     String   @map("receiver_phone")
+  source            String   @map("source")   // display: "Location - Branch"
+  destination       String   @map("destination")
+  sourceBranchId    String?  @map("source_branch_id")
+  destinationBranchId String? @map("destination_branch_id")
   transportMode  String   @default("air") @map("transport_mode") // air | road | sea
   carrier        String   @default("") @map("carrier") // e.g. Daallo Airline, Doontii hebel, Bus
   totalWeight    Float    @map("total_weight")
@@ -462,12 +501,16 @@ model CargoShipment {
   status         String
   createdAt      DateTime @default(now()) @map("created_at")
 
+  sourceBranch      Branch?   @relation("SourceBranch", fields: [sourceBranchId], references: [id], onDelete: SetNull)
+  destinationBranch Branch?   @relation("DestinationBranch", fields: [destinationBranchId], references: [id], onDelete: SetNull)
   items    CargoItem[]
   logs     CargoTrackingLog[]
   payments Payment[]
 
   @@index([status])
   @@index([createdAt])
+  @@index([sourceBranchId])
+  @@index([destinationBranchId])
   @@map("cargo_shipments")
 }
 

@@ -10,7 +10,13 @@ type User = {
   isActive: boolean;
   userType: string | null;
   role: { id: string; name: string };
+  locationId?: string | null;
+  branchId?: string | null;
+  location?: { id: string; name: string } | null;
+  branch?: { id: string; name: string } | null;
 };
+
+type Location = { id: string; name: string; branches: { id: string; name: string }[] };
 
 type Props = {
   user: User;
@@ -26,9 +32,14 @@ export default function EditUserForm({ user, onClose }: Props) {
     user.userType === "leader" ? "leader" : "officer"
   );
   const [isActive, setIsActive] = useState(user.isActive);
+  const [locationId, setLocationId] = useState(user.locationId ?? "");
+  const [branchId, setBranchId] = useState(user.branchId ?? "");
+  const [locations, setLocations] = useState<Location[]>([]);
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const branches = locationId ? (locations.find((l) => l.id === locationId)?.branches ?? []) : [];
 
   useEffect(() => {
     fetch("/api/roles")
@@ -39,17 +50,33 @@ export default function EditUserForm({ user, onClose }: Props) {
       });
   }, [user.role.id]);
 
+  useEffect(() => {
+    fetch("/api/cargo/locations")
+      .then((r) => r.json())
+      .then((data) => setLocations(Array.isArray(data) ? data : []))
+      .catch(() => setLocations([]));
+  }, []);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    if (locationId && !branchId) {
+      setError("Please select a branch when location is selected");
+      return;
+    }
     setLoading(true);
     try {
-      const body: { name: string; roleId: string; isActive: boolean; password?: string } = {
-        name,
-        roleId,
-        isActive,
-      };
+      const body: {
+        name: string;
+        roleId: string;
+        isActive: boolean;
+        locationId?: string | null;
+        branchId?: string | null;
+        password?: string;
+      } = { name, roleId, isActive };
       if (password.length >= 8) body.password = password;
+      body.locationId = locationId || null;
+      body.branchId = locationId ? branchId : null;
 
       const res = await fetch(`/api/users/${user.id}`, {
         method: "PUT",
@@ -113,6 +140,38 @@ export default function EditUserForm({ user, onClose }: Props) {
               <option value="leader">Leader</option>
             </select>
           </div>
+          <div>
+            <label className="block text-sm font-medium">Location (optional)</label>
+            <select
+              value={locationId}
+              onChange={(e) => {
+                setLocationId(e.target.value);
+                setBranchId("");
+              }}
+              className="mt-1 w-full rounded border px-3 py-2 dark:bg-zinc-800 dark:text-white"
+            >
+              <option value="">— No location —</option>
+              {locations.map((l) => (
+                <option key={l.id} value={l.id}>{l.name}</option>
+              ))}
+            </select>
+          </div>
+          {locationId && (
+            <div>
+              <label className="block text-sm font-medium">Branch *</label>
+              <select
+                value={branchId}
+                onChange={(e) => setBranchId(e.target.value)}
+                required
+                className="mt-1 w-full rounded border px-3 py-2 dark:bg-zinc-800 dark:text-white"
+              >
+                <option value="">Select branch</option>
+                {branches.map((b) => (
+                  <option key={b.id} value={b.id}>{b.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
           <div>
             <label className="flex cursor-pointer items-center gap-2">
               <input

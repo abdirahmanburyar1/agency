@@ -14,7 +14,7 @@ export default async function UsersPage() {
 
   const usersQuery = () =>
     prisma.user.findMany({
-      include: { role: true },
+      include: { role: true, location: true, branch: true },
       orderBy: { createdAt: "desc" },
     });
   let users: Awaited<ReturnType<typeof usersQuery>> = [];
@@ -55,6 +55,7 @@ export default async function UsersPage() {
               <th className="px-4 py-3 text-left font-medium text-zinc-900 dark:text-white">Name</th>
               <th className="px-4 py-3 text-left font-medium text-zinc-900 dark:text-white">Role</th>
               <th className="px-4 py-3 text-left font-medium text-zinc-900 dark:text-white">User type</th>
+              <th className="px-4 py-3 text-left font-medium text-zinc-900 dark:text-white">Location / Branch</th>
               <th className="px-4 py-3 text-left font-medium text-zinc-900 dark:text-white">Status</th>
               <th className="px-4 py-3 text-left font-medium text-zinc-900 dark:text-white">Actions</th>
             </tr>
