@@ -96,7 +96,7 @@ export async function POST(request: Request) {
     });
     if (priceByCountry && visaPrices.length > 0) {
       await prisma.hajUmrahPackageVisaPrice.createMany({
-        data: visaPrices.map((v) => ({ packageId: pkg.id, country: v.country, price: v.price })),
+        data: visaPrices.map((v: { country: string; price: number }) => ({ packageId: pkg.id, country: v.country, price: v.price })),
       });
     }
     const result = await prisma.hajUmrahPackage.findUniqueOrThrow({

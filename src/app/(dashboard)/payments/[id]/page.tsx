@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { requirePermission, canAccess } from "@/lib/permissions";
 import { PERMISSION } from "@/lib/permissions";
@@ -23,14 +24,27 @@ export default async function PaymentDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const session = await requirePermission(PERMISSION.PAYMENTS_VIEW, { redirectOnForbidden: true });
-  const { id } = await params;
+  const session = await auth();
+  if (!session?.user) redirect("/login");
 
   const permissions = (session.user as { permissions?: string[] }).permissions ?? [];
+  const hasPaymentsView = permissions.includes(PERMISSION.PAYMENTS_VIEW);
+  const hasCargoView = permissions.some((p) => p.startsWith("cargo."));
+  if (!hasPaymentsView && !hasCargoView) redirect("/");
+
+  const { id } = await params;
+
   const roleName = String((session.user as { roleName?: string }).roleName ?? "").trim();
   const locationId = (session.user as { locationId?: string | null }).locationId ?? null;
-  const isAdminOrViewAll = roleName.toLowerCase() === "admin" || permissions.includes(PERMISSION.CARGO_VIEW_ALL);
-  const paymentWhere = getPaymentVisibilityWhere(isAdminOrViewAll, hasCargoPermission(permissions), locationId);
+  const isAdminOrCargoViewAll = roleName.toLowerCase() === "admin" || permissions.includes(PERMISSION.CARGO_VIEW_ALL);
+  const hasPaymentsViewAll = permissions.includes(PERMISSION.PAYMENTS_VIEW_ALL);
+  const hasCargoOrPaymentsView = hasCargoPermission(permissions) || permissions.includes(PERMISSION.PAYMENTS_VIEW);
+  const paymentWhere = getPaymentVisibilityWhere(
+    isAdminOrCargoViewAll,
+    hasPaymentsViewAll,
+    hasCargoOrPaymentsView,
+    locationId
+  );
 
   const [payment, rates] = await Promise.all([
     prisma.payment.findFirst({
@@ -98,12 +112,23 @@ export default async function PaymentDetailPage({
   return (
     <main className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6">
       <div className="mb-8 flex items-center justify-between">
-        <Link
-          href="/payments"
-          className="text-sm font-medium text-zinc-500 transition hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
-        >
-          ← Back to Payments
-        </Link>
+        {hasPaymentsView ? (
+          <Link
+            href="/payments"
+            className="text-sm font-medium text-zinc-500 transition hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
+          >
+            ← Back to Payments
+          </Link>
+        ) : payment.cargoShipmentId ? (
+          <Link
+            href={`/cargo/${payment.cargoShipmentId}`}
+            className="text-sm font-medium text-zinc-500 transition hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
+          >
+            ← Back to Cargo
+          </Link>
+        ) : (
+          <span />
+        )}
         <Link
           href={`/payments/${id}/receipt`}
           className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium transition hover:bg-zinc-50 dark:border-zinc-600 dark:hover:bg-zinc-800"

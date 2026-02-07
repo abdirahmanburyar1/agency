@@ -92,19 +92,39 @@ export function getCargoVisibilityWhere(
 }
 
 /**
- * Returns Prisma where clause for Payment to restrict by cargo visibility.
- * - Admin or cargo.view_all: no filter (see all payments)
- * - User with cargo perms + location but no view_all (cargo-section): only cargo payments for shipments in their location
- * - User without cargo perms: no filter (finance user, sees all)
- * - User with cargo perms but no location: no cargo payments (empty set)
+ * Returns Prisma where clause for cargo report: only shipments SENT FROM the user's branch.
+ * - Admin or cargo.view_all: no filter (see all)
+ * - User with branchId: see shipments where sourceBranchId = userBranchId
+ * - User with locationId only: see shipments where source is in their location
+ * - User without location: see nothing
+ */
+export function getCargoReportVisibilityWhere(
+  isAdminOrViewAll: boolean,
+  userLocationId: string | null,
+  userBranchId: string | null
+): Prisma.CargoShipmentWhereInput {
+  if (isAdminOrViewAll) return {};
+  if (!userLocationId && !userBranchId) return { id: "never-match" };
+  if (userBranchId) {
+    return { sourceBranchId: userBranchId };
+  }
+  return { sourceBranch: { locationId: userLocationId! } };
+}
+
+/**
+ * Returns Prisma where clause for Payment to restrict by location.
+ * - Admin, cargo.view_all, or payments.view_all: no filter (see all payments)
+ * - User with location but no view_all (cargo-section, branch finance): only cargo payments for shipments in their location
+ * - User without location: no cargo payments when restricted (empty set)
  */
 export function getPaymentVisibilityWhere(
-  isAdminOrViewAll: boolean,
-  hasCargoPermission: boolean,
+  isAdminOrCargoViewAll: boolean,
+  hasPaymentsViewAll: boolean,
+  hasCargoOrPaymentsView: boolean,
   userLocationId: string | null
 ): Prisma.PaymentWhereInput {
-  if (isAdminOrViewAll) return {};
-  if (!hasCargoPermission) return {}; // Finance user, no cargo context → see all
+  if (isAdminOrCargoViewAll || hasPaymentsViewAll) return {};
+  if (!hasCargoOrPaymentsView) return {};
   const cargoWhere = getCargoVisibilityWhere(false, userLocationId);
   return { cargoShipment: cargoWhere }; // Only cargo payments whose shipment matches
 }

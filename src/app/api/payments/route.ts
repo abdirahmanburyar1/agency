@@ -24,8 +24,15 @@ export async function GET() {
     const permissions = (session.user as { permissions?: string[] }).permissions ?? [];
     const roleName = String((session.user as { roleName?: string }).roleName ?? "").trim();
     const locationId = (session.user as { locationId?: string | null }).locationId ?? null;
-    const isAdminOrViewAll = roleName.toLowerCase() === "admin" || permissions.includes(PERMISSION.CARGO_VIEW_ALL);
-    const paymentWhere = getPaymentVisibilityWhere(isAdminOrViewAll, hasCargoPermission(permissions), locationId);
+    const isAdminOrCargoViewAll = roleName.toLowerCase() === "admin" || permissions.includes(PERMISSION.CARGO_VIEW_ALL);
+    const hasPaymentsViewAll = permissions.includes(PERMISSION.PAYMENTS_VIEW_ALL);
+    const hasCargoOrPaymentsView = hasCargoPermission(permissions) || permissions.includes(PERMISSION.PAYMENTS_VIEW);
+    const paymentWhere = getPaymentVisibilityWhere(
+      isAdminOrCargoViewAll,
+      hasPaymentsViewAll,
+      hasCargoOrPaymentsView,
+      locationId
+    );
 
     const payments = await prisma.payment.findMany({
       where: paymentWhere,

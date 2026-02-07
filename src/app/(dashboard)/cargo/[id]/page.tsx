@@ -38,7 +38,8 @@ export default async function CargoDetailPage({
   if (!shipment) notFound();
 
   const canEdit = await canAccess(PERMISSION.CARGO_EDIT);
-  const canViewPayments = await canAccess(PERMISSION.PAYMENTS_VIEW);
+  const canViewPayments =
+    (await canAccess(PERMISSION.PAYMENTS_VIEW)) || !!payment?.id; // Cargo Section: view payment link from cargo detail only
 
   const permissions = (session.user as { permissions?: string[] }).permissions ?? [];
   const roleName = String((session.user as { roleName?: string }).roleName ?? "").trim();

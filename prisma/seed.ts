@@ -31,6 +31,7 @@ const PERMISSIONS = [
   { code: "payables.approve", name: "Approve Payable Payments", resource: "payables", action: "approve" },
   { code: "payables.delete", name: "Delete Payables", resource: "payables", action: "delete" },
   { code: "payments.view", name: "View Payments", resource: "payments", action: "view" },
+  { code: "payments.view_all", name: "View All Payments", resource: "payments", action: "view_all" },
   { code: "payments.create", name: "Create Payments", resource: "payments", action: "create" },
   { code: "payments.edit", name: "Edit Payments", resource: "payments", action: "edit" },
   { code: "payments.delete", name: "Delete Payments", resource: "payments", action: "delete" },
@@ -155,21 +156,20 @@ async function main() {
     }
   }
 
-  // Cargo Section: cargo ops in assigned location only; sees only own location's cargo payments
+  // Cargo Section: cargo ops in assigned location only; no Payments main page (View payment link on cargo detail only)
   const cargoViewPerm = await prisma.permission.findUnique({ where: { code: "cargo.view" } });
   const cargoCreatePerm = await prisma.permission.findUnique({ where: { code: "cargo.create" } });
   const cargoEditPerm = await prisma.permission.findUnique({ where: { code: "cargo.edit" } });
-  const paymentsViewPerm = await prisma.permission.findUnique({ where: { code: "payments.view" } });
-  if (cargoViewPerm && cargoCreatePerm && cargoEditPerm && paymentsViewPerm) {
+  if (cargoViewPerm && cargoCreatePerm && cargoEditPerm) {
     const cargoSectionRole = await prisma.role.upsert({
       where: { name: "Cargo Section" },
       create: {
         name: "Cargo Section",
-        description: "Cargo operations for assigned branch. Sees only cargo and cargo payments in their location.",
+        description: "Cargo operations for assigned branch. View payment only from cargo detail, no Payments page.",
       },
       update: {},
     });
-    for (const perm of [cargoViewPerm, cargoCreatePerm, cargoEditPerm, paymentsViewPerm]) {
+    for (const perm of [cargoViewPerm, cargoCreatePerm, cargoEditPerm]) {
       await prisma.rolePermission.upsert({
         where: {
           roleId_permissionId: { roleId: cargoSectionRole.id, permissionId: perm.id },
@@ -180,18 +180,43 @@ async function main() {
     }
   }
 
-  // Finance: mark expenses as paid
+  // Branch Finance: payments in their location only (cargo payments where source/dest in their location)
+  const paymentsViewPerm = await prisma.permission.findUnique({ where: { code: "payments.view" } });
+  const paymentsViewAllPerm = await prisma.permission.findUnique({ where: { code: "payments.view_all" } });
+  if (paymentsViewPerm) {
+    const branchFinanceRole = await prisma.role.upsert({
+      where: { name: "Branch Finance" },
+      create: {
+        name: "Branch Finance",
+        description: "View payments for their branch/location only. Assign location & branch to the user.",
+      },
+      update: {},
+    });
+    await prisma.rolePermission.upsert({
+      where: {
+        roleId_permissionId: { roleId: branchFinanceRole.id, permissionId: paymentsViewPerm.id },
+      },
+      create: { roleId: branchFinanceRole.id, permissionId: paymentsViewPerm.id },
+      update: {},
+    });
+  }
+
+  // Finance (central): expenses + all payments
   const expensePaidPerm = await prisma.permission.findUnique({ where: { code: "expenses.paid" } });
   if (expensePaidPerm && expenseViewPerm) {
     const financeRole = await prisma.role.upsert({
       where: { name: "Finance" },
       create: {
         name: "Finance",
-        description: "Can view expenses and mark approved expenses as paid.",
+        description: "Central finance: view all payments, expenses, mark expenses paid.",
       },
       update: {},
     });
-    for (const perm of [expenseViewPerm!, expensePaidPerm]) {
+    const perms = [expenseViewPerm, expensePaidPerm];
+    if (paymentsViewPerm) perms.push(paymentsViewPerm);
+    if (paymentsViewAllPerm) perms.push(paymentsViewAllPerm);
+    for (const perm of perms) {
+      if (!perm) continue;
       await prisma.rolePermission.upsert({
         where: { roleId_permissionId: { roleId: financeRole.id, permissionId: perm.id } },
         create: { roleId: financeRole.id, permissionId: perm.id },

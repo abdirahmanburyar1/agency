@@ -125,23 +125,25 @@ export default function ReportsView({ initialData }: Props) {
       ["Ticket revenue", summary.ticketRevenue],
       ["Visa revenue", summary.visaRevenue],
       ["Haj & Umrah revenue", summary.hajUmrahRevenue],
+      ["Cargo revenue", summary.cargoRevenue],
       ["Total revenue", summary.totalRevenue],
       ["Total expenses", summary.totalExpenses],
       ["Net income", summary.netIncome],
       ["Receivables (outstanding)", summary.totalReceivables],
       ["Payables", summary.totalPayables],
     ];
-    const tableHeaders = ["Period", "Tickets", "Visas", "Haj & Umrah", "Total revenue", "Expenses", "Net income"];
+    const tableHeaders = ["Period", "Tickets", "Visas", "Haj & Umrah", "Cargo", "Total revenue", "Expenses", "Net income"];
     const tableRows = rows.map((r) => [
       r.monthLabel,
       r.ticketRevenue,
       r.visaRevenue,
       r.hajUmrahRevenue,
+      r.cargoRevenue,
       r.totalRevenue,
       r.expenses,
       r.netIncome,
     ]);
-    const receivablesRow = ["", "", "", "", "", "Receivables (outstanding)", summary.totalReceivables];
+    const receivablesRow = ["", "", "", "", "", "", "Receivables (outstanding)", summary.totalReceivables];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(summarySheet), "Summary");
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([tableHeaders, ...tableRows, [], receivablesRow]), "Breakdown");
@@ -186,12 +188,13 @@ export default function ReportsView({ initialData }: Props) {
     doc.text(`${periodLabel} breakdown`, 14, tableStartY);
     autoTable(doc, {
       startY: tableStartY + 6,
-      head: [["Period", "Tickets", "Visas", "Haj & Umrah", "Revenue", "Expenses", "Net"]],
+      head: [["Period", "Tickets", "Visas", "Haj & Umrah", "Cargo", "Revenue", "Expenses", "Net"]],
       body: rows.map((r) => [
         r.monthLabel,
         `$${r.ticketRevenue.toLocaleString()}`,
         `$${r.visaRevenue.toLocaleString()}`,
         `$${r.hajUmrahRevenue.toLocaleString()}`,
+        `$${r.cargoRevenue.toLocaleString()}`,
         `$${r.totalRevenue.toLocaleString()}`,
         `$${r.expenses.toLocaleString()}`,
         `$${r.netIncome.toLocaleString()}`,
@@ -212,6 +215,7 @@ export default function ReportsView({ initialData }: Props) {
     Tickets: r.ticketRevenue,
     Visas: r.visaRevenue,
     "Haj & Umrah": r.hajUmrahRevenue,
+    Cargo: r.cargoRevenue,
     Expenses: r.expenses,
   }));
 
@@ -279,6 +283,7 @@ export default function ReportsView({ initialData }: Props) {
           <SummaryCard title="Ticket revenue" value={summary.ticketRevenue} prefix="$" accent="blue" />
           <SummaryCard title="Visa revenue" value={summary.visaRevenue} prefix="$" accent="emerald" />
           <SummaryCard title="Haj & Umrah revenue" value={summary.hajUmrahRevenue} prefix="$" accent="teal" />
+          <SummaryCard title="Cargo revenue" value={summary.cargoRevenue} prefix="$" accent="violet" />
           <SummaryCard title="Total expenses" value={summary.totalExpenses} prefix="$" accent="amber" />
           <SummaryCard title="Net income" value={summary.netIncome} prefix="$" accent="emerald" highlight />
           <SummaryCard title="Receivables (outstanding)" value={summary.totalReceivables} prefix="$" accent="violet" />
@@ -302,6 +307,7 @@ export default function ReportsView({ initialData }: Props) {
               <Bar dataKey="Tickets" fill="#3b82f6" radius={[4, 4, 0, 0]} />
               <Bar dataKey="Visas" fill="#10b981" radius={[4, 4, 0, 0]} />
               <Bar dataKey="Haj & Umrah" fill="#14b8a6" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="Cargo" fill="#d97706" radius={[4, 4, 0, 0]} />
               <Bar dataKey="Expenses" fill="#f59e0b" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
@@ -339,6 +345,7 @@ export default function ReportsView({ initialData }: Props) {
                 <th className="px-3 py-3 text-right font-semibold text-slate-700 dark:text-slate-300 sm:px-6 sm:py-4">Tickets</th>
                 <th className="px-3 py-3 text-right font-semibold text-slate-700 dark:text-slate-300 sm:px-6 sm:py-4">Visas</th>
                 <th className="px-3 py-3 text-right font-semibold text-slate-700 dark:text-slate-300 sm:px-6 sm:py-4">Haj & Umrah</th>
+                <th className="px-3 py-3 text-right font-semibold text-slate-700 dark:text-slate-300 sm:px-6 sm:py-4">Cargo</th>
                 <th className="px-3 py-3 text-right font-semibold text-slate-700 dark:text-slate-300 sm:px-6 sm:py-4">Revenue</th>
                 <th className="px-3 py-3 text-right font-semibold text-slate-700 dark:text-slate-300 sm:px-6 sm:py-4">Expenses</th>
                 <th className="px-3 py-3 text-right font-semibold text-emerald-700 dark:text-emerald-400 sm:px-6 sm:py-4">Net income</th>
@@ -347,7 +354,7 @@ export default function ReportsView({ initialData }: Props) {
             <tbody>
               {rows.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-3 py-12 text-center text-slate-500 dark:text-slate-400 sm:px-6">
+                  <td colSpan={8} className="px-3 py-12 text-center text-slate-500 dark:text-slate-400 sm:px-6">
                     No data for the selected period
                   </td>
                 </tr>
@@ -364,6 +371,9 @@ export default function ReportsView({ initialData }: Props) {
                     <td className="px-3 py-3 text-right text-slate-600 dark:text-slate-300 sm:px-6 sm:py-4">
                       ${r.hajUmrahRevenue.toLocaleString()}
                     </td>
+                    <td className="px-3 py-3 text-right text-slate-600 dark:text-slate-300 sm:px-6 sm:py-4">
+                      ${r.cargoRevenue.toLocaleString()}
+                    </td>
                     <td className="px-3 py-3 text-right font-medium text-slate-900 dark:text-white sm:px-6 sm:py-4">
                       ${r.totalRevenue.toLocaleString()}
                     </td>
@@ -379,7 +389,7 @@ export default function ReportsView({ initialData }: Props) {
             </tbody>
             <tfoot>
               <tr className="border-t-2 border-slate-200 bg-violet-50/50 dark:border-slate-700 dark:bg-violet-950/20">
-                <td className="px-3 py-3 font-semibold text-slate-700 dark:text-slate-300 sm:px-6 sm:py-4" colSpan={4}>
+                <td className="px-3 py-3 font-semibold text-slate-700 dark:text-slate-300 sm:px-6 sm:py-4" colSpan={5}>
                   Receivables (outstanding)
                 </td>
                 <td className="px-3 py-3 text-right font-semibold text-violet-700 dark:text-violet-300 sm:px-6 sm:py-4" colSpan={3}>

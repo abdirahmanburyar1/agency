@@ -5,6 +5,8 @@ import { requirePermission } from "@/lib/permissions";
 import { PERMISSION } from "@/lib/permissions";
 import { generateTrackingNumber, CARGO_RATE_PER_KG } from "@/lib/cargo";
 
+type CargoItemValid = { description: string; quantity: number; weight: number; unitPrice: number };
+
 export async function GET() {
   await requirePermission(PERMISSION.CARGO_VIEW);
   try {
@@ -75,14 +77,14 @@ export async function POST(request: Request) {
         weight: Math.max(0, Number(i.weight) || 0),
         unitPrice: Math.max(0, Number(i.unitPrice) ?? CARGO_RATE_PER_KG),
       }))
-      .filter((i) => i.description && (i.quantity > 0 || i.weight > 0));
+      .filter((i: CargoItemValid) => i.description && (i.quantity > 0 || i.weight > 0));
 
     if (validItems.length === 0) {
       return NextResponse.json({ error: "At least one valid item is required" }, { status: 400 });
     }
 
-    const totalWeight = validItems.reduce((sum, i) => sum + i.weight * i.quantity, 0);
-    const price = validItems.reduce((sum, i) => sum + i.quantity * i.weight * i.unitPrice, 0);
+    const totalWeight = validItems.reduce((sum: number, i: CargoItemValid) => sum + i.weight * i.quantity, 0);
+    const price = validItems.reduce((sum: number, i: CargoItemValid) => sum + i.quantity * i.weight * i.unitPrice, 0);
     const trackingNumber = await generateTrackingNumber();
     const status = "PENDING";
 
@@ -107,7 +109,7 @@ export async function POST(request: Request) {
         },
       });
       await tx.cargoItem.createMany({
-        data: validItems.map((i) => ({
+        data: validItems.map((i: CargoItemValid) => ({
           cargoShipmentId: created.id,
           description: i.description,
           quantity: i.quantity,

@@ -1,6 +1,17 @@
 import { prisma } from "./db";
 import { getCurrencyRates, toUsd } from "./currency-rates";
 
+/** Convert receipt amount to USD. Prefer rateToBase (1 unit = X USD) when stored, else use currency rates. */
+function receiptToUsd(
+  amount: number,
+  currency: string,
+  rateToBase: number | null | undefined,
+  rates: Record<string, number>
+): number {
+  if (rateToBase != null && rateToBase > 0) return amount * Number(rateToBase);
+  return toUsd(amount, currency || "USD", rates);
+}
+
 function startOfDay(d: Date): Date {
   const x = new Date(d);
   x.setHours(0, 0, 0, 0);
@@ -83,6 +94,7 @@ export type ReportSummary = {
   ticketRevenue: number;
   visaRevenue: number;
   hajUmrahRevenue: number;
+  cargoRevenue: number;
   totalRevenue: number;
   totalExpenses: number;
   netIncome: number;
@@ -101,6 +113,7 @@ export type ReportRow = {
   ticketRevenue: number;
   visaRevenue: number;
   hajUmrahRevenue: number;
+  cargoRevenue: number;
   totalRevenue: number;
   expenses: number;
   netIncome: number;
@@ -160,6 +173,15 @@ export async function getReportData(filter?: ReportFilters): Promise<ReportData>
   const paymentDateRange = { paymentDate: { gte: from, lte: to } };
   const paymentWhere = { ...paymentDateRange, canceledAt: null, status: { not: "refunded" } };
   const hajPaymentWhere = { ...paymentWhere, hajUmrahBookingId: { not: null }, status: { not: "refunded" } };
+  /** Cargo: only paid/partial (actual revenue received); use receipts for amount; receipt date for period */
+  const cargoReceiptWhere = {
+    date: { gte: from, lte: to },
+    payment: {
+      canceledAt: null,
+      cargoShipmentId: { not: null },
+      status: { in: ["paid", "partial"] },
+    },
+  };
 
   const ticketWhere = { ...dateRange, canceledAt: null };
   const visaWhere = { ...dateRange, canceledAt: null };
@@ -174,6 +196,7 @@ export async function getReportData(filter?: ReportFilters): Promise<ReportData>
     payments,
     payablesAgg,
     hajPaymentsAgg,
+    cargoReceipts,
     receiptsAgg,
     ticketsForGrouping,
     visasForGrouping,
@@ -189,6 +212,10 @@ export async function getReportData(filter?: ReportFilters): Promise<ReportData>
     prisma.payment.findMany({ where: paymentWhere, include: { receipts: true } }),
     prisma.payable.aggregate({ where: payableWhere, _sum: { balance: true } }),
     prisma.payment.aggregate({ where: hajPaymentWhere, _sum: { amount: true } }),
+    prisma.receipt.findMany({
+      where: cargoReceiptWhere,
+      select: { date: true, amount: true, currency: true, rateToBase: true },
+    }),
     prisma.receipt.aggregate({ where: receiptWhere, _sum: { amount: true } }),
     period === "monthly" || period === "yearly"
       ? prisma.ticket.findMany({ where: ticketWhere, select: { date: true, netSales: true } })
@@ -224,7 +251,12 @@ export async function getReportData(filter?: ReportFilters): Promise<ReportData>
   const ticketRevenue = Number(ticketsAgg._sum.netSales ?? 0);
   const visaRevenue = Number(visasAgg._sum.netSales ?? 0);
   const hajUmrahRevenue = Number(hajPaymentsAgg._sum.amount ?? 0);
-  const totalRevenue = ticketRevenue + visaRevenue + hajUmrahRevenue;
+  const cargoRevenue = (cargoReceipts as { amount: unknown; currency: string; rateToBase?: number | null }[]).reduce(
+    (sum, r) =>
+      sum + receiptToUsd(Number(r.amount ?? 0), r.currency || "USD", r.rateToBase, currencyRates),
+    0
+  );
+  const totalRevenue = ticketRevenue + visaRevenue + hajUmrahRevenue + cargoRevenue;
   const totalExpenses = totalExpensesUsd;
   const totalPayables = Number(payablesAgg._sum.balance ?? 0);
   const incomeReceived = Number(receiptsAgg._sum.amount ?? 0);
@@ -234,6 +266,7 @@ export async function getReportData(filter?: ReportFilters): Promise<ReportData>
     ticketRevenue,
     visaRevenue,
     hajUmrahRevenue,
+    cargoRevenue,
     totalRevenue,
     totalExpenses,
     netIncome,
@@ -257,10 +290,10 @@ export async function getReportData(filter?: ReportFilters): Promise<ReportData>
     const dayBuckets = daysInRange(from, to);
     const rowMap = new Map<
       string,
-      { ticketRevenue: number; visaRevenue: number; hajUmrahRevenue: number; expenses: number; incomeReceived: number }
+      { ticketRevenue: number; visaRevenue: number; hajUmrahRevenue: number; cargoRevenue: number; expenses: number; incomeReceived: number }
     >();
     for (const { periodKey } of dayBuckets) {
-      rowMap.set(periodKey, { ticketRevenue: 0, visaRevenue: 0, hajUmrahRevenue: 0, expenses: 0, incomeReceived: 0 });
+      rowMap.set(periodKey, { ticketRevenue: 0, visaRevenue: 0, hajUmrahRevenue: 0, cargoRevenue: 0, expenses: 0, incomeReceived: 0 });
     }
     for (const t of (ticketsDaily ?? []) as { date: Date; netSales: unknown }[]) {
       const key = toDayKey(t.date);
@@ -277,14 +310,19 @@ export async function getReportData(filter?: ReportFilters): Promise<ReportData>
       const m = rowMap.get(key);
       if (m) m.hajUmrahRevenue += Number(h.amount ?? 0);
     }
+    for (const r of (cargoReceipts ?? []) as { date: Date; amount: unknown; currency: string; rateToBase?: number | null }[]) {
+      const key = toDayKey(r.date);
+      const m = rowMap.get(key);
+      if (m) m.cargoRevenue += receiptToUsd(Number(r.amount ?? 0), r.currency || "USD", r.rateToBase, currencyRates);
+    }
     for (const e of expenseRows) {
       const key = toDayKey(e.date);
       const m = rowMap.get(key);
       if (m) m.expenses += toUsd(Number(e.amount ?? 0), e.currency || "USD", currencyRates);
     }
     rows = dayBuckets.map(({ periodKey, label }) => {
-      const m = rowMap.get(periodKey) ?? { ticketRevenue: 0, visaRevenue: 0, hajUmrahRevenue: 0, expenses: 0, incomeReceived: 0 };
-      const totalRevenue = m.ticketRevenue + m.visaRevenue + m.hajUmrahRevenue;
+      const m = rowMap.get(periodKey) ?? { ticketRevenue: 0, visaRevenue: 0, hajUmrahRevenue: 0, cargoRevenue: 0, expenses: 0, incomeReceived: 0 };
+      const totalRevenue = m.ticketRevenue + m.visaRevenue + m.hajUmrahRevenue + m.cargoRevenue;
       const netIncome = totalRevenue - m.expenses;
       return {
         month: periodKey,
@@ -292,6 +330,7 @@ export async function getReportData(filter?: ReportFilters): Promise<ReportData>
         ticketRevenue: m.ticketRevenue,
         visaRevenue: m.visaRevenue,
         hajUmrahRevenue: m.hajUmrahRevenue,
+        cargoRevenue: m.cargoRevenue,
         totalRevenue,
         expenses: m.expenses,
         netIncome,
@@ -301,13 +340,13 @@ export async function getReportData(filter?: ReportFilters): Promise<ReportData>
     const monthBuckets = monthsInRange(from, to);
     const rowMap = new Map<
       string,
-      { ticketRevenue: number; visaRevenue: number; hajUmrahRevenue: number; expenses: number; incomeReceived: number }
+      { ticketRevenue: number; visaRevenue: number; hajUmrahRevenue: number; cargoRevenue: number; expenses: number; incomeReceived: number }
     >();
     for (const t of (ticketsForGrouping ?? []) as { date: Date; netSales: unknown }[]) {
       const y = String(new Date(t.date).getFullYear());
       let m = rowMap.get(y);
       if (!m) {
-        m = { ticketRevenue: 0, visaRevenue: 0, hajUmrahRevenue: 0, expenses: 0, incomeReceived: 0 };
+        m = { ticketRevenue: 0, visaRevenue: 0, hajUmrahRevenue: 0, cargoRevenue: 0, expenses: 0, incomeReceived: 0 };
         rowMap.set(y, m);
       }
       m.ticketRevenue += Number(t.netSales ?? 0);
@@ -316,7 +355,7 @@ export async function getReportData(filter?: ReportFilters): Promise<ReportData>
       const y = String(new Date(v.date).getFullYear());
       let m = rowMap.get(y);
       if (!m) {
-        m = { ticketRevenue: 0, visaRevenue: 0, hajUmrahRevenue: 0, expenses: 0, incomeReceived: 0 };
+        m = { ticketRevenue: 0, visaRevenue: 0, hajUmrahRevenue: 0, cargoRevenue: 0, expenses: 0, incomeReceived: 0 };
         rowMap.set(y, m);
       }
       m.visaRevenue += Number(v.netSales ?? 0);
@@ -325,24 +364,33 @@ export async function getReportData(filter?: ReportFilters): Promise<ReportData>
       const y = String(new Date(h.paymentDate).getFullYear());
       let m = rowMap.get(y);
       if (!m) {
-        m = { ticketRevenue: 0, visaRevenue: 0, hajUmrahRevenue: 0, expenses: 0, incomeReceived: 0 };
+        m = { ticketRevenue: 0, visaRevenue: 0, hajUmrahRevenue: 0, cargoRevenue: 0, expenses: 0, incomeReceived: 0 };
         rowMap.set(y, m);
       }
       m.hajUmrahRevenue += Number(h.amount ?? 0);
+    }
+    for (const r of (cargoReceipts ?? []) as { date: Date; amount: unknown; currency: string; rateToBase?: number | null }[]) {
+      const y = String(new Date(r.date).getFullYear());
+      let m = rowMap.get(y);
+      if (!m) {
+        m = { ticketRevenue: 0, visaRevenue: 0, hajUmrahRevenue: 0, cargoRevenue: 0, expenses: 0, incomeReceived: 0 };
+        rowMap.set(y, m);
+      }
+      m.cargoRevenue += receiptToUsd(Number(r.amount ?? 0), r.currency || "USD", r.rateToBase, currencyRates);
     }
     for (const e of expenseRows) {
       const y = String(new Date(e.date).getFullYear());
       let m = rowMap.get(y);
       if (!m) {
-        m = { ticketRevenue: 0, visaRevenue: 0, hajUmrahRevenue: 0, expenses: 0, incomeReceived: 0 };
+        m = { ticketRevenue: 0, visaRevenue: 0, hajUmrahRevenue: 0, cargoRevenue: 0, expenses: 0, incomeReceived: 0 };
         rowMap.set(y, m);
       }
       m.expenses += toUsd(Number(e.amount ?? 0), e.currency || "USD", currencyRates);
     }
     const yearBuckets = yearsInRange(from, to);
     rows = yearBuckets.map(({ periodKey, label }) => {
-      const m = rowMap.get(periodKey) ?? { ticketRevenue: 0, visaRevenue: 0, hajUmrahRevenue: 0, expenses: 0, incomeReceived: 0 };
-      const totalRevenue = m.ticketRevenue + m.visaRevenue + m.hajUmrahRevenue;
+      const m = rowMap.get(periodKey) ?? { ticketRevenue: 0, visaRevenue: 0, hajUmrahRevenue: 0, cargoRevenue: 0, expenses: 0, incomeReceived: 0 };
+      const totalRevenue = m.ticketRevenue + m.visaRevenue + m.hajUmrahRevenue + m.cargoRevenue;
       const netIncome = totalRevenue - m.expenses;
       return {
         month: periodKey,
@@ -350,6 +398,7 @@ export async function getReportData(filter?: ReportFilters): Promise<ReportData>
         ticketRevenue: m.ticketRevenue,
         visaRevenue: m.visaRevenue,
         hajUmrahRevenue: m.hajUmrahRevenue,
+        cargoRevenue: m.cargoRevenue,
         totalRevenue,
         expenses: m.expenses,
         netIncome,
@@ -359,10 +408,10 @@ export async function getReportData(filter?: ReportFilters): Promise<ReportData>
     const chartMonths = monthsInRange(from, to);
     const rowMap = new Map<
       string,
-      { ticketRevenue: number; visaRevenue: number; hajUmrahRevenue: number; expenses: number; incomeReceived: number }
+      { ticketRevenue: number; visaRevenue: number; hajUmrahRevenue: number; cargoRevenue: number; expenses: number; incomeReceived: number }
     >();
     for (const { periodKey } of chartMonths) {
-      rowMap.set(periodKey, { ticketRevenue: 0, visaRevenue: 0, hajUmrahRevenue: 0, expenses: 0, incomeReceived: 0 });
+      rowMap.set(periodKey, { ticketRevenue: 0, visaRevenue: 0, hajUmrahRevenue: 0, cargoRevenue: 0, expenses: 0, incomeReceived: 0 });
     }
     for (const t of (ticketsForGrouping ?? []) as { date: Date; netSales: unknown }[]) {
       const monthKey = toMonthKey(t.date);
@@ -379,14 +428,19 @@ export async function getReportData(filter?: ReportFilters): Promise<ReportData>
       const m = rowMap.get(monthKey);
       if (m) m.hajUmrahRevenue += Number(h.amount ?? 0);
     }
+    for (const r of (cargoReceipts ?? []) as { date: Date; amount: unknown; currency: string; rateToBase?: number | null }[]) {
+      const monthKey = toMonthKey(r.date);
+      const m = rowMap.get(monthKey);
+      if (m) m.cargoRevenue += receiptToUsd(Number(r.amount ?? 0), r.currency || "USD", r.rateToBase, currencyRates);
+    }
     for (const e of expenseRows) {
       const monthKey = toMonthKey(e.date);
       const m = rowMap.get(monthKey);
       if (m) m.expenses += toUsd(Number(e.amount ?? 0), e.currency || "USD", currencyRates);
     }
     rows = chartMonths.map(({ periodKey, label }) => {
-      const m = rowMap.get(periodKey) ?? { ticketRevenue: 0, visaRevenue: 0, hajUmrahRevenue: 0, expenses: 0, incomeReceived: 0 };
-      const totalRevenue = m.ticketRevenue + m.visaRevenue + m.hajUmrahRevenue;
+      const m = rowMap.get(periodKey) ?? { ticketRevenue: 0, visaRevenue: 0, hajUmrahRevenue: 0, cargoRevenue: 0, expenses: 0, incomeReceived: 0 };
+      const totalRevenue = m.ticketRevenue + m.visaRevenue + m.hajUmrahRevenue + m.cargoRevenue;
       const netIncome = totalRevenue - m.expenses;
       return {
         month: periodKey,
@@ -394,6 +448,7 @@ export async function getReportData(filter?: ReportFilters): Promise<ReportData>
         ticketRevenue: m.ticketRevenue,
         visaRevenue: m.visaRevenue,
         hajUmrahRevenue: m.hajUmrahRevenue,
+        cargoRevenue: m.cargoRevenue,
         totalRevenue,
         expenses: m.expenses,
         netIncome,

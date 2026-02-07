@@ -33,8 +33,8 @@ export default async function DashboardLayout({
 
   const navItems = NAV_ITEMS.filter((item) => {
     if (isAdmin || perms.length === 0) return true;
+    if (item.href === "/payments" && roleName.toLowerCase() === "cargo section") return false; // Cargo Section: no Payments main page
     if (item.perm && perms.includes(item.perm)) return true;
-    // Cargo: show if user has any cargo permission (view, create, edit, delete)
     if (item.href === "/cargo") {
       return perms.some((p) => p.startsWith("cargo."));
     }

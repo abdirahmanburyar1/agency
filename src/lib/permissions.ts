@@ -28,6 +28,7 @@ export const PERMISSION = {
   PAYABLES_APPROVE: "payables.approve",
   PAYABLES_DELETE: "payables.delete",
   PAYMENTS_VIEW: "payments.view",
+  PAYMENTS_VIEW_ALL: "payments.view_all", // See all payments; without it, branch finance sees only their location's cargo payments
   PAYMENTS_CREATE: "payments.create",
   PAYMENTS_EDIT: "payments.edit",
   PAYMENTS_DELETE: "payments.delete",
@@ -88,6 +89,8 @@ const STALE_JWT_ALLOWED: PermissionCode[] = [
   PERMISSION.CARGO_VIEW_ALL,
   PERMISSION.CARGO_CREATE,
   PERMISSION.CARGO_EDIT,
+  PERMISSION.PAYMENTS_VIEW,
+  PERMISSION.PAYMENTS_VIEW_ALL,
   PERMISSION.DOCUMENTS_VIEW,
   PERMISSION.DOCUMENTS_UPLOAD,
   PERMISSION.DOCUMENTS_DELETE,

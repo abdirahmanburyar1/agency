@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requirePermission } from "@/lib/permissions";
+import { requirePermission, canAccess } from "@/lib/permissions";
 import { PERMISSION } from "@/lib/permissions";
 import { getReportData, type ReportPeriod } from "@/lib/reports";
 import ReportsView from "./ReportsView";
@@ -30,7 +30,10 @@ export default async function ReportsPage({
   const period = VALID_PERIODS.includes(periodParam as ReportPeriod) ? (periodParam as ReportPeriod) : undefined;
 
   const filter = validRange ? { fromDate: fromDate!, toDate: toDate!, period } : undefined;
-  const data = await getReportData(filter);
+  const [data, canViewCargo] = await Promise.all([
+    getReportData(filter),
+    canAccess(PERMISSION.CARGO_VIEW),
+  ]);
 
   return (
     <main className="w-full py-6 sm:py-8">
@@ -38,7 +41,17 @@ export default async function ReportsPage({
         <Link href="/" className="text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200">
           ← Dashboard
         </Link>
-        <h1 className="text-xl font-semibold text-slate-900 dark:text-white">Reports</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-xl font-semibold text-slate-900 dark:text-white">Reports</h1>
+          {canViewCargo && (
+            <Link
+              href="/reports/cargo"
+              className="text-sm font-medium text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300"
+            >
+              Cargo Report →
+            </Link>
+          )}
+        </div>
       </div>
       <ReportsView initialData={data} />
     </main>

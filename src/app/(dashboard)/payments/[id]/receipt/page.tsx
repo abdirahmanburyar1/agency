@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
-import { requirePermission } from "@/lib/permissions";
 import { PERMISSION } from "@/lib/permissions";
 import { getPaymentVisibilityWhere } from "@/lib/cargo";
 import { getCurrencyRates } from "@/lib/currency-rates";
@@ -25,15 +25,28 @@ export default async function PaymentReceiptPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ r?: string }>;
 }) {
-  const session = await requirePermission(PERMISSION.PAYMENTS_VIEW, { redirectOnForbidden: true });
+  const session = await auth();
+  if (!session?.user) redirect("/login");
+
+  const permissions = (session.user as { permissions?: string[] }).permissions ?? [];
+  const hasPaymentsView = permissions.includes(PERMISSION.PAYMENTS_VIEW);
+  const hasCargoView = permissions.some((p) => p.startsWith("cargo."));
+  if (!hasPaymentsView && !hasCargoView) redirect("/");
+
   const { id: paymentId } = await params;
   const { r: receiptId } = await searchParams;
 
-  const permissions = (session.user as { permissions?: string[] }).permissions ?? [];
   const roleName = String((session.user as { roleName?: string }).roleName ?? "").trim();
   const locationId = (session.user as { locationId?: string | null }).locationId ?? null;
-  const isAdminOrViewAll = roleName.toLowerCase() === "admin" || permissions.includes(PERMISSION.CARGO_VIEW_ALL);
-  const paymentWhere = getPaymentVisibilityWhere(isAdminOrViewAll, hasCargoPermission(permissions), locationId);
+  const isAdminOrCargoViewAll = roleName.toLowerCase() === "admin" || permissions.includes(PERMISSION.CARGO_VIEW_ALL);
+  const hasPaymentsViewAll = permissions.includes(PERMISSION.PAYMENTS_VIEW_ALL);
+  const hasCargoOrPaymentsView = hasCargoPermission(permissions) || permissions.includes(PERMISSION.PAYMENTS_VIEW);
+  const paymentWhere = getPaymentVisibilityWhere(
+    isAdminOrCargoViewAll,
+    hasPaymentsViewAll,
+    hasCargoOrPaymentsView,
+    locationId
+  );
 
   const [payment, rates] = await Promise.all([
     prisma.payment.findFirst({
@@ -134,12 +147,28 @@ export default async function PaymentReceiptPage({
 
       <div className="mx-auto max-w-2xl print:max-w-none">
         <div className="mb-4 flex items-center justify-between print:hidden">
-          <Link
-            href="/payments"
-            className="text-sm text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
-          >
-            ← Back to Payments
-          </Link>
+          {hasPaymentsView ? (
+            <Link
+              href="/payments"
+              className="text-sm text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
+            >
+              ← Back to Payments
+            </Link>
+          ) : payment.cargoShipmentId ? (
+            <Link
+              href={`/cargo/${payment.cargoShipmentId}`}
+              className="text-sm text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
+            >
+              ← Back to Cargo
+            </Link>
+          ) : (
+            <Link
+              href={`/payments/${paymentId}`}
+              className="text-sm text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
+            >
+              ← Back to Payment
+            </Link>
+          )}
           <div className="flex gap-3">
             <Link
               href={`/payments/${paymentId}`}
