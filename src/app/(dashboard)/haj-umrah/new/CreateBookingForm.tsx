@@ -546,7 +546,6 @@ export default function CreateBookingForm({ nextTrackNumberDisplay, initialCusto
             setNewCustomerName("");
             setNewCustomerPhone("");
             setNewCustomerWhatsappNumber("");
-            setNewCustomerCountry("");
             setError("");
           }}
         >

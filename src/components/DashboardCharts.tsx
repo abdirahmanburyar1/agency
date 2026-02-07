@@ -166,7 +166,7 @@ export default function DashboardCharts({
                 <CartesianGrid strokeDasharray="3 3" className="stroke-slate-200 dark:stroke-slate-700" />
                 <XAxis dataKey="month" tick={{ fill: "currentColor", fontSize: 12 }} />
                 <YAxis tick={{ fill: "currentColor", fontSize: 12 }} tickFormatter={(v) => `$${v}`} axisLine={false} tickLine={false} />
-                <Tooltip formatter={(v: number) => [formatCurrency(v), "Net Income"]} contentStyle={{ borderRadius: 12 }} />
+                <Tooltip formatter={(v: number | undefined) => [formatCurrency(v ?? 0), "Net Income"]} contentStyle={{ borderRadius: 12 }} />
                 <Area type="monotone" dataKey="netIncome" stroke="#10b981" strokeWidth={2} fill="url(#colorNetIncome)" />
               </AreaChart>
             </ResponsiveContainer>
@@ -192,13 +192,13 @@ export default function DashboardCharts({
                       paddingAngle={2}
                       dataKey="value"
                       nameKey="name"
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
                     >
                       {pieData.map((_, i) => (
                         <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(v: number) => formatCurrency(v)} />
+                    <Tooltip formatter={(v: number | undefined) => formatCurrency(v ?? 0)} />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
@@ -235,7 +235,7 @@ export default function DashboardCharts({
                 <CartesianGrid strokeDasharray="3 3" className="stroke-slate-200 dark:stroke-slate-700" />
                 <XAxis type="number" tickFormatter={(v) => `$${v}`} tick={{ fill: "currentColor", fontSize: 12 }} />
                 <YAxis type="category" dataKey="name" tick={{ fill: "currentColor", fontSize: 12 }} width={70} />
-                <Tooltip formatter={(v: number) => formatCurrency(v)} contentStyle={{ borderRadius: 12 }} />
+                <Tooltip formatter={(v: number | undefined) => formatCurrency(v ?? 0)} contentStyle={{ borderRadius: 12 }} />
                 <Bar dataKey="value" radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
@@ -260,7 +260,7 @@ export default function DashboardCharts({
               <CartesianGrid strokeDasharray="3 3" className="stroke-slate-200 dark:stroke-slate-700" />
               <XAxis dataKey="month" tick={{ fill: "currentColor", fontSize: 12 }} />
               <YAxis tick={{ fill: "currentColor", fontSize: 12 }} tickFormatter={(v) => `$${v}`} axisLine={false} tickLine={false} />
-              <Tooltip formatter={(v: number) => [formatCurrency(v), "Revenue"]} contentStyle={{ borderRadius: 12 }} />
+              <Tooltip formatter={(v: number | undefined) => [formatCurrency(v ?? 0), "Revenue"]} contentStyle={{ borderRadius: 12 }} />
               <Area type="monotone" dataKey="totalRevenue" stroke="#10b981" strokeWidth={2.5} fill="url(#colorRevenue)" />
             </AreaChart>
           </ResponsiveContainer>
