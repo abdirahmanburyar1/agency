@@ -4,6 +4,8 @@ import { PERMISSION } from "@/lib/permissions";
 import { getReportData, type ReportPeriod } from "@/lib/reports";
 import ReportsView from "./ReportsView";
 
+export const dynamic = "force-dynamic";
+
 const VALID_PERIODS: ReportPeriod[] = ["today", "daily", "monthly", "yearly"];
 
 export default async function ReportsPage({

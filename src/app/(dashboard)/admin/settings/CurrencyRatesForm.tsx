@@ -17,10 +17,12 @@ export default function CurrencyRatesForm({ canEdit }: { canEdit: boolean }) {
       .then((r) => r.json())
       .then((data: { currency: string; rateToUsd: number }[]) => {
         const byCode = new Map(data.map((r) => [r.currency, r.rateToUsd]));
-        const rows: RateRow[] = CURRENCIES.filter((c) => c.code !== "USD").map((c) => ({
-          currency: c.code,
-          rateToUsd: byCode.get(c.code) ?? 0,
-        }));
+        const rows: RateRow[] = CURRENCIES.filter((c) => c.code !== "USD").map((c) => {
+          const stored = byCode.get(c.code);
+          // Display: 1 USD = ? units. Stored is 1 unit = X USD, so 1 USD = 1/X units.
+          const displayValue = stored && stored > 0 ? 1 / stored : 0;
+          return { currency: c.code, rateToUsd: displayValue };
+        });
         setRates(rows);
       })
       .finally(() => setLoading(false));
@@ -37,7 +39,10 @@ export default function CurrencyRatesForm({ canEdit }: { canEdit: boolean }) {
     if (!canEdit || saving) return;
     setSaving(true);
     try {
-      const payload = rates.filter((r) => r.rateToUsd > 0).map((r) => ({ currency: r.currency, rateToUsd: r.rateToUsd }));
+      // User enters "1 USD = X units". We store rateToUsd = 1/X (1 unit = 1/X USD).
+      const payload = rates
+        .filter((r) => r.rateToUsd > 0)
+        .map((r) => ({ currency: r.currency, rateToUsd: 1 / r.rateToUsd }));
       const res = await fetch("/api/settings/currency-rates", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -64,7 +69,7 @@ export default function CurrencyRatesForm({ canEdit }: { canEdit: boolean }) {
     <div className="rounded-lg border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
       <h2 className="text-lg font-medium text-zinc-900 dark:text-white">Currency rates to USD</h2>
       <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-        Base currency is USD. Set the rate for each currency: 1 unit = X USD. Used for reports and dashboard to convert expenses into dollars.
+        Enter how many units of each currency equal 1 USD. Example: 1 USD = 128 KES, so enter 128 for KES. Used for reports and dashboard.
       </p>
       <form onSubmit={handleSave} className="mt-4">
         <div className="max-h-80 overflow-y-auto rounded border border-zinc-100 dark:border-zinc-800">
@@ -72,7 +77,7 @@ export default function CurrencyRatesForm({ canEdit }: { canEdit: boolean }) {
             <thead className="sticky top-0 bg-zinc-50 dark:bg-zinc-800/80">
               <tr>
                 <th className="px-3 py-2 text-left font-medium text-zinc-700 dark:text-zinc-300">Currency</th>
-                <th className="px-3 py-2 text-right font-medium text-zinc-700 dark:text-zinc-300">Rate to USD (1 X = ? USD)</th>
+                <th className="px-3 py-2 text-right font-medium text-zinc-700 dark:text-zinc-300">1 USD = ? (units)</th>
               </tr>
             </thead>
             <tbody>
@@ -87,7 +92,7 @@ export default function CurrencyRatesForm({ canEdit }: { canEdit: boolean }) {
                       <input
                         type="number"
                         min={0}
-                        step={0.000001}
+                        step={1}
                         value={r.rateToUsd || ""}
                         onChange={(e) => updateRate(r.currency, parseFloat(e.target.value) || 0)}
                         disabled={!canEdit}

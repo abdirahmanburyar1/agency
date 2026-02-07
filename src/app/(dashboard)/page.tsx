@@ -7,6 +7,8 @@ import { PERMISSION } from "@/lib/permissions";
 import DashboardCharts from "@/components/DashboardCharts";
 import DashboardDateFilter from "@/components/DashboardDateFilter";
 
+export const dynamic = "force-dynamic";
+
 const NAV_ITEMS = [
   { href: "/tickets", label: "Tickets", color: "blue", icon: "🎫", perm: PERMISSION.TICKETS_VIEW },
   { href: "/visas", label: "Visas", color: "emerald", icon: "🛂", perm: PERMISSION.VISAS_VIEW },

@@ -56,7 +56,7 @@ export async function getDashboard(filter?: DashboardDateFilter) {
   const ticketWhere = { ...dateRange, canceledAt: null };
   const paymentWhere = { ...dateRange, canceledAt: null, status: { not: "refunded" } };
   const payableWhere = { ...dateRange };
-  const expenseWhere = { ...dateRange, status: "approved" };
+  const expenseWhere = { ...dateRange, status: { in: ["approved", "paid"] } };
   const hajUmrahPaymentWhere = { ...paymentWhere, hajUmrahBookingId: { not: null }, status: { not: "refunded" } };
 
   const [tickets, visas, expensesRaw, payments, payables, hajUmrahRevenueAgg, currencyRates] = await Promise.all([
