@@ -17,6 +17,9 @@
 /.next/
 /out/
 
+# prisma generated (custom output to avoid Windows EPERM on node_modules/.prisma)
+/generated/
+
 # production
 /build
 
