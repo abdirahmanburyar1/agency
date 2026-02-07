@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { requirePermission } from "@/lib/permissions";
 import { PERMISSION } from "@/lib/permissions";
@@ -34,20 +33,10 @@ export default async function SettingsPage() {
 
   return (
     <main className="w-full py-6 sm:py-8">
-      <div className="mb-6 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Link href="/" className="text-sm text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300">
-            ← Back
-          </Link>
-          <h1 className="text-xl font-semibold text-zinc-900 dark:text-white">
-            Ticket Settings
-          </h1>
-        </div>
-      </div>
-      <p className="mb-6 text-sm text-zinc-500 dark:text-zinc-400">
-        Configure airlines, payment methods, flights, payment statuses, countries, expense categories, locations & branches, carriers, and currency rates. Currency rates are used in reports and dashboard to convert multi-currency expenses to USD.
-      </p>
       <div className="space-y-8">
+        <p className="text-sm text-slate-500 dark:text-slate-400">
+          Configure airlines, payment methods, flights, payment statuses, countries, expense categories, locations & branches, carriers, and currency rates. Currency rates are used in reports and dashboard to convert multi-currency expenses to USD.
+        </p>
         <CurrencyRatesForm canEdit={canEdit} />
         <LocationsBranchesForm canEdit={canEdit} />
         {grouped.map(({ type, label, values }) => (

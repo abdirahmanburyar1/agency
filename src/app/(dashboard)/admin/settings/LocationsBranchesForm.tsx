@@ -154,19 +154,19 @@ export default function LocationsBranchesForm({ canEdit }: Props) {
   if (loading) return <div className="text-sm text-zinc-500">Loading...</div>;
 
   return (
-    <div className="rounded-lg border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
-      <h2 className="text-lg font-medium text-zinc-900 dark:text-white">Locations & Branches</h2>
-      <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900/50">
+      <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Locations & Branches</h2>
+      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
         Locations (e.g. Nairobi, Mombasa) contain branches (e.g. Westlands Branch, Eastleigh Branch) with contact details.
       </p>
       <div className="mt-4 space-y-4">
         {locations.map((loc) => (
           <div
             key={loc.id}
-            className="rounded border border-zinc-100 dark:border-zinc-800"
+            className="rounded-xl border border-slate-200 dark:border-slate-700"
           >
-            <div className="flex items-center justify-between border-b border-zinc-100 bg-zinc-50 px-3 py-2 dark:border-zinc-800 dark:bg-zinc-950">
-              <span className="font-medium text-zinc-900 dark:text-white">{loc.name}</span>
+            <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-800/50">
+              <span className="font-semibold text-slate-900 dark:text-white">{loc.name}</span>
               {canEdit && (
                 <div className="flex gap-2">
                   <button
@@ -186,7 +186,7 @@ export default function LocationsBranchesForm({ canEdit }: Props) {
                 </div>
               )}
             </div>
-            <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
+            <ul className="divide-y divide-slate-100 dark:divide-slate-800">
               {loc.branches.map((b) => (
                 <li key={b.id} className="flex items-start justify-between px-3 py-2">
                   <div>
@@ -314,7 +314,7 @@ export default function LocationsBranchesForm({ canEdit }: Props) {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <form
             onSubmit={handleSaveBranchEdit}
-            className="w-full max-w-md rounded-lg border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900"
+            className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-xl dark:border-slate-700 dark:bg-slate-900"
           >
             <h3 className="text-lg font-medium">Edit {editingBranch.name}</h3>
             <div className="mt-4 space-y-2">

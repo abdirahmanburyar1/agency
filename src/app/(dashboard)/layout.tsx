@@ -45,14 +45,11 @@ export default async function DashboardLayout({
   const canViewDashboard = isAdmin || perms.length === 0 || perms.includes(PERMISSION.DASHBOARD_VIEW);
 
   const adminItems: { href: string; label: string }[] = [];
-  if (isAdmin || perms.includes(PERMISSION.SETTINGS_VIEW)) {
-    adminItems.push({ href: "/admin/settings", label: "Settings" });
-  }
-  if (isAdmin || perms.includes(PERMISSION.USERS_VIEW)) {
-    adminItems.push({ href: "/admin/users", label: "Users" });
-  }
-  if (isAdmin || perms.includes(PERMISSION.ROLES_VIEW)) {
-    adminItems.push({ href: "/admin/roles", label: "Roles" });
+  if (isAdmin || perms.includes(PERMISSION.SETTINGS_VIEW) || perms.includes(PERMISSION.USERS_VIEW) || perms.includes(PERMISSION.ROLES_VIEW)) {
+    adminItems.push({ href: "/admin", label: "Admin" });
+    if (isAdmin || perms.includes(PERMISSION.SETTINGS_VIEW)) adminItems.push({ href: "/admin/settings", label: "Settings" });
+    if (isAdmin || perms.includes(PERMISSION.USERS_VIEW)) adminItems.push({ href: "/admin/users", label: "Users" });
+    if (isAdmin || perms.includes(PERMISSION.ROLES_VIEW)) adminItems.push({ href: "/admin/roles", label: "Roles" });
   }
 
   return (

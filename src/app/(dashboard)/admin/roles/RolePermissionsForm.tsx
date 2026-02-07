@@ -78,13 +78,13 @@ export default function RolePermissionsForm({
     <>
       <button
         onClick={() => setOpen(true)}
-        className="rounded border px-3 py-1.5 text-sm hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
+        className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800"
       >
         Edit Permissions
       </button>
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="max-h-[80vh] w-full max-w-2xl overflow-auto rounded-lg bg-white p-6 dark:bg-zinc-900">
+          <div className="max-h-[80vh] w-full max-w-2xl overflow-auto rounded-2xl border border-slate-200 bg-white p-6 shadow-xl dark:border-slate-700 dark:bg-slate-900">
             <h2 className="text-lg font-semibold">Permissions for {roleName}</h2>
             <div className="mt-4 space-y-4 max-h-96 overflow-auto">
               {Object.entries(byResource).map(([resource, items]) => (
@@ -114,7 +114,7 @@ export default function RolePermissionsForm({
               <button
                 onClick={handleSave}
                 disabled={loading}
-                className="rounded bg-zinc-900 px-4 py-2 text-white disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
+                className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-700 disabled:opacity-50 dark:bg-emerald-500 dark:hover:bg-emerald-600"
               >
                 {loading ? "Saving..." : "Save"}
               </button>

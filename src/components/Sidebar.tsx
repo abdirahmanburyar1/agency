@@ -236,7 +236,7 @@ export default function Sidebar({ navItems, adminItems, showDashboard = true, sh
                         <span className={`flex size-9 shrink-0 items-center justify-center rounded-lg ${ICON_COLORS.settings}`}>
                           {ICONS.settings}
                         </span>
-                        <span>Settings &amp; Users</span>
+                        <span>Admin</span>
                       </span>
                       <svg
                         className={`size-4 text-slate-400 transition-transform duration-200 ${adminExpanded ? "rotate-180" : ""}`}

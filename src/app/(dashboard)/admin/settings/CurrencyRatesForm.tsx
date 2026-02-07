@@ -56,34 +56,34 @@ export default function CurrencyRatesForm({ canEdit }: { canEdit: boolean }) {
 
   if (loading) {
     return (
-      <div className="rounded-lg border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
-        <h2 className="text-lg font-medium text-zinc-900 dark:text-white">Currency rates to USD</h2>
-        <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">Loading…</p>
+      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900/50">
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Currency rates to USD</h2>
+        <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">Loading…</p>
       </div>
     );
   }
 
   return (
-    <div className="rounded-lg border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
-      <h2 className="text-lg font-medium text-zinc-900 dark:text-white">Currency rates to USD</h2>
-      <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900/50">
+      <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Currency rates to USD</h2>
+      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
         Enter the rate: how many units of that currency equal 1 USD. Example: 128 KES = 1 USD, enter 128. Stored and used as-is in reports and dashboard.
       </p>
       <form onSubmit={handleSave} className="mt-4">
-        <div className="max-h-80 overflow-y-auto rounded border border-zinc-100 dark:border-zinc-800">
+        <div className="max-h-80 overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-700">
           <table className="w-full text-sm">
-            <thead className="sticky top-0 bg-zinc-50 dark:bg-zinc-800/80">
+            <thead className="sticky top-0 bg-slate-50 dark:bg-slate-800/80">
               <tr>
-                <th className="px-3 py-2 text-left font-medium text-zinc-700 dark:text-zinc-300">Currency</th>
-                <th className="px-3 py-2 text-right font-medium text-zinc-700 dark:text-zinc-300">Units = 1 USD</th>
+                <th className="px-3 py-2 text-left font-medium text-slate-700 dark:text-slate-300">Currency</th>
+                <th className="px-3 py-2 text-right font-medium text-slate-700 dark:text-slate-300">Units = 1 USD</th>
               </tr>
             </thead>
             <tbody>
               {rates.map((r) => {
                 const info = CURRENCIES.find((c) => c.code === r.currency);
                 return (
-                  <tr key={r.currency} className="border-t border-zinc-100 dark:border-zinc-800">
-                    <td className="px-3 py-2 text-zinc-700 dark:text-zinc-300">
+                  <tr key={r.currency} className="border-t border-slate-100 dark:border-slate-800">
+                    <td className="px-3 py-2 text-slate-700 dark:text-slate-300">
                       {r.currency} {info ? `(${info.name})` : ""}
                     </td>
                     <td className="px-3 py-2 text-right">
@@ -95,7 +95,7 @@ export default function CurrencyRatesForm({ canEdit }: { canEdit: boolean }) {
                         onChange={(e) => updateRate(r.currency, parseFloat(e.target.value) || 0)}
                         disabled={!canEdit}
                         placeholder="0"
-                        className="w-28 rounded border border-zinc-300 px-2 py-1 text-right text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-white disabled:opacity-60"
+                        className="w-28 rounded-lg border border-slate-300 px-2 py-1 text-right text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-white disabled:opacity-60"
                       />
                     </td>
                   </tr>
@@ -108,7 +108,7 @@ export default function CurrencyRatesForm({ canEdit }: { canEdit: boolean }) {
           <button
             type="submit"
             disabled={saving}
-            className="mt-4 rounded bg-zinc-900 px-4 py-2 text-sm text-white disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
+            className="mt-4 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-700 disabled:opacity-50 dark:bg-emerald-500 dark:hover:bg-emerald-600"
           >
             {saving ? "Saving…" : "Save rates"}
           </button>
