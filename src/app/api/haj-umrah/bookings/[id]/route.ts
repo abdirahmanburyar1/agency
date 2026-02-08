@@ -231,7 +231,7 @@ export async function PATCH(
     const profitAmount = booking.profit != null ? Number(booking.profit) : 0;
     const totalAmount = packagesTotal + profitAmount;
 
-    // When booking is confirmed, create payment automatically if none exists (or previous was refunded/reinitiated)
+    // When booking is confirmed, create or update payment to match total (packages + profit)
     if (status === "confirmed" && totalAmount > 0 && booking.customer) {
       const existingActivePayment = await prisma.payment.findFirst({
         where: { hajUmrahBookingId: booking.id, status: { not: "refunded" } },
@@ -256,6 +256,12 @@ export async function PATCH(
           },
         });
         trigger(EVENTS.PAYMENT_CREATED, { payment }).catch(() => {});
+      } else if (Number(existingActivePayment.amount) !== totalAmount) {
+        // Sync payment amount when booking total changes (e.g. profit added or packages updated)
+        await prisma.payment.update({
+          where: { id: existingActivePayment.id },
+          data: { amount: totalAmount },
+        });
       }
     }
 

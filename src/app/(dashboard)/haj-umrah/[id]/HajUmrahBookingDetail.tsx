@@ -102,7 +102,11 @@ export default function HajUmrahBookingDetail({ booking, canEdit }: Props) {
       const res = await fetch(`/api/haj-umrah/bookings/${booking.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status, notes: notes.trim() || null }),
+        body: JSON.stringify({
+          status,
+          notes: notes.trim() || null,
+          profit: booking.profit != null ? Number(booking.profit) : 0,
+        }),
       });
       if (!res.ok) {
         const data = await res.json();
@@ -361,6 +365,14 @@ export default function HajUmrahBookingDetail({ booking, canEdit }: Props) {
             <dd className="text-zinc-900 dark:text-white">{new Date(booking.date).toLocaleDateString()}</dd>
           </div>
           <div>
+            <dt className="text-xs text-zinc-500 dark:text-zinc-400">Profit</dt>
+            <dd className="text-zinc-900 dark:text-white">
+              {booking.profit != null && Number(booking.profit) > 0
+                ? `$${Number(booking.profit).toLocaleString()}`
+                : "—"}
+            </dd>
+          </div>
+          <div>
             <dt className="text-xs text-zinc-500 dark:text-zinc-400">Status</dt>
             <dd>
               {canEditBooking ? (
@@ -503,13 +515,22 @@ export default function HajUmrahBookingDetail({ booking, canEdit }: Props) {
             </tbody>
           </table>
         </div>
-        <p className="mt-4 text-right text-lg font-semibold text-zinc-900 dark:text-white">
-          Total: $
-          {(canEditBooking
-            ? packageLines.reduce((sum, l) => sum + l.amount, 0)
-            : booking.totalAmount
-          ).toLocaleString()}
-        </p>
+        <div className="mt-4 space-y-1 text-right">
+          {booking.profit != null && Number(booking.profit) > 0 && (
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">
+              Packages: ${(canEditBooking ? packageLines.reduce((sum, l) => sum + l.amount, 0) : booking.packages.reduce((s, p) => s + ("amount" in p ? p.amount : p.quantity * p.unitPrice), 0)).toLocaleString()}
+              {" + "}
+              Profit: ${Number(booking.profit).toLocaleString()}
+            </p>
+          )}
+          <p className="text-lg font-semibold text-zinc-900 dark:text-white">
+            Total: $
+            {(canEditBooking
+              ? packageLines.reduce((sum, l) => sum + l.amount, 0) + (booking.profit != null ? Number(booking.profit) : 0)
+              : booking.totalAmount
+            ).toLocaleString()}
+          </p>
+        </div>
       </div>
 
       {booking.canceledAt && booking.totalReceived != null && booking.totalReceived > 0 && (
