@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { getCurrencySymbol } from "@/lib/currencies";
 
 export type SerializedPayment = {
@@ -66,6 +66,8 @@ export default function PaymentsTableWithFilters({ payments: allPayments }: Paym
   const [status, setStatus] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(10);
 
   /** Orange: credit date within 7 days. Red: overdue or same day. Also returns daysLeft for border logic. */
   function getCreditDateAlert(p: SerializedPayment): { alert: "red" | "orange" | null; daysLeft: number | null } {
@@ -122,6 +124,16 @@ export default function PaymentsTableWithFilters({ payments: allPayments }: Paym
       return bTime.localeCompare(aTime);
     });
   }, [allPayments, search, source, status, dateFrom, dateTo]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredPayments.length / perPage));
+  const paginatedPayments = useMemo(() => {
+    const start = (page - 1) * perPage;
+    return filteredPayments.slice(start, start + perPage);
+  }, [filteredPayments, page, perPage]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, source, status, dateFrom, dateTo]);
 
   const totalBalance = useMemo(
     () => filteredPayments.filter((p) => p.status !== "refunded").reduce((sum, p) => sum + p.balance, 0),
@@ -228,6 +240,56 @@ export default function PaymentsTableWithFilters({ payments: allPayments }: Paym
         )}
       </div>
 
+      {filteredPayments.length > 0 && (
+        <div className="mb-4 flex flex-col gap-3 rounded-lg border border-zinc-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-sm text-zinc-600 dark:text-zinc-400">
+              Showing {((page - 1) * perPage) + 1}–{Math.min(page * perPage, filteredPayments.length)} of {filteredPayments.length}
+            </span>
+            <div className="flex items-center gap-2">
+              <label htmlFor="payments-per-page-top" className="text-sm text-zinc-600 dark:text-zinc-400">
+                Per page
+              </label>
+              <select
+                id="payments-per-page-top"
+                value={perPage}
+                onChange={(e) => {
+                  setPerPage(Number(e.target.value));
+                  setPage(1);
+                }}
+                className="rounded border border-zinc-300 bg-white px-2 py-1 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
+              >
+                <option value={10}>10</option>
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1}
+              className="rounded border border-zinc-300 px-3 py-1.5 text-sm font-medium text-zinc-700 disabled:cursor-not-allowed disabled:opacity-50 hover:bg-zinc-50 dark:border-zinc-600 dark:text-zinc-300 dark:hover:bg-zinc-800"
+            >
+              Previous
+            </button>
+            <span className="text-sm text-zinc-600 dark:text-zinc-400">
+              Page {page} of {totalPages}
+            </span>
+            <button
+              type="button"
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page >= totalPages}
+              className="rounded border border-zinc-300 px-3 py-1.5 text-sm font-medium text-zinc-700 disabled:cursor-not-allowed disabled:opacity-50 hover:bg-zinc-50 dark:border-zinc-600 dark:text-zinc-300 dark:hover:bg-zinc-800"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="overflow-x-auto rounded-lg border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
         <table className="w-full text-sm">
           <thead>
@@ -251,7 +313,7 @@ export default function PaymentsTableWithFilters({ payments: allPayments }: Paym
                 </td>
               </tr>
             ) : (
-              filteredPayments.map((p) => {
+              paginatedPayments.map((p) => {
                 const { alert: creditAlert, daysLeft } = getCreditDateAlert(p);
                 const isOverdueOrSameDay = daysLeft !== null && daysLeft <= 0;
                 const hoverMessage = getRowHoverMessage(p);
@@ -403,6 +465,55 @@ export default function PaymentsTableWithFilters({ payments: allPayments }: Paym
           </tfoot>
         </table>
       </div>
+      {filteredPayments.length > 0 && (
+        <div className="mt-4 flex flex-col gap-3 rounded-lg border border-zinc-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-sm text-zinc-600 dark:text-zinc-400">
+              Showing {((page - 1) * perPage) + 1}–{Math.min(page * perPage, filteredPayments.length)} of {filteredPayments.length}
+            </span>
+            <div className="flex items-center gap-2">
+              <label htmlFor="payments-per-page" className="text-sm text-zinc-600 dark:text-zinc-400">
+                Per page
+              </label>
+              <select
+                id="payments-per-page"
+                value={perPage}
+                onChange={(e) => {
+                  setPerPage(Number(e.target.value));
+                  setPage(1);
+                }}
+                className="rounded border border-zinc-300 bg-white px-2 py-1 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
+              >
+                <option value={10}>10</option>
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1}
+              className="rounded border border-zinc-300 px-3 py-1.5 text-sm font-medium text-zinc-700 disabled:cursor-not-allowed disabled:opacity-50 hover:bg-zinc-50 dark:border-zinc-600 dark:text-zinc-300 dark:hover:bg-zinc-800"
+            >
+              Previous
+            </button>
+            <span className="text-sm text-zinc-600 dark:text-zinc-400">
+              Page {page} of {totalPages}
+            </span>
+            <button
+              type="button"
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page >= totalPages}
+              className="rounded border border-zinc-300 px-3 py-1.5 text-sm font-medium text-zinc-700 disabled:cursor-not-allowed disabled:opacity-50 hover:bg-zinc-50 dark:border-zinc-600 dark:text-zinc-300 dark:hover:bg-zinc-800"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
     </>
   );
 }
