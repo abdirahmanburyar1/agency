@@ -30,7 +30,7 @@ export default async function PaymentsPage() {
   const paymentsQuery = () =>
     prisma.payment.findMany({
       where: { canceledAt: null, ...paymentWhere },
-      orderBy: { paymentDate: "desc" },
+      orderBy: { createdAt: "desc" },
       include: {
         ticket: { include: { customer: true } },
         visa: { include: { customerRelation: true } },
@@ -101,6 +101,7 @@ export default async function PaymentsPage() {
       id: p.id,
       date: p.date.toISOString(),
       paymentDate: p.paymentDate.toISOString(),
+      createdAt: p.createdAt.toISOString(),
       status: p.status,
       name: p.name,
       description: p.description,

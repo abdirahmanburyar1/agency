@@ -8,6 +8,7 @@ export type SerializedPayment = {
   id: string;
   date: string;
   paymentDate: string;
+  createdAt?: string;
   status: string;
   name: string | null;
   description: string | null;
@@ -66,6 +67,38 @@ export default function PaymentsTableWithFilters({ payments: allPayments }: Paym
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
 
+  /** Orange: credit date within 7 days. Red: overdue or same day. Also returns daysLeft for border logic. */
+  function getCreditDateAlert(p: SerializedPayment): { alert: "red" | "orange" | null; daysLeft: number | null } {
+    if (p.status !== "credit" || !p.expectedDate) return { alert: null, daysLeft: null };
+    const expected = new Date(p.expectedDate);
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    const expDay = new Date(expected);
+    expDay.setHours(0, 0, 0, 0);
+    const daysLeft = Math.ceil((expDay.getTime() - now.getTime()) / (24 * 60 * 60 * 1000));
+    if (daysLeft < 0) return { alert: "red", daysLeft }; // overdue
+    if (daysLeft === 0) return { alert: "red", daysLeft }; // same day
+    if (daysLeft <= 7) return { alert: "orange", daysLeft }; // within 7 days
+    return { alert: null, daysLeft };
+  }
+
+  /** Custom hover message for the row based on credit date situation. */
+  function getRowHoverMessage(p: SerializedPayment): string | undefined {
+    if (p.status !== "credit" || !p.expectedDate) return undefined;
+    const { alert, daysLeft } = getCreditDateAlert(p);
+    if (alert === "red" && daysLeft !== null) {
+      if (daysLeft < 0) return `Credit payment overdue by ${Math.abs(daysLeft)} day${Math.abs(daysLeft) === 1 ? "" : "s"}`;
+      return "Credit payment due today";
+    }
+    if (alert === "orange" && daysLeft !== null) {
+      return `Credit payment due in ${daysLeft} day${daysLeft === 1 ? "" : "s"}`;
+    }
+    if (daysLeft !== null && daysLeft > 7) {
+      return `Credit payment due in ${daysLeft} days`;
+    }
+    return undefined;
+  }
+
   const filteredPayments = useMemo(() => {
     return allPayments.filter((p) => {
       if (!matchSearch(p, search)) return false;
@@ -83,6 +116,10 @@ export default function PaymentsTableWithFilters({ payments: allPayments }: Paym
         if (d > to) return false;
       }
       return true;
+    }).sort((a, b) => {
+      const aTime = (a.createdAt ?? a.paymentDate ?? a.date).split("T")[0];
+      const bTime = (b.createdAt ?? b.paymentDate ?? b.date).split("T")[0];
+      return bTime.localeCompare(aTime);
     });
   }, [allPayments, search, source, status, dateFrom, dateTo]);
 
@@ -214,8 +251,22 @@ export default function PaymentsTableWithFilters({ payments: allPayments }: Paym
                 </td>
               </tr>
             ) : (
-              filteredPayments.map((p) => (
-                <tr key={p.id} className="border-b border-zinc-100 dark:border-zinc-800">
+              filteredPayments.map((p) => {
+                const { alert: creditAlert, daysLeft } = getCreditDateAlert(p);
+                const isOverdueOrSameDay = daysLeft !== null && daysLeft <= 0;
+                const hoverMessage = getRowHoverMessage(p);
+                return (
+                <tr
+                  key={p.id}
+                  title={hoverMessage}
+                  className={`border-b ${
+                    isOverdueOrSameDay
+                      ? "border-l-4 border-l-red-500 border-b-2 border-b-red-500 border-r border-r-red-500/40 bg-red-50/80 dark:bg-red-950/20 dark:border-r-red-500/30 dark:border-b-red-500"
+                      : creditAlert === "orange"
+                        ? "border-b border-zinc-100 bg-orange-50/60 dark:bg-orange-950/15 dark:border-zinc-800"
+                        : "border-b border-zinc-100 dark:border-zinc-800"
+                  }`}
+                >
                   <td className="px-4 py-3 text-zinc-700 dark:text-zinc-300">
                     {new Date(p.paymentDate).toLocaleDateString()}
                   </td>
@@ -296,15 +347,39 @@ export default function PaymentsTableWithFilters({ payments: allPayments }: Paym
                       {p.status}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-zinc-700 dark:text-zinc-300">
-                    {p.status === "credit" && p.expectedDate
-                      ? new Date(p.expectedDate).toLocaleDateString()
-                      : p.status === "refund"
-                        ? "Refund due"
-                        : "—"}
+                  <td className="px-4 py-3">
+                    {p.status === "credit" && p.expectedDate ? (
+                      (() => {
+                        const { alert } = getCreditDateAlert(p);
+                        const dateStr = new Date(p.expectedDate).toLocaleDateString();
+                        return alert ? (
+                          <span
+                            className={`inline-block rounded px-2 py-0.5 font-medium ${
+                              alert === "red"
+                                ? "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300"
+                                : "bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300"
+                            }`}
+                            title={
+                              alert === "red"
+                                ? "Credit date overdue or due today"
+                                : "Credit date due within 7 days"
+                            }
+                          >
+                            {dateStr}
+                          </span>
+                        ) : (
+                          <span className="text-zinc-700 dark:text-zinc-300">{dateStr}</span>
+                        );
+                      })()
+                    ) : p.status === "refund" ? (
+                      "Refund due"
+                    ) : (
+                      "—"
+                    )}
                   </td>
                 </tr>
-              ))
+              );
+              })
             )}
           </tbody>
           <tfoot>
