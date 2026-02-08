@@ -54,6 +54,8 @@ export default function HajUmrahBookingsTable({ bookings, canEdit, initialCampai
 
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(10);
 
   const filtered = useMemo(() => {
     return bookings.filter((b) => {
@@ -73,6 +75,17 @@ export default function HajUmrahBookingsTable({ bookings, canEdit, initialCampai
       return true;
     });
   }, [bookings, search, statusFilter, campaignFilter, dateFrom, dateTo]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
+  const paginated = useMemo(() => {
+    const start = (page - 1) * perPage;
+    return filtered.slice(start, start + perPage);
+  }, [filtered, page, perPage]);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setPage(1);
+  }, [search, statusFilter, campaignFilter, dateFrom, dateTo]);
 
   const hasFilters = search || statusFilter || campaignFilter || dateFrom || dateTo;
   const clearFilters = () => {
@@ -200,7 +213,7 @@ export default function HajUmrahBookingsTable({ bookings, canEdit, initialCampai
                   </td>
                 </tr>
               ) : (
-                filtered.map((b) => (
+                paginated.map((b) => (
                   <tr
                     key={b.id}
                     className="border-b border-zinc-100 dark:border-zinc-700/50 hover:bg-zinc-50 dark:hover:bg-zinc-800/30"
@@ -265,6 +278,55 @@ export default function HajUmrahBookingsTable({ bookings, canEdit, initialCampai
             </tbody>
           </table>
         </div>
+        {filtered.length > 0 && (
+          <div className="flex flex-col gap-3 border-t border-zinc-200 px-4 py-3 dark:border-zinc-700 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="text-sm text-zinc-600 dark:text-zinc-400">
+                Showing {((page - 1) * perPage) + 1}–{Math.min(page * perPage, filtered.length)} of {filtered.length}
+              </span>
+              <div className="flex items-center gap-2">
+                <label htmlFor="per-page" className="text-sm text-zinc-600 dark:text-zinc-400">
+                  Per page
+                </label>
+                <select
+                  id="per-page"
+                  value={perPage}
+                  onChange={(e) => {
+                    setPerPage(Number(e.target.value));
+                    setPage(1);
+                  }}
+                  className="rounded border border-zinc-300 bg-white px-2 py-1 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
+                >
+                  <option value={10}>10</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                </select>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page <= 1}
+                className="rounded border border-zinc-300 px-3 py-1.5 text-sm font-medium text-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-zinc-50 dark:border-zinc-600 dark:text-zinc-300 dark:hover:bg-zinc-800"
+              >
+                Previous
+              </button>
+              <span className="text-sm text-zinc-600 dark:text-zinc-400">
+                Page {page} of {totalPages}
+              </span>
+              <button
+                type="button"
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page >= totalPages}
+                className="rounded border border-zinc-300 px-3 py-1.5 text-sm font-medium text-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-zinc-50 dark:border-zinc-600 dark:text-zinc-300 dark:hover:bg-zinc-800"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </>
   );

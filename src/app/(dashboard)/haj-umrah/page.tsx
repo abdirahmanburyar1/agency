@@ -103,7 +103,7 @@ export default async function HajUmrahPage({
       notes: b.notes,
       packageCount,
       packageSummary,
-      totalAmount: b.packages.reduce((sum, bp) => sum + Number(bp.amount), 0),
+      totalAmount: b.packages.reduce((sum, bp) => sum + Number(bp.amount), 0) + (b.profit != null ? Number(b.profit) : 0),
       canceledAt: b.canceledAt?.toISOString() ?? null,
     };
   });

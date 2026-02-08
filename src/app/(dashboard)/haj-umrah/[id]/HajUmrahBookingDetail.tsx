@@ -518,7 +518,7 @@ export default function HajUmrahBookingDetail({ booking, canEdit }: Props) {
         <div className="mt-4 space-y-1 text-right">
           {booking.profit != null && Number(booking.profit) > 0 && (
             <p className="text-sm text-zinc-600 dark:text-zinc-400">
-              Packages: ${(canEditBooking ? packageLines.reduce((sum, l) => sum + l.amount, 0) : booking.packages.reduce((s, p) => s + ("amount" in p ? p.amount : p.quantity * p.unitPrice), 0)).toLocaleString()}
+              Packages: ${(canEditBooking ? packageLines.reduce((sum, l) => sum + l.amount, 0) : booking.packages.reduce((s, p) => s + p.amount, 0)).toLocaleString()}
               {" + "}
               Profit: ${Number(booking.profit).toLocaleString()}
             </p>

@@ -63,6 +63,12 @@ export default async function LeaderCampaignsPage() {
               year: "numeric",
             });
             const timeStr = d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false });
+            const returnDateStr = c.returnDate
+              ? (() => {
+                  const rd = new Date(c.returnDate);
+                  return `${rd.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })} ${rd.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false })}`;
+                })()
+              : null;
             return (
               <li key={c.id}>
                 <Link
@@ -74,6 +80,11 @@ export default async function LeaderCampaignsPage() {
                       <p className="font-semibold text-zinc-900 dark:text-white">
                         {dateStr} · {timeStr}
                       </p>
+                      {returnDateStr && (
+                        <p className="mt-0.5 text-sm text-zinc-600 dark:text-zinc-400">
+                          Return {returnDateStr}
+                        </p>
+                      )}
                       {c.name && (
                         <p className="mt-0.5 text-sm text-zinc-600 dark:text-zinc-400">{c.name}</p>
                       )}
