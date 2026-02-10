@@ -131,13 +131,13 @@ export function getPaymentVisibilityWhere(
 
 /**
  * Generates next tracking number in format CRG-YYYY-XXXXXX
- * Uses database for atomic sequence increment
+ * Uses database for atomic sequence increment (per tenant)
  */
-export async function generateTrackingNumber(): Promise<string> {
+export async function generateTrackingNumber(tenantId: string): Promise<string> {
   const year = new Date().getFullYear();
   const row = await prisma.cargoSequence.upsert({
-    where: { year },
-    create: { year, lastValue: 1 },
+    where: { tenantId_year: { tenantId, year } },
+    create: { tenantId, year, lastValue: 1 },
     update: { lastValue: { increment: 1 } },
   });
   return `CRG-${year}-${String(row.lastValue).padStart(6, "0")}`;

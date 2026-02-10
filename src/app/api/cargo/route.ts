@@ -86,10 +86,10 @@ export async function POST(request: Request) {
 
     const totalWeight = validItems.reduce((sum: number, i: CargoItemValid) => sum + i.weight * i.quantity, 0);
     const price = validItems.reduce((sum: number, i: CargoItemValid) => sum + i.quantity * i.weight * i.unitPrice, 0);
-    const trackingNumber = await generateTrackingNumber();
+    const tenantId = getTenantIdFromSession(session);
+    const trackingNumber = await generateTrackingNumber(tenantId);
     const status = "PENDING";
 
-    const tenantId = getTenantIdFromSession(session);
     const shipment = await prisma.$transaction(async (tx) => {
       const created = await tx.cargoShipment.create({
         data: {

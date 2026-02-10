@@ -22,7 +22,7 @@ const STATUS_DESCRIPTIONS: Record<string, string> = {
 
 async function getTracking(trackingNumber: string) {
   try {
-    const shipment = await prisma.cargoShipment.findUnique({
+    const shipment = await prisma.cargoShipment.findFirst({
       where: { trackingNumber },
       include: {
         items: true,

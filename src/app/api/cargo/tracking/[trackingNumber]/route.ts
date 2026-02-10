@@ -15,7 +15,7 @@ export async function GET(
       return NextResponse.json({ error: "Tracking number is required" }, { status: 400 });
     }
 
-    const shipment = await prisma.cargoShipment.findUnique({
+    const shipment = await prisma.cargoShipment.findFirst({
       where: { trackingNumber: normalized },
       include: {
         logs: { orderBy: { createdAt: "asc" } },

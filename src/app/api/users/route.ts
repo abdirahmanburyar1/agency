@@ -52,8 +52,11 @@ export async function POST(request: Request) {
         ? (String(userType).toLowerCase() === "leader" ? "leader" : "officer")
         : null;
 
+    const session = await auth();
+    const tenantId = getTenantIdFromSession(session);
+
     const existing = await prisma.user.findUnique({
-      where: { email: String(email).toLowerCase() },
+      where: { tenantId_email: { tenantId, email: String(email).toLowerCase() } },
     });
     if (existing) {
       return NextResponse.json(
@@ -66,9 +69,6 @@ export async function POST(request: Request) {
     if (!role) {
       return NextResponse.json({ error: "Invalid role" }, { status: 400 });
     }
-
-    const session = await auth();
-    const tenantId = getTenantIdFromSession(session);
 
     const passwordHash = await bcrypt.hash(String(password), 12);
     await prisma.user.create({
