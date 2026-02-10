@@ -138,6 +138,7 @@ export async function POST(
       ops.push(
         prisma.payable.create({
           data: {
+            tenantId: ticket.tenantId,
             date: adjustmentDate,
             month: ticket.month,
             name: ticket.airline ? `Ticket: ${ticket.airline}` : "Ticket",

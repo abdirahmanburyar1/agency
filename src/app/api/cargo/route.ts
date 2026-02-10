@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { requirePermission } from "@/lib/permissions";
 import { PERMISSION } from "@/lib/permissions";
 import { generateTrackingNumber, CARGO_RATE_PER_KG } from "@/lib/cargo";
+import { getTenantIdFromSession } from "@/lib/tenant";
 
 type CargoItemValid = { description: string; quantity: number; weight: number; unitPrice: number };
 
@@ -88,9 +89,11 @@ export async function POST(request: Request) {
     const trackingNumber = await generateTrackingNumber();
     const status = "PENDING";
 
+    const tenantId = getTenantIdFromSession(session);
     const shipment = await prisma.$transaction(async (tx) => {
       const created = await tx.cargoShipment.create({
         data: {
+          tenantId,
           trackingNumber,
           senderName,
           senderPhone,

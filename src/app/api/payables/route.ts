@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
+import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { trigger, EVENTS } from "@/lib/pusher";
 import { requirePermission } from "@/lib/permissions";
 import { PERMISSION } from "@/lib/permissions";
 import { handleAuthError } from "@/lib/api-auth";
+import { getTenantIdFromSession } from "@/lib/tenant";
 
 export async function GET() {
   try {
@@ -27,9 +29,12 @@ export async function POST(request: Request) {
     throw e;
   }
   try {
+    const session = await auth();
+    const tenantId = getTenantIdFromSession(session);
     const body = await request.json();
     const payable = await prisma.payable.create({
       data: {
+        tenantId,
         date: new Date(body.date),
         month: body.month,
         invoice: body.invoice,

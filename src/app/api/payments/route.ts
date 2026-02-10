@@ -6,6 +6,7 @@ import { requirePermission } from "@/lib/permissions";
 import { PERMISSION } from "@/lib/permissions";
 import { getPaymentVisibilityWhere } from "@/lib/cargo";
 import { handleAuthError } from "@/lib/api-auth";
+import { getTenantIdFromSession } from "@/lib/tenant";
 
 function hasCargoPermission(permissions: string[]): boolean {
   return permissions.some((p) => p.startsWith("cargo."));
@@ -54,9 +55,12 @@ export async function POST(request: Request) {
     throw e;
   }
   try {
+    const session = await auth();
+    const tenantId = getTenantIdFromSession(session);
     const body = await request.json();
     const payment = await prisma.payment.create({
       data: {
+        tenantId,
         date: new Date(body.date),
         month: body.month,
         paymentDate: body.paymentDate ? new Date(body.paymentDate) : new Date(body.date),

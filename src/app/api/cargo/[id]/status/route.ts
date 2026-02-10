@@ -72,6 +72,7 @@ export async function PATCH(
         const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
         await tx.payment.create({
           data: {
+            tenantId: shipment.tenantId,
             date: now,
             month,
             paymentDate: now,

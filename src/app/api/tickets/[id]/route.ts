@@ -133,6 +133,7 @@ export async function PATCH(
       ops.push(
         prisma.payment.create({
           data: {
+            tenantId: ticket.tenantId,
             date: body.date ? new Date(body.date) : ticket.date,
             month: body.month ?? ticket.month,
             paymentDate,
@@ -170,6 +171,7 @@ export async function PATCH(
         ops.push(
           prisma.payable.create({
             data: {
+              tenantId: ticket.tenantId,
               date: body.date ? new Date(body.date) : ticket.date,
               month: body.month ?? ticket.month,
               name: (body.airline ?? ticket.airline)

@@ -6,6 +6,7 @@ import { requirePermission } from "@/lib/permissions";
 import { PERMISSION } from "@/lib/permissions";
 import { getCargoVisibilityWhere } from "@/lib/cargo";
 import { handleAuthError } from "@/lib/api-auth";
+import { getTenantIdFromSession } from "@/lib/tenant";
 
 const IMAGE_EXTENSIONS = ["jpg", "jpeg", "png", "gif", "webp", "bmp"];
 const IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp", "image/bmp"];
@@ -119,7 +120,8 @@ export async function POST(
         imageKitId: result.fileId ?? "",
         url: result.url ?? "",
         fileName: file.name,
-        createdBy: userId ?? undefined,
+        tenantId: getTenantIdFromSession(session ?? null),
+        ...(userId && { createdBy: userId }),
       },
     });
 

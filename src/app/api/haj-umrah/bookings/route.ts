@@ -1,10 +1,12 @@
 import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
+import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { requirePermission } from "@/lib/permissions";
 import { PERMISSION } from "@/lib/permissions";
 import { handleAuthError } from "@/lib/api-auth";
 import { trigger, EVENTS } from "@/lib/pusher";
+import { getTenantIdFromSession } from "@/lib/tenant";
 
 export async function GET() {
   try {
@@ -74,6 +76,8 @@ export async function POST(request: Request) {
     throw e;
   }
   try {
+    const session = await auth();
+    const tenantId = getTenantIdFromSession(session);
     const body = await request.json();
     const customerId = String(body.customerId ?? "").trim();
     if (!customerId) return NextResponse.json({ error: "Customer is required" }, { status: 400 });
@@ -122,6 +126,7 @@ export async function POST(request: Request) {
       const nextTrackNumber = (lastBooking?.trackNumber ?? 0) + 1;
       const b = await tx.hajUmrahBooking.create({
         data: {
+          tenantId,
           customerId,
           campaignId,
           date,
@@ -166,6 +171,7 @@ export async function POST(request: Request) {
           : "";
       await prisma.payment.create({
         data: {
+          tenantId: booking.tenantId,
           date: booking.date,
           month: booking.month,
           paymentDate: new Date(), // current date when booking is confirmed

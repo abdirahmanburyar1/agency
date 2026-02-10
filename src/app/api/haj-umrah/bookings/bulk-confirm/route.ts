@@ -69,6 +69,7 @@ export async function POST(request: Request) {
             : "";
         const payment = await prisma.payment.create({
           data: {
+            tenantId: booking.tenantId,
             date: booking.date,
             month: booking.month,
             paymentDate: new Date(), // current date when booking is confirmed

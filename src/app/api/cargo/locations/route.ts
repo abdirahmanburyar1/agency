@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
+import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { requirePermission } from "@/lib/permissions";
 import { PERMISSION } from "@/lib/permissions";
+import { getTenantIdFromSession } from "@/lib/tenant";
 
 export async function GET() {
   try {
@@ -28,19 +30,21 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   try {
+    const session = await auth();
+    const tenantId = getTenantIdFromSession(session);
     const { name } = await request.json();
     const trimmed = String(name ?? "").trim();
     if (!trimmed) {
       return NextResponse.json({ error: "Name is required" }, { status: 400 });
     }
     const existing = await prisma.cargoLocation.findUnique({
-      where: { name: trimmed },
+      where: { tenantId_name: { tenantId, name: trimmed } },
     });
     if (existing) {
       return NextResponse.json({ error: "Location already exists" }, { status: 400 });
     }
     const location = await prisma.cargoLocation.create({
-      data: { name: trimmed },
+      data: { tenantId, name: trimmed },
     });
     return NextResponse.json(location);
   } catch (error) {

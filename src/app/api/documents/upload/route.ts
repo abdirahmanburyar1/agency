@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { requirePermission } from "@/lib/permissions";
 import { PERMISSION } from "@/lib/permissions";
 import { imagekit } from "@/lib/imagekit";
+import { getTenantIdFromSession } from "@/lib/tenant";
 
 export async function POST(request: Request) {
   await requirePermission(PERMISSION.DOCUMENTS_UPLOAD);
@@ -58,7 +59,8 @@ export async function POST(request: Request) {
         imageKitId: result.fileId ?? "",
         url: result.url ?? "",
         fileName: file.name,
-        createdBy: userId ?? undefined,
+        tenantId: getTenantIdFromSession(session ?? null),
+        ...(userId && { createdBy: userId }),
       },
     });
 

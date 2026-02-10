@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { auth } from "@/auth";
+import { getTenantIdFromSession } from "@/lib/tenant";
 import { requirePermission, PERMISSION } from "@/lib/permissions";
 import { handleAuthError } from "@/lib/api-auth";
 
@@ -30,6 +31,8 @@ export async function POST(request: Request) {
     throw e;
   }
 
+  const session = await auth();
+  const tenantId = getTenantIdFromSession(session);
   const { name, description } = await request.json();
   if (!name || typeof name !== "string") {
     return NextResponse.json(
@@ -39,7 +42,7 @@ export async function POST(request: Request) {
   }
 
   const existing = await prisma.role.findUnique({
-    where: { name: name.trim() },
+    where: { tenantId_name: { tenantId, name: name.trim() } },
   });
   if (existing) {
     return NextResponse.json(
@@ -50,6 +53,7 @@ export async function POST(request: Request) {
 
   const role = await prisma.role.create({
     data: {
+      tenantId,
       name: name.trim(),
       description: description?.trim() || null,
     },

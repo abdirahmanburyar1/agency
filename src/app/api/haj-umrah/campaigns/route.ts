@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
+import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
+import { getTenantIdFromSession } from "@/lib/tenant";
 import { requirePermission } from "@/lib/permissions";
 import { PERMISSION } from "@/lib/permissions";
 import { handleAuthError } from "@/lib/api-auth";
@@ -71,8 +73,10 @@ export async function POST(request: Request) {
       const user = await prisma.user.findUnique({ where: { id: leaderId }, select: { id: true } });
       if (!user) return NextResponse.json({ error: "Invalid leader user" }, { status: 400 });
     }
+    const session = await auth();
+    const tenantId = getTenantIdFromSession(session);
     const campaign = await prisma.hajUmrahCampaign.create({
-      data: { date, month, returnDate, name, type, leaderId },
+      data: { tenantId, date, month, returnDate, name, type, leaderId },
       include: { leader: { select: { id: true, name: true, email: true } } },
     });
     return NextResponse.json({

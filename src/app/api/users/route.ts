@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import * as bcrypt from "bcryptjs";
+import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
+import { getTenantIdFromSession } from "@/lib/tenant";
 import { requirePermission } from "@/lib/permissions";
 import { PERMISSION } from "@/lib/permissions";
 
@@ -65,9 +67,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid role" }, { status: 400 });
     }
 
+    const session = await auth();
+    const tenantId = getTenantIdFromSession(session);
+
     const passwordHash = await bcrypt.hash(String(password), 12);
     await prisma.user.create({
       data: {
+        tenantId,
         email: String(email).toLowerCase(),
         passwordHash,
         name: name || null,

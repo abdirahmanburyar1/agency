@@ -3,6 +3,27 @@ import * as bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
+const DEFAULT_TENANT_ID = "cldefault00000000000000001";
+const DAYBAH_TENANT_ID = "cldaybah00000000000000001";
+
+/** Ensure tenant exists, create if not (for fresh DB) */
+async function ensureTenant(id: string, subdomain: string, name: string) {
+  await prisma.tenant.upsert({
+    where: { id },
+    create: { id, subdomain, name, status: "active" },
+    update: {},
+  });
+}
+
+/** Upsert role for a tenant */
+function roleUpsert(tenantId: string, name: string, description: string) {
+  return prisma.role.upsert({
+    where: { tenantId_name: { tenantId, name } },
+    create: { tenantId, name, description },
+    update: {},
+  });
+}
+
 // All system permissions - every feature has view/create/edit/delete
 const PERMISSIONS = [
   { code: "dashboard.view", name: "View Dashboard", resource: "dashboard", action: "view" },
@@ -65,6 +86,9 @@ const PERMISSIONS = [
 ];
 
 async function main() {
+  await ensureTenant(DEFAULT_TENANT_ID, "default", "Default Tenant");
+  await ensureTenant(DAYBAH_TENANT_ID, "daybah", "Daybah Travel Agency");
+
   // Create permissions
   for (const p of PERMISSIONS) {
     await prisma.permission.upsert({
@@ -74,171 +98,146 @@ async function main() {
     });
   }
 
-  // Create Admin role with ALL permissions
-  const adminRole = await prisma.role.upsert({
-    where: { name: "Admin" },
-    create: {
-      name: "Admin",
-      description: "Full system access. Can manage users, roles, and permissions.",
-    },
-    update: {},
-  });
-
   const allPermissions = await prisma.permission.findMany();
-  for (const perm of allPermissions) {
-    await prisma.rolePermission.upsert({
-      where: {
-        roleId_permissionId: { roleId: adminRole.id, permissionId: perm.id },
-      },
-      create: { roleId: adminRole.id, permissionId: perm.id },
-      update: {},
-    });
-  }
 
-  // Campaign Leader role: only haj_umrah.leader (see own campaigns only; uses /leader app)
-  const leaderPerm = await prisma.permission.findUnique({ where: { code: "haj_umrah.leader" } });
-  if (leaderPerm) {
-    const campaignLeaderRole = await prisma.role.upsert({
-      where: { name: "Campaign Leader" },
-      create: {
-        name: "Campaign Leader",
-        description: "See and manage only campaigns where they are assigned as leader. Tablet-friendly, no dashboard.",
-      },
-      update: {},
-    });
-    await prisma.rolePermission.upsert({
-      where: {
-        roleId_permissionId: { roleId: campaignLeaderRole.id, permissionId: leaderPerm.id },
-      },
-      create: { roleId: campaignLeaderRole.id, permissionId: leaderPerm.id },
-      update: {},
-    });
-  }
-
-  // Expense Initiator: create expenses only
-  const expenseCreatePerm = await prisma.permission.findUnique({ where: { code: "expenses.create" } });
-  const expenseViewPerm = await prisma.permission.findUnique({ where: { code: "expenses.view" } });
-  if (expenseCreatePerm && expenseViewPerm) {
-    const expenseInitiatorRole = await prisma.role.upsert({
-      where: { name: "Expense Initiator" },
-      create: {
-        name: "Expense Initiator",
-        description: "Can create and view expenses. Cannot approve or mark as paid.",
-      },
-      update: {},
-    });
-    for (const perm of [expenseViewPerm, expenseCreatePerm]) {
+  // Seed roles for both default (platform admin) and Daybah (main app)
+  for (const tenantId of [DEFAULT_TENANT_ID, DAYBAH_TENANT_ID]) {
+    const adminRole = await roleUpsert(
+      tenantId,
+      "Admin",
+      "Full system access. Can manage users, roles, and permissions."
+    );
+    for (const perm of allPermissions) {
       await prisma.rolePermission.upsert({
-        where: { roleId_permissionId: { roleId: expenseInitiatorRole.id, permissionId: perm.id } },
-        create: { roleId: expenseInitiatorRole.id, permissionId: perm.id },
+        where: { roleId_permissionId: { roleId: adminRole.id, permissionId: perm.id } },
+        create: { roleId: adminRole.id, permissionId: perm.id },
         update: {},
       });
     }
-  }
 
-  // General Manager: approve expenses
-  const expenseApprovePerm = await prisma.permission.findUnique({ where: { code: "expenses.approve" } });
-  if (expenseApprovePerm && expenseViewPerm) {
-    const generalManagerRole = await prisma.role.upsert({
-      where: { name: "General Manager" },
-      create: {
-        name: "General Manager",
-        description: "Can view and approve expenses. Cannot mark as paid.",
-      },
-      update: {},
-    });
-    for (const perm of [expenseViewPerm!, expenseApprovePerm]) {
+    const leaderPerm = await prisma.permission.findUnique({ where: { code: "haj_umrah.leader" } });
+    if (leaderPerm) {
+      const campaignLeaderRole = await roleUpsert(
+        tenantId,
+        "Campaign Leader",
+        "See and manage only campaigns where they are assigned as leader. Tablet-friendly, no dashboard."
+      );
       await prisma.rolePermission.upsert({
-        where: { roleId_permissionId: { roleId: generalManagerRole.id, permissionId: perm.id } },
-        create: { roleId: generalManagerRole.id, permissionId: perm.id },
+        where: { roleId_permissionId: { roleId: campaignLeaderRole.id, permissionId: leaderPerm.id } },
+        create: { roleId: campaignLeaderRole.id, permissionId: leaderPerm.id },
         update: {},
       });
     }
-  }
 
-  // Cargo Section: cargo ops in assigned location only; no Payments main page (View payment link on cargo detail only)
-  const cargoViewPerm = await prisma.permission.findUnique({ where: { code: "cargo.view" } });
-  const cargoCreatePerm = await prisma.permission.findUnique({ where: { code: "cargo.create" } });
-  const cargoEditPerm = await prisma.permission.findUnique({ where: { code: "cargo.edit" } });
-  if (cargoViewPerm && cargoCreatePerm && cargoEditPerm) {
-    const cargoSectionRole = await prisma.role.upsert({
-      where: { name: "Cargo Section" },
-      create: {
-        name: "Cargo Section",
-        description: "Cargo operations for assigned branch. View payment only from cargo detail, no Payments page.",
-      },
-      update: {},
-    });
-    for (const perm of [cargoViewPerm, cargoCreatePerm, cargoEditPerm]) {
+    const expenseCreatePerm = await prisma.permission.findUnique({ where: { code: "expenses.create" } });
+    const expenseViewPerm = await prisma.permission.findUnique({ where: { code: "expenses.view" } });
+    if (expenseCreatePerm && expenseViewPerm) {
+      const expenseInitiatorRole = await roleUpsert(
+        tenantId,
+        "Expense Initiator",
+        "Can create and view expenses. Cannot approve or mark as paid."
+      );
+      for (const perm of [expenseViewPerm, expenseCreatePerm]) {
+        await prisma.rolePermission.upsert({
+          where: { roleId_permissionId: { roleId: expenseInitiatorRole.id, permissionId: perm.id } },
+          create: { roleId: expenseInitiatorRole.id, permissionId: perm.id },
+          update: {},
+        });
+      }
+    }
+
+    const expenseApprovePerm = await prisma.permission.findUnique({ where: { code: "expenses.approve" } });
+    const expenseViewPermGM = await prisma.permission.findUnique({ where: { code: "expenses.view" } });
+    if (expenseApprovePerm && expenseViewPermGM) {
+      const generalManagerRole = await roleUpsert(
+        tenantId,
+        "General Manager",
+        "Can view and approve expenses. Cannot mark as paid."
+      );
+      for (const perm of [expenseViewPermGM, expenseApprovePerm]) {
+        await prisma.rolePermission.upsert({
+          where: { roleId_permissionId: { roleId: generalManagerRole.id, permissionId: perm.id } },
+          create: { roleId: generalManagerRole.id, permissionId: perm.id },
+          update: {},
+        });
+      }
+    }
+
+    const cargoViewPerm = await prisma.permission.findUnique({ where: { code: "cargo.view" } });
+    const cargoCreatePerm = await prisma.permission.findUnique({ where: { code: "cargo.create" } });
+    const cargoEditPerm = await prisma.permission.findUnique({ where: { code: "cargo.edit" } });
+    if (cargoViewPerm && cargoCreatePerm && cargoEditPerm) {
+      const cargoSectionRole = await roleUpsert(
+        tenantId,
+        "Cargo Section",
+        "Cargo operations for assigned branch. View payment only from cargo detail, no Payments page."
+      );
+      for (const perm of [cargoViewPerm, cargoCreatePerm, cargoEditPerm]) {
+        await prisma.rolePermission.upsert({
+          where: { roleId_permissionId: { roleId: cargoSectionRole.id, permissionId: perm.id } },
+          create: { roleId: cargoSectionRole.id, permissionId: perm.id },
+          update: {},
+        });
+      }
+    }
+
+    const paymentsViewPerm = await prisma.permission.findUnique({ where: { code: "payments.view" } });
+    const paymentsViewAllPerm = await prisma.permission.findUnique({ where: { code: "payments.view_all" } });
+    if (paymentsViewPerm) {
+      const branchFinanceRole = await roleUpsert(
+        tenantId,
+        "Branch Finance",
+        "View payments for their branch/location only. Assign location & branch to the user."
+      );
       await prisma.rolePermission.upsert({
-        where: {
-          roleId_permissionId: { roleId: cargoSectionRole.id, permissionId: perm.id },
-        },
-        create: { roleId: cargoSectionRole.id, permissionId: perm.id },
+        where: { roleId_permissionId: { roleId: branchFinanceRole.id, permissionId: paymentsViewPerm.id } },
+        create: { roleId: branchFinanceRole.id, permissionId: paymentsViewPerm.id },
         update: {},
       });
     }
-  }
 
-  // Branch Finance: payments in their location only (cargo payments where source/dest in their location)
-  const paymentsViewPerm = await prisma.permission.findUnique({ where: { code: "payments.view" } });
-  const paymentsViewAllPerm = await prisma.permission.findUnique({ where: { code: "payments.view_all" } });
-  if (paymentsViewPerm) {
-    const branchFinanceRole = await prisma.role.upsert({
-      where: { name: "Branch Finance" },
-      create: {
-        name: "Branch Finance",
-        description: "View payments for their branch/location only. Assign location & branch to the user.",
-      },
-      update: {},
-    });
-    await prisma.rolePermission.upsert({
-      where: {
-        roleId_permissionId: { roleId: branchFinanceRole.id, permissionId: paymentsViewPerm.id },
-      },
-      create: { roleId: branchFinanceRole.id, permissionId: paymentsViewPerm.id },
-      update: {},
-    });
-  }
-
-  // Finance (central): expenses + all payments
-  const expensePaidPerm = await prisma.permission.findUnique({ where: { code: "expenses.paid" } });
-  if (expensePaidPerm && expenseViewPerm) {
-    const financeRole = await prisma.role.upsert({
-      where: { name: "Finance" },
-      create: {
-        name: "Finance",
-        description: "Central finance: view all payments, expenses, mark expenses paid.",
-      },
-      update: {},
-    });
-    const perms = [expenseViewPerm, expensePaidPerm];
-    if (paymentsViewPerm) perms.push(paymentsViewPerm);
-    if (paymentsViewAllPerm) perms.push(paymentsViewAllPerm);
-    for (const perm of perms) {
-      if (!perm) continue;
-      await prisma.rolePermission.upsert({
-        where: { roleId_permissionId: { roleId: financeRole.id, permissionId: perm.id } },
-        create: { roleId: financeRole.id, permissionId: perm.id },
-        update: {},
-      });
+    const expensePaidPerm = await prisma.permission.findUnique({ where: { code: "expenses.paid" } });
+    const expenseViewPermFin = await prisma.permission.findUnique({ where: { code: "expenses.view" } });
+    if (expensePaidPerm && expenseViewPermFin) {
+      const financeRole = await roleUpsert(
+        tenantId,
+        "Finance",
+        "Central finance: view all payments, expenses, mark expenses paid."
+      );
+      const paymentsViewPermFin = await prisma.permission.findUnique({ where: { code: "payments.view" } });
+      const perms = [expenseViewPermFin, expensePaidPerm];
+      if (paymentsViewPermFin) perms.push(paymentsViewPermFin);
+      if (paymentsViewAllPerm) perms.push(paymentsViewAllPerm);
+      for (const perm of perms) {
+        if (!perm) continue;
+        await prisma.rolePermission.upsert({
+          where: { roleId_permissionId: { roleId: financeRole.id, permissionId: perm.id } },
+          create: { roleId: financeRole.id, permissionId: perm.id },
+          update: {},
+        });
+      }
     }
   }
 
-  // Optional: Create initial admin via env vars (e.g. for quick dev setup)
-  // Otherwise use /setup page to create the first admin
+  // Optional: Create initial admin via env vars (for Daybah tenant)
   const userCount = await prisma.user.count();
   if (userCount === 0 && process.env.ADMIN_INITIAL_EMAIL && process.env.ADMIN_INITIAL_PASSWORD) {
-    const passwordHash = await bcrypt.hash(process.env.ADMIN_INITIAL_PASSWORD, 12);
-    await prisma.user.create({
-      data: {
-        email: process.env.ADMIN_INITIAL_EMAIL,
-        passwordHash,
-        name: "Admin",
-        roleId: adminRole.id,
-      },
+    const adminRole = await prisma.role.findUnique({
+      where: { tenantId_name: { tenantId: DAYBAH_TENANT_ID, name: "Admin" } },
     });
-    console.log("Created initial admin user from env.");
+    if (adminRole) {
+      const passwordHash = await bcrypt.hash(process.env.ADMIN_INITIAL_PASSWORD, 12);
+      await prisma.user.create({
+        data: {
+          email: process.env.ADMIN_INITIAL_EMAIL,
+          passwordHash,
+          name: "Admin",
+          roleId: adminRole.id,
+          tenantId: DAYBAH_TENANT_ID,
+        },
+      });
+      console.log("Created initial admin user from env.");
+    }
   }
 
   console.log("Seed completed.");

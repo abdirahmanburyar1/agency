@@ -5,6 +5,7 @@ import { requirePermission } from "@/lib/permissions";
 import { PERMISSION } from "@/lib/permissions";
 import { handleAuthError } from "@/lib/api-auth";
 import { auth } from "@/auth";
+import { getTenantIdFromSession } from "@/lib/tenant";
 
 export async function GET() {
   try {
@@ -35,6 +36,7 @@ export async function POST(request: Request) {
   }
   try {
     const session = await auth();
+    const tenantId = getTenantIdFromSession(session);
     const sponsor = session?.user?.name?.trim() || session?.user?.email || null;
 
     const body = await request.json();
@@ -68,6 +70,7 @@ export async function POST(request: Request) {
 
     const ticket = await prisma.ticket.create({
       data: {
+        tenantId,
         ticketNumber: nextTicketNumber,
         reference: referenceTrimmed,
         date: new Date(body.date),
@@ -91,6 +94,7 @@ export async function POST(request: Request) {
     if (netCost > 0) {
       await prisma.payable.create({
         data: {
+          tenantId,
           date: new Date(body.date),
           month: body.month,
           name: body.airline ? `Ticket: ${body.airline}` : "Ticket",
@@ -113,6 +117,7 @@ export async function POST(request: Request) {
     if (netSales > 0 && (customerId || customerName)) {
       await prisma.payment.create({
         data: {
+          tenantId,
           date: new Date(body.date),
           month: body.month,
           paymentDate,

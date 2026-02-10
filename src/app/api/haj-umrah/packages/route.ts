@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
+import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
+import { getTenantIdFromSession } from "@/lib/tenant";
 import { requirePermission } from "@/lib/permissions";
 import { PERMISSION } from "@/lib/permissions";
 import { handleAuthError } from "@/lib/api-auth";
@@ -82,8 +84,11 @@ export async function POST(request: Request) {
     }
 
     // Sequential creates (no transaction) to avoid "Transaction not found" with serverless DBs
+    const session = await auth();
+    const tenantId = getTenantIdFromSession(session);
     const pkg = await prisma.hajUmrahPackage.create({
       data: {
+        tenantId,
         name,
         type,
         description: body.description ? String(body.description).trim() || null : null,

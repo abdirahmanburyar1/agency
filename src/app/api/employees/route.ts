@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
+import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { requirePermission } from "@/lib/permissions";
 import { PERMISSION } from "@/lib/permissions";
+import { getTenantIdFromSession } from "@/lib/tenant";
 
 export async function GET() {
   await requirePermission(PERMISSION.EXPENSES_VIEW);
@@ -20,6 +22,8 @@ export async function GET() {
 export async function POST(request: Request) {
   await requirePermission(PERMISSION.EXPENSES_CREATE);
   try {
+    const session = await auth();
+    const tenantId = getTenantIdFromSession(session);
     const body = await request.json();
     const name = String(body.name ?? "").trim();
     if (!name) {
@@ -27,6 +31,7 @@ export async function POST(request: Request) {
     }
     const employee = await prisma.employee.create({
       data: {
+        tenantId,
         name,
         role: body.role?.trim() || null,
         phone: body.phone?.trim() || null,

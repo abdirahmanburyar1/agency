@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
+import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
+import { getTenantIdFromSession } from "@/lib/tenant";
 import { trigger, EVENTS } from "@/lib/pusher";
 import { requirePermission } from "@/lib/permissions";
 import { PERMISSION } from "@/lib/permissions";
@@ -26,6 +28,8 @@ export async function POST(request: Request) {
     throw e;
   }
   try {
+    const session = await auth();
+    const tenantId = getTenantIdFromSession(session);
     const body = await request.json();
     let customer: string | null = body.customer ?? null;
     const customerId: string | null = body.customerId ?? null;
@@ -54,6 +58,7 @@ export async function POST(request: Request) {
 
     const visa = await prisma.visa.create({
       data: {
+        tenantId,
         date: new Date(body.date),
         month: body.month,
         sponsor: body.sponsor,
@@ -73,6 +78,7 @@ export async function POST(request: Request) {
     if (netCost > 0) {
       await prisma.payable.create({
         data: {
+          tenantId,
           date: new Date(body.date),
           month: body.month,
           name: body.country ? `Visa: ${body.country}` : "Visa",
@@ -89,6 +95,7 @@ export async function POST(request: Request) {
     if (netSales > 0 && (customerId || customer)) {
       await prisma.payment.create({
         data: {
+          tenantId,
           date: new Date(body.date),
           month: body.month,
           paymentDate: new Date(body.date),
