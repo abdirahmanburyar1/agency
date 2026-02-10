@@ -2,6 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { requirePermission } from "@/lib/permissions";
 import { PERMISSION } from "@/lib/permissions";
+import { getSystemSettings } from "@/lib/system-settings";
 import DatabaseErrorBanner from "@/components/DatabaseErrorBanner";
 import { isDbConnectionError } from "@/lib/db-safe";
 import PayablesTableWithFilters, { type SerializedPayable } from "./PayablesTableWithFilters";
@@ -52,6 +53,8 @@ export default async function PayablesPage() {
     visaReference: p.visa?.reference ?? null,
   }));
 
+  const systemSettings = await getSystemSettings();
+
   return (
     <main className="w-full py-6 sm:py-8">
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -60,7 +63,7 @@ export default async function PayablesPage() {
         </Link>
         <h1 className="text-xl font-semibold text-zinc-900 dark:text-white">Payables</h1>
       </div>
-      <PayablesTableWithFilters payables={serialized} />
+      <PayablesTableWithFilters payables={serialized} systemName={systemSettings.systemName} logoUrl={systemSettings.logoUrl} />
     </main>
   );
 }

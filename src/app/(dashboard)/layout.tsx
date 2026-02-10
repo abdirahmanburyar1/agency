@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { PERMISSION } from "@/lib/permissions";
+import { getSystemSettings } from "@/lib/system-settings";
+import { getTenantIdFromSession, getTenantStatus } from "@/lib/tenant";
 import DashboardShell from "@/components/DashboardShell";
 
 const NAV_ITEMS = [
@@ -44,13 +46,24 @@ export default async function DashboardLayout({
   const canViewReports = isAdmin || perms.length === 0 || perms.includes(PERMISSION.REPORTS_VIEW);
   const canViewDashboard = isAdmin || perms.length === 0 || perms.includes(PERMISSION.DASHBOARD_VIEW);
 
+  const isPlatformAdmin = (session.user as { isPlatformAdmin?: boolean }).isPlatformAdmin ?? false;
   const adminItems: { href: string; label: string }[] = [];
+  if (isPlatformAdmin) {
+    adminItems.push({ href: "/platform", label: "Platform" });
+  }
   if (isAdmin || perms.includes(PERMISSION.SETTINGS_VIEW) || perms.includes(PERMISSION.USERS_VIEW) || perms.includes(PERMISSION.ROLES_VIEW)) {
     adminItems.push({ href: "/admin", label: "Admin" });
     if (isAdmin || perms.includes(PERMISSION.SETTINGS_VIEW)) adminItems.push({ href: "/admin/settings", label: "Settings" });
     if (isAdmin || perms.includes(PERMISSION.USERS_VIEW)) adminItems.push({ href: "/admin/users", label: "Users" });
     if (isAdmin || perms.includes(PERMISSION.ROLES_VIEW)) adminItems.push({ href: "/admin/roles", label: "Roles" });
   }
+
+  const tenantId = getTenantIdFromSession(session);
+  const tenantStatus = await getTenantStatus(tenantId);
+  if (tenantStatus === "suspended" || tenantStatus === "banned") {
+    redirect("/tenant-suspended");
+  }
+  const systemSettings = await getSystemSettings(tenantId);
 
   return (
     <DashboardShell
@@ -62,6 +75,8 @@ export default async function DashboardLayout({
       userEmail={session.user.email ?? ""}
       userName={session.user.name ?? null}
       roleName={roleName || "User"}
+      systemName={systemSettings.systemName}
+      logoUrl={systemSettings.logoUrl}
     >
       {children}
     </DashboardShell>

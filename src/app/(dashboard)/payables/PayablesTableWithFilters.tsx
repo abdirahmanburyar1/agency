@@ -27,6 +27,8 @@ export type SerializedPayable = {
 
 type PayablesTableWithFiltersProps = {
   payables: SerializedPayable[];
+  systemName?: string;
+  logoUrl?: string;
 };
 
 function matchSearch(payable: SerializedPayable, q: string): boolean {
@@ -65,7 +67,7 @@ function formatDate(iso: string | null): string {
   return new Date(iso).toLocaleDateString();
 }
 
-export default function PayablesTableWithFilters({ payables: allPayables }: PayablesTableWithFiltersProps) {
+export default function PayablesTableWithFilters({ payables: allPayables, systemName = "Daybah Travel Agency", logoUrl = "/logo.png" }: PayablesTableWithFiltersProps) {
   const [search, setSearch] = useState("");
   const [source, setSource] = useState("");
   const [dateFrom, setDateFrom] = useState("");
@@ -170,13 +172,13 @@ export default function PayablesTableWithFilters({ payables: allPayables }: Paya
     const logoH = 18;
     const margin = 14;
     try {
-      const logoDataUrl = await getLogoDataUrl();
+      const logoDataUrl = await getLogoDataUrl(logoUrl);
       doc.addImage(logoDataUrl, "PNG", pageW - margin - logoW, 6, logoW, logoH);
     } catch {
       // logo optional
     }
     doc.setFontSize(14);
-    doc.text("Daybah Travel Agency — Payables", margin, 14);
+    doc.text(`${systemName} — Payables`, margin, 14);
     const headers = [["Date", "Source", "Name", "Description", "Amount", "Balance", "Deadline", "Remaining"]];
     const body = filteredPayables.map((p) => [
       formatDate(p.date),

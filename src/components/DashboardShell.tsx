@@ -21,6 +21,8 @@ type DashboardShellProps = {
   userEmail: string;
   userName: string | null;
   roleName: string;
+  systemName?: string;
+  logoUrl?: string;
 };
 
 export default function DashboardShell({
@@ -33,6 +35,8 @@ export default function DashboardShell({
   userEmail,
   userName,
   roleName,
+  systemName = "Daybah Travel Agency",
+  logoUrl = "/logo.png",
 }: DashboardShellProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -54,6 +58,8 @@ export default function DashboardShell({
         homeHref={homeHref}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
+        systemName={systemName}
+        logoUrl={logoUrl}
       />
       <div className="lg:pl-72">
         <AppHeader

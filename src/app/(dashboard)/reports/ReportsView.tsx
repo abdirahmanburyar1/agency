@@ -18,7 +18,7 @@ import {
 import { getLogoDataUrl } from "@/lib/pdf-logo";
 import type { ReportData, ReportPeriod } from "@/lib/reports";
 
-type Props = { initialData: ReportData };
+type Props = { initialData: ReportData; systemName?: string; logoUrl?: string };
 
 function SummaryCard({
   title,
@@ -66,7 +66,7 @@ function SummaryCard({
   );
 }
 
-export default function ReportsView({ initialData }: Props) {
+export default function ReportsView({ initialData, systemName = "Daybah Travel Agency", logoUrl = "/logo.png" }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [from, setFrom] = useState(() => {
@@ -157,14 +157,14 @@ export default function ReportsView({ initialData }: Props) {
     const logoH = 18;
     const margin = 14;
     try {
-      const logoDataUrl = await getLogoDataUrl();
+      const logoDataUrl = await getLogoDataUrl(logoUrl);
       // Top right: preserve aspect ratio (wider than tall) so logo isn't compressed
       doc.addImage(logoDataUrl, "PNG", pageW - margin - logoW, 8, logoW, logoH);
     } catch {
       // logo optional: continue without it
     }
     doc.setFontSize(16);
-    doc.text("Daybah Travel Agency — Report", margin, 16);
+    doc.text(`${systemName} — Report`, margin, 16);
     doc.setFontSize(10);
     doc.text(dateRangeLabel, margin, 24);
 

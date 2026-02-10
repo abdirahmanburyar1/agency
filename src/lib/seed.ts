@@ -1,4 +1,5 @@
 import { prisma } from "./db";
+import { DEFAULT_TENANT_ID } from "./tenant";
 
 const PERMISSIONS = [
   { code: "dashboard.view", name: "View Dashboard", resource: "dashboard", action: "view" },
@@ -57,8 +58,9 @@ export async function ensureSeed() {
   }
 
   const adminRole = await prisma.role.upsert({
-    where: { name: "Admin" },
+    where: { tenantId_name: { tenantId: DEFAULT_TENANT_ID, name: "Admin" } },
     create: {
+      tenantId: DEFAULT_TENANT_ID,
       name: "Admin",
       description: "Full system access. Can manage users, roles, and permissions.",
     },

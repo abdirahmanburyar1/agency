@@ -1,9 +1,10 @@
 /**
- * Load the app logo from /logo.png as a data URL for use in jsPDF.
+ * Load the app logo as a data URL for use in jsPDF.
  * Must be called in the browser (client component).
+ * @param logoUrl - Logo URL (default: /logo.png)
  */
-export function getLogoDataUrl(): Promise<string> {
-  return fetch("/logo.png")
+export function getLogoDataUrl(logoUrl: string = "/logo.png"): Promise<string> {
+  return fetch(logoUrl)
     .then((r) => r.blob())
     .then(
       (blob) =>

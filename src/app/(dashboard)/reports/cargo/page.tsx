@@ -5,6 +5,7 @@ import { requirePermission, canAccess } from "@/lib/permissions";
 import { PERMISSION } from "@/lib/permissions";
 import { getCargoReportVisibilityWhere } from "@/lib/cargo";
 import { getCargoReportData } from "@/lib/cargo-report";
+import { getSystemSettings } from "@/lib/system-settings";
 import CargoReportView from "./CargoReportView";
 
 export const dynamic = "force-dynamic";
@@ -52,9 +53,10 @@ export default async function CargoReportPage({
 
   const data = await getCargoReportData(filter, visibilityWhere);
 
-  const [locations, canViewReports] = await Promise.all([
+  const [locations, canViewReports, systemSettings] = await Promise.all([
     prisma.cargoLocation.findMany({ orderBy: { name: "asc" } }),
     canAccess(PERMISSION.REPORTS_VIEW),
+    getSystemSettings(),
   ]);
 
   return (
@@ -70,7 +72,7 @@ export default async function CargoReportPage({
           <h1 className="mt-1 text-xl font-semibold text-slate-900 dark:text-white">Cargo Report</h1>
         </div>
       </div>
-      <CargoReportView initialData={data} locations={locations} />
+      <CargoReportView initialData={data} locations={locations} systemName={systemSettings.systemName} logoUrl={systemSettings.logoUrl} />
     </main>
   );
 }

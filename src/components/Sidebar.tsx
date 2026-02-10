@@ -19,6 +19,8 @@ type SidebarProps = {
   homeHref?: string;
   isOpen: boolean;
   onClose: () => void;
+  systemName?: string;
+  logoUrl?: string;
 };
 
 const ICON_COLORS: Record<string, string> = {
@@ -36,6 +38,7 @@ const ICON_COLORS: Record<string, string> = {
   settings: "bg-slate-500/15 text-slate-600 dark:bg-slate-400/20 dark:text-slate-400",
   users: "bg-cyan-500/15 text-cyan-600 dark:bg-cyan-400/20 dark:text-cyan-400",
   roles: "bg-fuchsia-500/15 text-fuchsia-600 dark:bg-fuchsia-400/20 dark:text-fuchsia-400",
+  platform: "bg-violet-500/15 text-violet-600 dark:bg-violet-400/20 dark:text-violet-400",
 };
 
 const ICONS: Record<string, React.ReactNode> = {
@@ -113,6 +116,11 @@ const ICONS: Record<string, React.ReactNode> = {
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
     </svg>
   ),
+  platform: (
+    <svg className="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
+    </svg>
+  ),
 };
 
 function NavLink({
@@ -151,7 +159,7 @@ function NavLink({
   );
 }
 
-export default function Sidebar({ navItems, adminItems, showDashboard = true, showReports = true, homeHref = "/", isOpen, onClose }: SidebarProps) {
+export default function Sidebar({ navItems, adminItems, showDashboard = true, showReports = true, homeHref = "/", isOpen, onClose, systemName = "Daybah Travel Agency", logoUrl = "/logo.png" }: SidebarProps) {
   const pathname = usePathname();
   const [adminExpanded, setAdminExpanded] = useState(false);
 
@@ -175,8 +183,8 @@ export default function Sidebar({ navItems, adminItems, showDashboard = true, sh
           <div className="border-b border-slate-200 px-5 py-5 dark:border-slate-700/80">
             <Link href={homeHref} className="flex items-center justify-center" onClick={onClose}>
               <img
-                src="/logo.png"
-                alt=""
+                src={logoUrl}
+                alt={systemName}
                 className="h-10 w-auto max-w-[160px] object-contain"
               />
             </Link>
@@ -251,7 +259,7 @@ export default function Sidebar({ navItems, adminItems, showDashboard = true, sh
                       <ul className="mt-1 space-y-1 border-l-2 border-slate-200 pl-4 dark:border-slate-700">
                         {adminItems.map((item) => {
                           const isActive = pathname.startsWith(item.href);
-                          const iconKey = item.label === "Settings" ? "settings" : item.label === "Users" ? "users" : "roles";
+                          const iconKey = item.label === "Settings" ? "settings" : item.label === "Users" ? "users" : item.label === "Platform" ? "platform" : "roles";
                           return (
                             <li key={item.href}>
                               <Link

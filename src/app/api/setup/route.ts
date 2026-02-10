@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import * as bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
+import { DEFAULT_TENANT_ID } from "@/lib/tenant";
 
 // Only allow when no users exist
 export async function POST(request: Request) {
@@ -21,8 +22,9 @@ export async function POST(request: Request) {
       );
     }
 
-    const existing = await prisma.user.findUnique({
-      where: { email: String(email).toLowerCase() },
+    const emailLower = String(email).toLowerCase();
+    const existing = await prisma.user.findFirst({
+      where: { email: emailLower },
     });
     if (existing) {
       return NextResponse.json(
@@ -34,10 +36,12 @@ export async function POST(request: Request) {
     const passwordHash = await bcrypt.hash(String(password), 12);
     await prisma.user.create({
       data: {
-        email: String(email).toLowerCase(),
+        email: emailLower,
         passwordHash,
         name: name ?? "Admin",
         roleId,
+        tenantId: DEFAULT_TENANT_ID,
+        isPlatformAdmin: true, // First admin can manage tenants
       },
     });
 

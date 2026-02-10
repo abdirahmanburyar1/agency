@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { auth } from "@/auth";
+import { getTenantIdFromSession } from "@/lib/tenant";
 import { requirePermission } from "@/lib/permissions";
 import { PERMISSION } from "@/lib/permissions";
 import { handleAuthError } from "@/lib/api-auth";
@@ -19,9 +21,11 @@ export async function GET(request: Request) {
   const types = type && TYPES.includes(type as (typeof TYPES)[number])
     ? [type]
     : TYPES;
+  const session = await auth();
+  const tenantId = getTenantIdFromSession(session);
 
   const settings = await prisma.setting.findMany({
-    where: { type: { in: [...types] } },
+    where: { tenantId, type: { in: [...types] } },
     orderBy: [{ type: "asc" }, { sortOrder: "asc" }, { value: "asc" }],
   });
 
@@ -86,14 +90,16 @@ export async function POST(request: Request) {
   if (!trimmed) {
     return NextResponse.json({ error: "Value cannot be empty" }, { status: 400 });
   }
+  const session = await auth();
+  const tenantId = getTenantIdFromSession(session);
   const existing = await prisma.setting.findUnique({
-    where: { type_value: { type, value: trimmed } },
+    where: { tenantId_type_value: { tenantId, type, value: trimmed } },
   });
   if (existing) {
     return NextResponse.json({ error: "Already exists" }, { status: 400 });
   }
   const setting = await prisma.setting.create({
-    data: { type, value: trimmed },
+    data: { tenantId, type, value: trimmed },
   });
   return NextResponse.json(setting);
 }

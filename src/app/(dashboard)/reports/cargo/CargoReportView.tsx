@@ -23,9 +23,11 @@ const STATUS_OPTIONS = [
 type Props = {
   initialData: CargoReportData;
   locations: Location[];
+  systemName?: string;
+  logoUrl?: string;
 };
 
-export default function CargoReportView({ initialData, locations }: Props) {
+export default function CargoReportView({ initialData, locations, systemName = "Daybah Travel Agency", logoUrl = "/logo.png" }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
@@ -96,13 +98,13 @@ export default function CargoReportView({ initialData, locations }: Props) {
     const logoH = 18;
     const margin = 14;
     try {
-      const logoDataUrl = await getLogoDataUrl();
+      const logoDataUrl = await getLogoDataUrl(logoUrl);
       doc.addImage(logoDataUrl, "PNG", pageW - margin - logoW, 8, logoW, logoH);
     } catch {
       /* logo optional */
     }
     doc.setFontSize(16);
-    doc.text("Daybah Travel Agency — Cargo Report", margin, 16);
+    doc.text(`${systemName} — Cargo Report`, margin, 16);
     doc.setFontSize(10);
     doc.text(dateRangeLabel, margin, 24);
 

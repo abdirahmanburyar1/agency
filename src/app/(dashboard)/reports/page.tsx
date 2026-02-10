@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requirePermission, canAccess } from "@/lib/permissions";
 import { PERMISSION } from "@/lib/permissions";
 import { getReportData, type ReportPeriod } from "@/lib/reports";
+import { getSystemSettings } from "@/lib/system-settings";
 import ReportsView from "./ReportsView";
 
 export const dynamic = "force-dynamic";
@@ -30,9 +31,10 @@ export default async function ReportsPage({
   const period = VALID_PERIODS.includes(periodParam as ReportPeriod) ? (periodParam as ReportPeriod) : undefined;
 
   const filter = validRange ? { fromDate: fromDate!, toDate: toDate!, period } : undefined;
-  const [data, canViewCargo] = await Promise.all([
+  const [data, canViewCargo, systemSettings] = await Promise.all([
     getReportData(filter),
     canAccess(PERMISSION.CARGO_VIEW),
+    getSystemSettings(),
   ]);
 
   return (
@@ -53,7 +55,7 @@ export default async function ReportsPage({
           )}
         </div>
       </div>
-      <ReportsView initialData={data} />
+      <ReportsView initialData={data} systemName={systemSettings.systemName} logoUrl={systemSettings.logoUrl} />
     </main>
   );
 }

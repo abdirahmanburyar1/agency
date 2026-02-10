@@ -4,15 +4,20 @@ import { useState, useEffect } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 
+type Tenant = { id: string; subdomain: string; name: string };
+
 export default function LoginPage() {
   const router = useRouter();
   const [needsSetup, setNeedsSetup] = useState<boolean | null>(null);
+  const [tenants, setTenants] = useState<Tenant[]>([]);
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") ?? "/";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [tenantId, setTenantId] = useState<string>("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [systemName, setSystemName] = useState("Daybah Travel Agency");
 
   useEffect(() => {
     fetch("/api/check-setup")
@@ -20,14 +25,56 @@ export default function LoginPage() {
       .then((d) => setNeedsSetup(d.needsSetup));
   }, []);
 
+  useEffect(() => {
+    fetch("/api/tenants/current")
+      .then((r) => r.json())
+      .then((current: { tenantId?: string | null; suspended?: boolean }) => {
+        if (current?.suspended) {
+          router.replace("/tenant-suspended");
+          return;
+        }
+        if (current?.tenantId) {
+          setTenantId(current.tenantId);
+          return;
+        }
+        fetch("/api/tenants/list")
+          .then((r) => r.json())
+          .then((list: Tenant[]) => {
+            const arr = Array.isArray(list) ? list : [];
+            setTenants(arr);
+            if (arr.length > 0) setTenantId((prev) => prev || arr[0].id);
+          })
+          .catch(() => setTenants([]));
+      })
+      .catch(() => {
+        fetch("/api/tenants/list")
+          .then((r) => r.json())
+          .then((list: Tenant[]) => {
+            const arr = Array.isArray(list) ? list : [];
+            setTenants(arr);
+            if (arr.length > 0) setTenantId((prev) => prev || arr[0].id);
+          })
+          .catch(() => setTenants([]));
+      });
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/settings/system")
+      .then((r) => r.json())
+      .then((d) => d.systemName && setSystemName(d.systemName))
+      .catch(() => {});
+  }, []);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
     setLoading(true);
+    const selectedTenantId = tenantId || (tenants[0]?.id ?? "cldefault00000000000000001");
     try {
       const res = await signIn("credentials", {
         email,
         password,
+        tenantId: selectedTenantId,
         redirect: false,
       });
       if (res?.error) {
@@ -48,12 +95,12 @@ export default function LoginPage() {
       {/* Left: Branding */}
       <div className="hidden w-1/2 flex-col justify-between bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-900 p-12 lg:flex">
         <div>
-          <h2 className="text-3xl font-bold text-white">Daybah Travel Agency</h2>
+          <h2 className="text-3xl font-bold text-white">{systemName}</h2>
           <p className="mt-3 max-w-sm text-slate-300">
             Manage tickets, visas, expenses, and payments in one place. Professional travel agency management made simple.
           </p>
         </div>
-        <p className="text-sm text-slate-500">© Daybah Travel Agency</p>
+        <p className="text-sm text-slate-500">© {systemName}</p>
       </div>
 
       {/* Right: Form */}
@@ -79,6 +126,25 @@ export default function LoginPage() {
             {error && (
               <div className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-900/20 dark:text-red-400">
                 {error}
+              </div>
+            )}
+            {tenants.length > 1 && (
+              <div>
+                <label htmlFor="tenant" className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                  Tenant / Organization
+                </label>
+                <select
+                  id="tenant"
+                  value={tenantId}
+                  onChange={(e) => setTenantId(e.target.value)}
+                  className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:border-slate-600 dark:bg-slate-900 dark:text-white"
+                >
+                  {tenants.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name} ({t.subdomain})
+                    </option>
+                  ))}
+                </select>
               </div>
             )}
             <div>

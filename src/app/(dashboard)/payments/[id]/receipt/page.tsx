@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { PERMISSION } from "@/lib/permissions";
 import { getPaymentVisibilityWhere } from "@/lib/cargo";
+import { getSystemSettings } from "@/lib/system-settings";
 import { getCurrencyRates } from "@/lib/currency-rates";
 import { getCurrencySymbol } from "@/lib/currencies";
 import { PrintButton } from "@/components/PrintButton";
@@ -48,7 +49,7 @@ export default async function PaymentReceiptPage({
     locationId
   );
 
-  const [payment, rates] = await Promise.all([
+  const [payment, rates, systemSettings] = await Promise.all([
     prisma.payment.findFirst({
       where: { id: paymentId, ...paymentWhere },
       include: {
@@ -60,6 +61,7 @@ export default async function PaymentReceiptPage({
       },
     }),
     getCurrencyRates(),
+    getSystemSettings(),
   ]);
 
   if (!payment) notFound();
@@ -186,8 +188,8 @@ export default async function PaymentReceiptPage({
           {/* Header with logo and customer on right */}
           <div className="flex h-12 items-center justify-between gap-4 border-b border-zinc-200 bg-zinc-50 px-4 print:bg-white sm:h-14">
             <img
-              src="/logo.png"
-              alt="Daybah Travel Agency"
+              src={systemSettings.logoUrl}
+              alt={systemSettings.systemName}
               className="h-full w-auto min-w-0 object-contain object-left"
             />
             <div className="shrink-0 text-right text-sm">

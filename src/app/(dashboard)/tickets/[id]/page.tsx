@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requirePermission, canAccess } from "@/lib/permissions";
+import { getSystemSettings } from "@/lib/system-settings";
 import { PERMISSION } from "@/lib/permissions";
 import { PrintButton } from "@/components/PrintButton";
 import TicketCancelButton from "./TicketCancelButton";
@@ -50,10 +51,13 @@ export default async function TicketDetailPage({
   await requirePermission(PERMISSION.TICKETS_VIEW, { redirectOnForbidden: true });
   const { id } = await params;
 
-  const ticket = await prisma.ticket.findUnique({
-    where: { id },
-    include: { customer: true, adjustments: { orderBy: { createdAt: "asc" } } },
-  });
+  const [ticket, systemSettings] = await Promise.all([
+    prisma.ticket.findUnique({
+      where: { id },
+      include: { customer: true, adjustments: { orderBy: { createdAt: "asc" } } },
+    }),
+    getSystemSettings(),
+  ]);
 
   if (!ticket) notFound();
 
@@ -145,8 +149,8 @@ export default async function TicketDetailPage({
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-emerald-500/10 via-transparent to-transparent" />
             <div className="relative flex items-center justify-between">
               <img
-                src="/logo.png"
-                alt="Daybah Travel Agency"
+                src={systemSettings.logoUrl}
+                alt={systemSettings.systemName}
                 className="h-14 w-auto object-contain drop-shadow-sm"
               />
               <div className="flex items-center gap-6">
@@ -278,7 +282,7 @@ export default async function TicketDetailPage({
             {/* Footer */}
             <p className="mt-8 text-center text-xs font-medium text-slate-400">
               Issued {new Date(ticket.date).toLocaleDateString()} ·{" "}
-              {ticket.sponsor ? `Booked by ${ticket.sponsor}` : "Daybah Travel Agency"}
+              {ticket.sponsor ? `Booked by ${ticket.sponsor}` : systemSettings.systemName}
             </p>
           </div>
         </article>

@@ -1,8 +1,11 @@
-export default function GlobalLoading() {
+import { getSystemSettings } from "@/lib/system-settings";
+
+export default async function GlobalLoading() {
+  const { logoUrl } = await getSystemSettings();
   return (
     <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center gap-6 bg-slate-50 dark:bg-zinc-950">
       <img
-        src="/logo.png"
+        src={logoUrl}
         alt=""
         className="h-14 w-auto max-w-[180px] object-contain opacity-90"
       />

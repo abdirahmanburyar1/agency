@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { auth } from "@/auth";
+import { getTenantIdFromSession } from "@/lib/tenant";
 import { PERMISSION } from "@/lib/permissions";
 import { canAccess } from "@/lib/permissions";
 
@@ -20,7 +21,9 @@ export async function GET() {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
   try {
+    const tenantId = getTenantIdFromSession(session);
     const customers = await prisma.customer.findMany({
+      where: { tenantId },
       orderBy: { name: "asc" },
       select: { id: true, name: true, phone: true, whatsappNumber: true },
     });

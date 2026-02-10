@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { auth } from "@/auth";
+import { getTenantIdFromSession } from "@/lib/tenant";
 import { requirePermission } from "@/lib/permissions";
 import { PERMISSION } from "@/lib/permissions";
 import { handleAuthError } from "@/lib/api-auth";
@@ -16,9 +18,11 @@ export async function GET(
     throw e;
   }
   try {
+    const session = await auth();
+    const tenantId = getTenantIdFromSession(session);
     const { id } = await params;
-    const customer = await prisma.customer.findUnique({
-      where: { id },
+    const customer = await prisma.customer.findFirst({
+      where: { id, tenantId },
     });
     if (!customer) {
       return NextResponse.json({ error: "Customer not found" }, { status: 404 });
@@ -42,7 +46,11 @@ export async function PUT(
     throw e;
   }
   try {
+    const session = await auth();
+    const tenantId = getTenantIdFromSession(session);
     const { id } = await params;
+    const existing = await prisma.customer.findFirst({ where: { id, tenantId } });
+    if (!existing) return NextResponse.json({ error: "Customer not found" }, { status: 404 });
     const body = await request.json();
     const name = body.name != null ? String(body.name).trim() : undefined;
     if (name !== undefined && !name) {
@@ -75,7 +83,11 @@ export async function DELETE(
     throw e;
   }
   try {
+    const session = await auth();
+    const tenantId = getTenantIdFromSession(session);
     const { id } = await params;
+    const existing = await prisma.customer.findFirst({ where: { id, tenantId } });
+    if (!existing) return NextResponse.json({ error: "Customer not found" }, { status: 404 });
     await prisma.customer.delete({ where: { id } });
     return NextResponse.json({ ok: true });
   } catch (error) {

@@ -4,6 +4,7 @@ import { PERMISSION } from "@/lib/permissions";
 import SettingsForm from "./SettingsForm";
 import CurrencyRatesForm from "./CurrencyRatesForm";
 import LocationsBranchesForm from "./LocationsBranchesForm";
+import SystemSettingsForm from "./SystemSettingsForm";
 
 const TYPES = [
   { type: "airline", label: "Airlines" },
@@ -35,8 +36,9 @@ export default async function SettingsPage() {
     <main className="w-full py-6 sm:py-8">
       <div className="space-y-8">
         <p className="text-sm text-slate-500 dark:text-slate-400">
-          Configure airlines, payment methods, flights, payment statuses, countries, expense categories, locations & branches, carriers, and currency rates. Currency rates are used in reports and dashboard to convert multi-currency expenses to USD.
+          Configure system branding, airlines, payment methods, flights, payment statuses, countries, expense categories, locations & branches, carriers, and currency rates. Currency rates are used in reports and dashboard to convert multi-currency expenses to USD.
         </p>
+        <SystemSettingsForm canEdit={canEdit} />
         <CurrencyRatesForm canEdit={canEdit} />
         <LocationsBranchesForm canEdit={canEdit} />
         {grouped.map(({ type, label, values }) => (

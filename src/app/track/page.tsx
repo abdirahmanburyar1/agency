@@ -1,10 +1,14 @@
 import { redirect } from "next/navigation";
+import { getSystemSettings } from "@/lib/system-settings";
 import TrackSearchForm from "./TrackSearchForm";
 
-export const metadata = {
-  title: "Track Cargo | Daybah Travel Agency",
-  description: "Track your cargo shipment by tracking number",
-};
+export async function generateMetadata() {
+  const { systemName } = await getSystemSettings();
+  return {
+    title: `Track Cargo | ${systemName}`,
+    description: "Track your cargo shipment by tracking number",
+  };
+}
 
 export default function TrackPage() {
   async function handleSearch(formData: FormData) {
