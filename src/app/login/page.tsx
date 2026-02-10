@@ -4,12 +4,11 @@ import { useState, useEffect } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-type Tenant = { id: string; subdomain: string; name: string };
+const DEFAULT_TENANT_ID = "cldefault00000000000000001";
 
 export default function LoginPage() {
   const router = useRouter();
   const [needsSetup, setNeedsSetup] = useState<boolean | null>(null);
-  const [tenants, setTenants] = useState<Tenant[]>([]);
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") ?? "/";
   const [email, setEmail] = useState("");
@@ -25,6 +24,7 @@ export default function LoginPage() {
       .then((d) => setNeedsSetup(d.needsSetup));
   }, []);
 
+  // Tenant is derived from subdomain (URL) only - never choosable. Clients stay isolated.
   useEffect(() => {
     fetch("/api/tenants/current")
       .then((r) => r.json())
@@ -33,30 +33,10 @@ export default function LoginPage() {
           router.replace("/tenant-suspended");
           return;
         }
-        if (current?.tenantId) {
-          setTenantId(current.tenantId);
-          return;
-        }
-        fetch("/api/tenants/list")
-          .then((r) => r.json())
-          .then((list: Tenant[]) => {
-            const arr = Array.isArray(list) ? list : [];
-            setTenants(arr);
-            if (arr.length > 0) setTenantId((prev) => prev || arr[0].id);
-          })
-          .catch(() => setTenants([]));
+        setTenantId(current?.tenantId ?? DEFAULT_TENANT_ID);
       })
-      .catch(() => {
-        fetch("/api/tenants/list")
-          .then((r) => r.json())
-          .then((list: Tenant[]) => {
-            const arr = Array.isArray(list) ? list : [];
-            setTenants(arr);
-            if (arr.length > 0) setTenantId((prev) => prev || arr[0].id);
-          })
-          .catch(() => setTenants([]));
-      });
-  }, []);
+      .catch(() => setTenantId(DEFAULT_TENANT_ID));
+  }, [router]);
 
   useEffect(() => {
     fetch("/api/settings/system")
@@ -69,7 +49,7 @@ export default function LoginPage() {
     e.preventDefault();
     setError("");
     setLoading(true);
-    const selectedTenantId = tenantId || (tenants[0]?.id ?? "cldefault00000000000000001");
+    const selectedTenantId = tenantId || DEFAULT_TENANT_ID;
     try {
       const res = await signIn("credentials", {
         email,
@@ -126,25 +106,6 @@ export default function LoginPage() {
             {error && (
               <div className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-900/20 dark:text-red-400">
                 {error}
-              </div>
-            )}
-            {tenants.length > 1 && (
-              <div>
-                <label htmlFor="tenant" className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-                  Tenant / Organization
-                </label>
-                <select
-                  id="tenant"
-                  value={tenantId}
-                  onChange={(e) => setTenantId(e.target.value)}
-                  className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:border-slate-600 dark:bg-slate-900 dark:text-white"
-                >
-                  {tenants.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name} ({t.subdomain})
-                    </option>
-                  ))}
-                </select>
               </div>
             )}
             <div>
