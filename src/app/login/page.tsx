@@ -13,7 +13,7 @@ export default function LoginPage() {
   const callbackUrl = searchParams.get("callbackUrl") ?? "/";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [tenantId, setTenantId] = useState<string>("");
+  const [tenantId, setTenantId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [systemName, setSystemName] = useState("Daybah Travel Agency");
@@ -29,13 +29,19 @@ export default function LoginPage() {
     fetch("/api/tenants/current")
       .then((r) => r.json())
       .then((current: { tenantId?: string | null; suspended?: boolean }) => {
+        console.log("Tenant from API:", current); // DEBUG
         if (current?.suspended) {
           router.replace("/tenant-suspended");
           return;
         }
-        setTenantId(current?.tenantId ?? DEFAULT_TENANT_ID);
+        const resolvedTenantId = current?.tenantId ?? DEFAULT_TENANT_ID;
+        console.log("Setting tenantId to:", resolvedTenantId); // DEBUG
+        setTenantId(resolvedTenantId);
       })
-      .catch(() => setTenantId(DEFAULT_TENANT_ID));
+      .catch((err) => {
+        console.error("Failed to get tenant:", err); // DEBUG
+        setTenantId(DEFAULT_TENANT_ID);
+      });
   }, [router]);
 
   useEffect(() => {
@@ -48,22 +54,31 @@ export default function LoginPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    
+    // Wait for tenant to be loaded
+    if (!tenantId) {
+      setError("Please wait, loading tenant information...");
+      return;
+    }
+    
     setLoading(true);
-    const selectedTenantId = tenantId || DEFAULT_TENANT_ID;
+    console.log("Logging in with tenantId:", tenantId); // DEBUG
     try {
       const res = await signIn("credentials", {
         email,
         password,
-        tenantId: selectedTenantId,
+        tenantId: tenantId,
         redirect: false,
       });
       if (res?.error) {
+        console.error("Login error:", res.error); // DEBUG
         setError("Invalid email or password");
         return;
       }
       router.push(callbackUrl);
       router.refresh();
-    } catch {
+    } catch (err) {
+      console.error("Login exception:", err); // DEBUG
       setError("Something went wrong");
     } finally {
       setLoading(false);
@@ -139,10 +154,10 @@ export default function LoginPage() {
             </div>
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !tenantId}
               className="w-full rounded-xl bg-emerald-600 px-4 py-3 font-semibold text-white shadow-sm hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 disabled:opacity-50"
             >
-              {loading ? "Signing in..." : "Sign in"}
+              {!tenantId ? "Loading..." : loading ? "Signing in..." : "Sign in"}
             </button>
           </form>
         </div>
