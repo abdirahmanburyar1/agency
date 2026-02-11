@@ -33,8 +33,12 @@ export function parseSubdomain(hostname: string): string | null {
  */
 export async function getTenantBySubdomain(subdomain: string) {
   const tenant = await prisma.tenant.findUnique({
-    where: { subdomain: subdomain.toLowerCase(), status: "active" },
+    where: { subdomain: subdomain.toLowerCase() },
   });
+  // Filter by status after fetching
+  if (tenant && tenant.status !== "active") {
+    return null;
+  }
   return tenant;
 }
 
@@ -72,9 +76,13 @@ export async function getTenantFromRequest(request: Request): Promise<{ id: stri
   const tenantHeader = request.headers.get("x-tenant-id");
   if (tenantHeader) {
     const tenant = await prisma.tenant.findUnique({
-      where: { id: tenantHeader, status: "active" },
+      where: { id: tenantHeader },
       select: { id: true, subdomain: true, name: true, status: true },
     });
+    // Filter by status after fetching
+    if (tenant && tenant.status !== "active") {
+      return null;
+    }
     return tenant;
   }
   const url = new URL(request.url);
