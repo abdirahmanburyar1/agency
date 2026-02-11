@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const session = await auth();
   const isPlatformAdmin = (session?.user as { isPlatformAdmin?: boolean })?.isPlatformAdmin;
 
@@ -11,7 +12,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   }
 
   const subscription = await prisma.subscription.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: {
       tenant: true,
       plan: true,
@@ -28,7 +29,8 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   return NextResponse.json(subscription);
 }
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const session = await auth();
   const isPlatformAdmin = (session?.user as { isPlatformAdmin?: boolean })?.isPlatformAdmin;
 
@@ -51,7 +53,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
 
   const subscription = await prisma.subscription.update({
-    where: { id: params.id },
+    where: { id },
     data: updateData,
     include: {
       tenant: true,
@@ -62,7 +64,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   return NextResponse.json(subscription);
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const session = await auth();
   const isPlatformAdmin = (session?.user as { isPlatformAdmin?: boolean })?.isPlatformAdmin;
 
@@ -71,7 +74,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
   }
 
   await prisma.subscription.delete({
-    where: { id: params.id },
+    where: { id },
   });
 
   return NextResponse.json({ message: "Subscription deleted" });
