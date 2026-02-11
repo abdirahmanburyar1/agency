@@ -6,6 +6,73 @@ const prisma = new PrismaClient();
 const DEFAULT_TENANT_ID = "cldefault00000000000000001";
 const DAYBAH_TENANT_ID = "cldaybah00000000000000001";
 
+// Subscription Plans
+const SUBSCRIPTION_PLANS = [
+  {
+    name: "starter",
+    displayName: "Starter",
+    description: "Perfect for small businesses just getting started",
+    price: 29.99,
+    billingInterval: "monthly",
+    maxUsers: 5,
+    maxStorage: 10, // GB
+    trialDays: 14,
+    setupFee: 0,
+    sortOrder: 1,
+    features: JSON.stringify([
+      "Up to 5 users",
+      "10GB storage",
+      "Basic reporting",
+      "Email support",
+      "Mobile app access"
+    ])
+  },
+  {
+    name: "professional",
+    displayName: "Professional",
+    description: "For growing businesses with advanced needs",
+    price: 79.99,
+    billingInterval: "monthly",
+    maxUsers: 20,
+    maxStorage: 50, // GB
+    trialDays: 14,
+    setupFee: 0,
+    sortOrder: 2,
+    features: JSON.stringify([
+      "Up to 20 users",
+      "50GB storage",
+      "Advanced reporting & analytics",
+      "Priority email & phone support",
+      "API access",
+      "Custom branding",
+      "Multi-currency support"
+    ])
+  },
+  {
+    name: "enterprise",
+    displayName: "Enterprise",
+    description: "For large organizations with custom requirements",
+    price: 199.99,
+    billingInterval: "monthly",
+    maxUsers: null, // Unlimited
+    maxStorage: null, // Unlimited
+    trialDays: 30,
+    setupFee: 499,
+    sortOrder: 3,
+    features: JSON.stringify([
+      "Unlimited users",
+      "Unlimited storage",
+      "Advanced security features",
+      "Dedicated account manager",
+      "24/7 phone & chat support",
+      "Custom integrations",
+      "SLA guarantee",
+      "Training & onboarding",
+      "Custom domain mapping"
+    ])
+  }
+];
+
 /** Ensure tenant exists, create if not (for fresh DB) */
 async function ensureTenant(id: string, subdomain: string, name: string) {
   await prisma.tenant.upsert({
@@ -238,6 +305,64 @@ async function main() {
       });
       console.log("Created initial admin user from env.");
     }
+  }
+
+  // Seed subscription plans
+  console.log("Seeding subscription plans...");
+  for (const plan of SUBSCRIPTION_PLANS) {
+    await prisma.subscriptionPlan.upsert({
+      where: { name: plan.name },
+      create: plan,
+      update: {
+        displayName: plan.displayName,
+        description: plan.description,
+        price: plan.price,
+        billingInterval: plan.billingInterval,
+        maxUsers: plan.maxUsers,
+        maxStorage: plan.maxStorage,
+        trialDays: plan.trialDays,
+        setupFee: plan.setupFee,
+        sortOrder: plan.sortOrder,
+        features: plan.features,
+      },
+    });
+  }
+  console.log(`Created/updated ${SUBSCRIPTION_PLANS.length} subscription plans.`);
+
+  // Create trial subscriptions for existing tenants
+  console.log("Creating trial subscriptions for existing tenants...");
+  const tenantsWithoutSub = await prisma.tenant.findMany({
+    where: {
+      subscriptions: {
+        none: {},
+      },
+    },
+  });
+
+  const starterPlan = await prisma.subscriptionPlan.findUnique({
+    where: { name: "starter" },
+  });
+
+  if (starterPlan && tenantsWithoutSub.length > 0) {
+    for (const tenant of tenantsWithoutSub) {
+      const now = new Date();
+      const trialEnd = new Date(now);
+      trialEnd.setDate(trialEnd.getDate() + (starterPlan.trialDays || 14));
+
+      await prisma.subscription.create({
+        data: {
+          tenantId: tenant.id,
+          planId: starterPlan.id,
+          status: "trial",
+          startDate: now,
+          trialEndDate: trialEnd,
+          currentPeriodStart: now,
+          currentPeriodEnd: trialEnd,
+          autoRenew: true,
+        },
+      });
+    }
+    console.log(`Created trial subscriptions for ${tenantsWithoutSub.length} tenants.`);
   }
 
   console.log("Seed completed.");

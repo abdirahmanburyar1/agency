@@ -1,49 +1,95 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
-import { requirePlatformAdmin } from "@/lib/platform";
 
-export async function GET(
-  _request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const err = await requirePlatformAdmin();
-  if (err) return err;
-  const { id } = await params;
-  try {
-    const tenant = await prisma.tenant.findUnique({
-      where: { id },
-      include: { _count: { select: { users: true } } },
-    });
-    if (!tenant) return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
-    return NextResponse.json(tenant);
-  } catch (e) {
-    console.error("Platform tenant GET error:", e);
-    return NextResponse.json({ error: "Failed to fetch tenant" }, { status: 500 });
+export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+  const session = await auth();
+  const isPlatformAdmin = (session?.user as { isPlatformAdmin?: boolean })?.isPlatformAdmin;
+
+  if (!isPlatformAdmin) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const tenant = await prisma.tenant.findUnique({
+    where: { id: params.id },
+    include: {
+      subscriptions: {
+        include: {
+          plan: true,
+        },
+        orderBy: { createdAt: "desc" },
+        take: 1,
+      },
+      _count: {
+        select: {
+          users: true,
+          customers: true,
+          tickets: true,
+          visas: true,
+          hajUmrahBookings: true,
+        },
+      },
+    },
+  });
+
+  if (!tenant) {
+    return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
+  }
+
+  return NextResponse.json(tenant);
 }
 
-export async function PATCH(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const err = await requirePlatformAdmin();
-  if (err) return err;
-  const { id } = await params;
-  try {
-    const body = await request.json();
-    const updates: { name?: string; status?: string } = {};
-    if (typeof body.name === "string") updates.name = body.name.trim();
-    if (["active", "suspended", "banned"].includes(body.status)) updates.status = body.status;
-    if (Object.keys(updates).length === 0) {
-      return NextResponse.json({ error: "No valid updates" }, { status: 400 });
-    }
-    const tenant = await prisma.tenant.update({
-      where: { id },
-      data: updates,
-    });
-    return NextResponse.json(tenant);
-  } catch (e) {
-    console.error("Platform tenant PATCH error:", e);
-    return NextResponse.json({ error: "Failed to update tenant" }, { status: 500 });
+export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+  const session = await auth();
+  const isPlatformAdmin = (session?.user as { isPlatformAdmin?: boolean })?.isPlatformAdmin;
+
+  if (!isPlatformAdmin) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const body = await req.json();
+  const {
+    name,
+    status,
+    contactName,
+    contactEmail,
+    contactPhone,
+    companyAddress,
+    companyCity,
+    companyCountry,
+    taxId,
+    businessType,
+    websiteUrl,
+    notes,
+  } = body;
+
+  const updateData: any = {};
+  if (name !== undefined) updateData.name = name;
+  if (status !== undefined) updateData.status = status;
+  if (contactName !== undefined) updateData.contactName = contactName;
+  if (contactEmail !== undefined) updateData.contactEmail = contactEmail;
+  if (contactPhone !== undefined) updateData.contactPhone = contactPhone;
+  if (companyAddress !== undefined) updateData.companyAddress = companyAddress;
+  if (companyCity !== undefined) updateData.companyCity = companyCity;
+  if (companyCountry !== undefined) updateData.companyCountry = companyCountry;
+  if (taxId !== undefined) updateData.taxId = taxId;
+  if (businessType !== undefined) updateData.businessType = businessType;
+  if (websiteUrl !== undefined) updateData.websiteUrl = websiteUrl;
+  if (notes !== undefined) updateData.notes = notes;
+
+  const tenant = await prisma.tenant.update({
+    where: { id: params.id },
+    data: updateData,
+    include: {
+      subscriptions: {
+        include: {
+          plan: true,
+        },
+        orderBy: { createdAt: "desc" },
+        take: 1,
+      },
+    },
+  });
+
+  return NextResponse.json(tenant);
 }
