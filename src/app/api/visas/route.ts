@@ -9,7 +9,20 @@ import { handleAuthError } from "@/lib/api-auth";
 
 export async function GET() {
   try {
+    await requirePermission(PERMISSION.VISAS_VIEW);
+  } catch (e) {
+    const res = handleAuthError(e);
+    if (res) return res;
+    throw e;
+  }
+  try {
+    const session = await auth();
+    const tenantId = getTenantIdFromSession(session);
+    
     const visas = await prisma.visa.findMany({
+      where: {
+        tenantId, // SCOPE BY TENANT
+      },
       orderBy: { date: "desc" },
     });
     return NextResponse.json(visas);

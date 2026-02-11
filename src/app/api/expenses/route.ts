@@ -3,11 +3,19 @@ import { prisma } from "@/lib/db";
 import { trigger, EVENTS } from "@/lib/pusher";
 import { requirePermission } from "@/lib/permissions";
 import { PERMISSION } from "@/lib/permissions";
+import { auth } from "@/auth";
+import { getTenantIdFromSession } from "@/lib/tenant";
 
 export async function GET() {
   await requirePermission(PERMISSION.EXPENSES_VIEW);
   try {
+    const session = await auth();
+    const tenantId = getTenantIdFromSession(session);
+    
     const expenses = await prisma.expense.findMany({
+      where: {
+        tenantId, // SCOPE BY TENANT
+      },
       orderBy: { date: "desc" },
     });
     return NextResponse.json(expenses);

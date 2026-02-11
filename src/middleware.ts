@@ -1,6 +1,7 @@
 import { getToken } from "next-auth/jwt";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { prisma } from "@/lib/db";
 
 const ROOT_DOMAIN = process.env.NEXT_PUBLIC_APP_DOMAIN ?? "fayohealthtech.so";
 
@@ -40,6 +41,7 @@ export async function middleware(req: NextRequest) {
   const isTrackPage = req.nextUrl.pathname.startsWith("/track");
   const isPlatformPage = req.nextUrl.pathname.startsWith("/platform");
   const isTenantSuspendedPage = req.nextUrl.pathname.startsWith("/tenant-suspended");
+  const isSubscriptionExpiredPage = req.nextUrl.pathname.startsWith("/subscription-expired");
 
   // Public pages - allow through but redirect if logged in
   if (isLoginPage || isSetupPage || isTrackPage || isTenantSuspendedPage) {
@@ -102,6 +104,29 @@ export async function middleware(req: NextRequest) {
   // Subdomains: All other pages require login
   if (!isLoggedIn && onSubdomain) {
     return NextResponse.redirect(new URL("/login", req.url));
+  }
+
+  // Check subscription status for subdomain users (non-platform admins)
+  if (isLoggedIn && onSubdomain && !isPlatformAdmin) {
+    const tenantId = (token as { tenantId?: string | null })?.tenantId;
+    if (tenantId) {
+      try {
+        const subscription = await prisma.subscription.findFirst({
+          where: {
+            tenantId,
+            status: "active",
+          },
+        });
+        
+        // If no active subscription, redirect to expired page
+        if (!subscription) {
+          return NextResponse.redirect(new URL("/subscription-expired", req.url));
+        }
+      } catch (error) {
+        console.error("Subscription check error:", error);
+        // On error, allow through to avoid blocking all access
+      }
+    }
   }
 
   // Subdomain app pages: handle role-based redirects

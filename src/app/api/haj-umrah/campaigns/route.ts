@@ -15,13 +15,16 @@ export async function GET(request: Request) {
     throw e;
   }
   try {
+    const session = await auth();
+    const tenantId = getTenantIdFromSession(session);
     const { searchParams } = new URL(request.url);
     const availableOnly = searchParams.get("available") === "true";
     const now = new Date();
     const campaigns = await prisma.hajUmrahCampaign.findMany({
-      where: availableOnly
-        ? { date: { gt: now }, canceledAt: null }
-        : undefined,
+      where: {
+        tenantId, // SCOPE BY TENANT
+        ...(availableOnly ? { date: { gt: now }, canceledAt: null } : {}),
+      },
       orderBy: { date: availableOnly ? "asc" : "desc" },
       include: {
         _count: { select: { bookings: true } },

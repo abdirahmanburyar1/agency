@@ -16,7 +16,13 @@ export async function GET() {
     throw e;
   }
   try {
+    const session = await auth();
+    const tenantId = getTenantIdFromSession(session);
+    
     const tickets = await prisma.ticket.findMany({
+      where: {
+        tenantId, // SCOPE BY TENANT
+      },
       orderBy: { date: "desc" },
     });
     return NextResponse.json(tickets);

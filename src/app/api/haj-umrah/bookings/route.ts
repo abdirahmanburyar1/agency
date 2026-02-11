@@ -17,8 +17,14 @@ export async function GET() {
     throw e;
   }
   try {
+    const session = await auth();
+    const tenantId = getTenantIdFromSession(session);
+    
     const bookings = await prisma.hajUmrahBooking.findMany({
-      where: { canceledAt: null },
+      where: { 
+        tenantId, // SCOPE BY TENANT
+        canceledAt: null 
+      },
       orderBy: { createdAt: "desc" },
       include: {
         customer: true,

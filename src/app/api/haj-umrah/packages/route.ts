@@ -15,10 +15,15 @@ export async function GET(request: Request) {
     throw e;
   }
   try {
+    const session = await auth();
+    const tenantId = getTenantIdFromSession(session);
     const { searchParams } = new URL(request.url);
     const activeOnly = searchParams.get("active") === "true";
     const packages = await prisma.hajUmrahPackage.findMany({
-      where: activeOnly ? { isActive: true } : undefined,
+      where: {
+        tenantId, // SCOPE BY TENANT
+        ...(activeOnly ? { isActive: true } : {}),
+      },
       orderBy: [{ type: "asc" }, { name: "asc" }],
       include: { visaPrices: true },
     });

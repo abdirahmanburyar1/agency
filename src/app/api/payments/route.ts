@@ -22,6 +22,7 @@ export async function GET() {
     throw e;
   }
   try {
+    const tenantId = getTenantIdFromSession(session);
     const permissions = (session.user as { permissions?: string[] }).permissions ?? [];
     const roleName = String((session.user as { roleName?: string }).roleName ?? "").trim();
     const locationId = (session.user as { locationId?: string | null }).locationId ?? null;
@@ -36,7 +37,10 @@ export async function GET() {
     );
 
     const payments = await prisma.payment.findMany({
-      where: paymentWhere,
+      where: {
+        tenantId, // SCOPE BY TENANT
+        ...paymentWhere,
+      },
       orderBy: { date: "desc" },
     });
     return NextResponse.json(payments);
