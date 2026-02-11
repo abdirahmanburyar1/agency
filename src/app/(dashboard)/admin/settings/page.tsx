@@ -5,6 +5,8 @@ import SettingsForm from "./SettingsForm";
 import CurrencyRatesForm from "./CurrencyRatesForm";
 import LocationsBranchesForm from "./LocationsBranchesForm";
 import SystemSettingsForm from "./SystemSettingsForm";
+import { auth } from "@/auth";
+import { getTenantIdFromSession } from "@/lib/tenant";
 
 const TYPES = [
   { type: "airline", label: "Airlines" },
@@ -22,7 +24,11 @@ export default async function SettingsPage() {
   await requirePermission(PERMISSION.SETTINGS_VIEW, { redirectOnForbidden: true });
   const canEdit = await (await import("@/lib/permissions")).canAccess(PERMISSION.SETTINGS_EDIT);
 
+  const session = await auth();
+  const tenantId = getTenantIdFromSession(session);
+
   const settings = await prisma.setting.findMany({
+    where: { tenantId }, // SCOPE BY TENANT
     orderBy: [{ type: "asc" }, { sortOrder: "asc" }, { value: "asc" }],
   });
 

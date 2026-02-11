@@ -44,8 +44,8 @@ export async function middleware(req: NextRequest) {
   const isSubscriptionExpiredPage = req.nextUrl.pathname.startsWith("/subscription-expired");
 
   // Public pages - allow through but redirect if logged in
-  if (isLoginPage || isSetupPage || isTrackPage || isTenantSuspendedPage) {
-    if (isLoggedIn && !isSetupPage && !isTrackPage && !isTenantSuspendedPage) {
+  if (isLoginPage || isSetupPage || isTrackPage || isTenantSuspendedPage || isSubscriptionExpiredPage) {
+    if (isLoggedIn && !isSetupPage && !isTrackPage && !isTenantSuspendedPage && !isSubscriptionExpiredPage) {
       // Logged-in users on login page: redirect to platform or app based on admin status
       if (!onSubdomain && isPlatformAdmin) {
         return NextResponse.redirect(new URL("/platform", req.url));
@@ -106,11 +106,29 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL("/login", req.url));
   }
 
-  // Check subscription status for subdomain users (non-platform admins)
+  // Check tenant status and subscription for subdomain users (non-platform admins)
   if (isLoggedIn && onSubdomain && !isPlatformAdmin) {
     const tenantId = (token as { tenantId?: string | null })?.tenantId;
     if (tenantId) {
       try {
+        // Check if tenant is suspended or banned
+        const tenant = await prisma.tenant.findUnique({
+          where: { id: tenantId },
+          select: { status: true },
+        });
+        
+        if (!tenant) {
+          // Tenant doesn't exist - redirect to suspended page
+          return NextResponse.redirect(new URL("/tenant-suspended", req.url));
+        }
+        
+        // Check if tenant status is not active
+        if (tenant.status !== "active") {
+          // status can be: "suspended", "banned", "inactive", etc.
+          return NextResponse.redirect(new URL("/tenant-suspended", req.url));
+        }
+        
+        // Check subscription status (only for active tenants)
         const subscription = await prisma.subscription.findFirst({
           where: {
             tenantId,
@@ -123,7 +141,7 @@ export async function middleware(req: NextRequest) {
           return NextResponse.redirect(new URL("/subscription-expired", req.url));
         }
       } catch (error) {
-        console.error("Subscription check error:", error);
+        console.error("Tenant/Subscription check error:", error);
         // On error, allow through to avoid blocking all access
       }
     }

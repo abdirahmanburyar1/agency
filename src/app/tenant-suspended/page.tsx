@@ -4,32 +4,68 @@ const LOGIN_URL = `https://${ROOT_DOMAIN}/login`;
 export default function TenantSuspendedPage() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-slate-50 px-4 dark:bg-slate-950">
-      <div className="w-full max-w-md rounded-xl border border-slate-200 bg-white p-8 text-center shadow-lg dark:border-slate-800 dark:bg-slate-900">
-        <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/30">
-          <svg
-            className="size-8 text-amber-600 dark:text-amber-400"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-            />
-          </svg>
+      <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-8 shadow-lg dark:border-slate-800 dark:bg-slate-900">
+        <div className="mb-6 flex justify-center">
+          <div className="rounded-full bg-red-100 p-3 dark:bg-red-900/30">
+            <svg
+              className="h-8 w-8 text-red-600 dark:text-red-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
+              />
+            </svg>
+          </div>
         </div>
-        <h1 className="text-xl font-bold text-slate-900 dark:text-white">Organization Unavailable</h1>
-        <p className="mt-2 text-slate-600 dark:text-slate-400">
-          This organization has been suspended. Please contact support if you believe this is an error.
+
+        <h1 className="mb-2 text-center text-2xl font-bold text-slate-900 dark:text-slate-100">
+          Account Suspended
+        </h1>
+        <p className="mb-6 text-center text-slate-600 dark:text-slate-400">
+          This organization's account has been suspended. Access to all services has been temporarily disabled.
         </p>
-        <a
-          href={LOGIN_URL}
-          className="mt-6 inline-block rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
-        >
-          Back to Login
-        </a>
+
+        <div className="rounded-lg bg-slate-50 p-4 dark:bg-slate-800/50">
+          <p className="mb-2 text-sm font-medium text-slate-700 dark:text-slate-300">
+            Contact Support:
+          </p>
+          <a
+            href="tel:+252907700949"
+            className="flex items-center gap-2 text-lg font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+          >
+            <svg
+              className="h-5 w-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
+              />
+            </svg>
+            +252 907 700 949
+          </a>
+          <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
+            Please contact support to resolve this issue and restore access to your account.
+          </p>
+        </div>
+
+        <div className="mt-6 text-center">
+          <a
+            href={LOGIN_URL}
+            className="text-sm text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
+          >
+            ← Back to Login
+          </a>
+        </div>
       </div>
     </div>
   );

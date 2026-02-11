@@ -2,22 +2,28 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requirePermission } from "@/lib/permissions";
 import { PERMISSION } from "@/lib/permissions";
+import { auth } from "@/auth";
+import { getTenantIdFromSession } from "@/lib/tenant";
 
 export async function GET(request: Request) {
   await requirePermission(PERMISSION.DASHBOARD_VIEW);
   try {
+    const session = await auth();
+    const tenantId = getTenantIdFromSession(session);
+    
     const { searchParams } = new URL(request.url);
     const month = searchParams.get("month"); // optional filter
 
     const monthWhere = month ? { month } : {};
-    const ticketWhere = { ...monthWhere, canceledAt: null };
-    const paymentWhere = { ...monthWhere, canceledAt: null, status: { not: "refunded" } };
-    const payableWhere = { ...monthWhere, canceledAt: null };
-    const expenseWhere = { ...monthWhere, status: "approved" };
+    const ticketWhere = { tenantId, ...monthWhere, canceledAt: null }; // SCOPE BY TENANT
+    const paymentWhere = { tenantId, ...monthWhere, canceledAt: null, status: { not: "refunded" } }; // SCOPE BY TENANT
+    const payableWhere = { tenantId, ...monthWhere, canceledAt: null }; // SCOPE BY TENANT
+    const expenseWhere = { tenantId, ...monthWhere, status: "approved" }; // SCOPE BY TENANT
+    const visaWhere = { tenantId, ...monthWhere }; // SCOPE BY TENANT
 
     const [tickets, visas, expenses, payments, payables] = await Promise.all([
       prisma.ticket.aggregate({ where: ticketWhere, _sum: { netSales: true, profit: true } }),
-      prisma.visa.aggregate({ where: monthWhere, _sum: { netSales: true, profit: true } }),
+      prisma.visa.aggregate({ where: visaWhere, _sum: { netSales: true, profit: true } }),
       prisma.expense.aggregate({ where: expenseWhere, _sum: { amount: true } }),
       prisma.payment.findMany({
         where: paymentWhere,

@@ -88,6 +88,7 @@ export type ReportFilters = {
   fromDate: Date;
   toDate: Date;
   period?: ReportPeriod;
+  tenantId: string; // REQUIRED FOR TENANT SCOPING
 };
 
 export type ReportSummary = {
@@ -152,6 +153,11 @@ function lastDayOfMonth(d: Date): Date {
 }
 
 export async function getReportData(filter?: ReportFilters): Promise<ReportData> {
+  if (!filter?.tenantId) {
+    throw new Error("tenantId is required for reports");
+  }
+
+  const tenantId = filter.tenantId;
   const defaultRange = getDefaultRange();
   let fromDate = filter?.fromDate ?? defaultRange.from;
   let toDate = filter?.toDate ?? defaultRange.to;
@@ -171,23 +177,24 @@ export async function getReportData(filter?: ReportFilters): Promise<ReportData>
   const dateRange = { date: { gte: from, lte: to } };
   /** Payments: filter by payment_date (departure date for Haj & Umrah, creation for others) */
   const paymentDateRange = { paymentDate: { gte: from, lte: to } };
-  const paymentWhere = { ...paymentDateRange, canceledAt: null, status: { not: "refunded" } };
+  const paymentWhere = { tenantId, ...paymentDateRange, canceledAt: null, status: { not: "refunded" } }; // SCOPE BY TENANT
   const hajPaymentWhere = { ...paymentWhere, hajUmrahBookingId: { not: null }, status: { not: "refunded" } };
   /** Cargo: only paid/partial (actual revenue received); use receipts for amount; receipt date for period */
   const cargoReceiptWhere = {
     date: { gte: from, lte: to },
     payment: {
+      tenantId, // SCOPE BY TENANT
       canceledAt: null,
       cargoShipmentId: { not: null },
       status: { in: ["paid", "partial"] },
     },
   };
 
-  const ticketWhere = { ...dateRange, canceledAt: null };
-  const visaWhere = { ...dateRange, canceledAt: null };
-  const expenseWhere = { ...dateRange, status: "paid" };
-  const payableWhere = { ...dateRange, canceledAt: null };
-  const receiptWhere = { date: { gte: from, lte: to }, payment: { status: { not: "refunded" } } };
+  const ticketWhere = { tenantId, ...dateRange, canceledAt: null }; // SCOPE BY TENANT
+  const visaWhere = { tenantId, ...dateRange, canceledAt: null }; // SCOPE BY TENANT
+  const expenseWhere = { tenantId, ...dateRange, status: "paid" }; // SCOPE BY TENANT
+  const payableWhere = { tenantId, ...dateRange, canceledAt: null }; // SCOPE BY TENANT
+  const receiptWhere = { date: { gte: from, lte: to }, payment: { tenantId, status: { not: "refunded" } } }; // SCOPE BY TENANT
 
   const [
     ticketsAgg,

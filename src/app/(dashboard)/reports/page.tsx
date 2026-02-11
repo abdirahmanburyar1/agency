@@ -4,6 +4,8 @@ import { PERMISSION } from "@/lib/permissions";
 import { getReportData, type ReportPeriod } from "@/lib/reports";
 import { getSystemSettings } from "@/lib/system-settings";
 import ReportsView from "./ReportsView";
+import { auth } from "@/auth";
+import { getTenantIdFromSession } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +17,9 @@ export default async function ReportsPage({
   searchParams: Promise<{ from?: string; to?: string; period?: string }>;
 }) {
   await requirePermission(PERMISSION.REPORTS_VIEW, { redirectOnForbidden: true });
+
+  const session = await auth();
+  const tenantId = getTenantIdFromSession(session);
 
   const params = await searchParams;
   const fromStr = params.from ?? "";
@@ -30,7 +35,9 @@ export default async function ReportsPage({
     fromDate <= toDate;
   const period = VALID_PERIODS.includes(periodParam as ReportPeriod) ? (periodParam as ReportPeriod) : undefined;
 
-  const filter = validRange ? { fromDate: fromDate!, toDate: toDate!, period } : undefined;
+  const filter = validRange 
+    ? { fromDate: fromDate!, toDate: toDate!, period, tenantId } 
+    : { fromDate: new Date(), toDate: new Date(), tenantId, period }; // SCOPE BY TENANT
   const [data, canViewCargo, systemSettings] = await Promise.all([
     getReportData(filter),
     canAccess(PERMISSION.CARGO_VIEW),
