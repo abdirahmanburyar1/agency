@@ -9,6 +9,7 @@ type User = {
   name: string | null;
   isActive: boolean;
   userType: string | null;
+  tenantId: string | null;
   role: { id: string; name: string };
   locationId?: string | null;
   branchId?: string | null;
@@ -32,6 +33,9 @@ export default function UserRow({ user, canEdit }: Props) {
         <td className="px-4 py-3 text-slate-700 dark:text-slate-300 sm:px-6">{user.name ?? "—"}</td>
         <td className="px-4 py-3 text-slate-700 dark:text-slate-300 sm:px-6">{user.role.name}</td>
         <td className="px-4 py-3 text-slate-700 capitalize dark:text-slate-300 sm:px-6">{user.userType ?? "—"}</td>
+        <td className="px-4 py-3 font-mono text-xs text-slate-600 dark:text-slate-400 sm:px-6">
+          {user.tenantId || "—"}
+        </td>
         <td className="px-4 py-3 text-slate-700 dark:text-slate-300 sm:px-6">
           {user.location && user.branch
             ? `${user.location.name} → ${user.branch.name}`

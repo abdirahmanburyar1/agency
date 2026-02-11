@@ -6,14 +6,22 @@ import { isDbConnectionError } from "@/lib/db-safe";
 import DatabaseErrorBanner from "@/components/DatabaseErrorBanner";
 import CreateUserForm from "./CreateUserForm";
 import UserRow from "./UserRow";
+import { auth } from "@/auth";
+import { getTenantIdFromSession } from "@/lib/tenant";
 
 export default async function UsersPage() {
   await requirePermission(PERMISSION.USERS_VIEW, { redirectOnForbidden: true });
   const canCreate = await (await import("@/lib/permissions")).canAccess(PERMISSION.USERS_CREATE);
   const canEdit = await (await import("@/lib/permissions")).canAccess(PERMISSION.USERS_EDIT);
 
+  const session = await auth();
+  const tenantId = getTenantIdFromSession(session);
+
   const usersQuery = () =>
     prisma.user.findMany({
+      where: {
+        tenantId, // SCOPE BY TENANT
+      },
       include: { role: true, location: true, branch: true },
       orderBy: { createdAt: "desc" },
     });
@@ -54,6 +62,7 @@ export default async function UsersPage() {
               <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 sm:px-6">Name</th>
               <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 sm:px-6">Role</th>
               <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 sm:px-6">User type</th>
+              <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 sm:px-6">Tenant ID</th>
               <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 sm:px-6">Location / Branch</th>
               <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 sm:px-6">Status</th>
               <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 sm:px-6">Actions</th>

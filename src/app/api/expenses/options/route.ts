@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { auth } from "@/auth";
 import { PERMISSION } from "@/lib/permissions";
 import { canAccess } from "@/lib/permissions";
+import { getTenantIdFromSession } from "@/lib/tenant";
 
 export async function GET() {
   const session = await auth();
@@ -17,16 +18,27 @@ export async function GET() {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
+  const tenantId = getTenantIdFromSession(session);
+
   const [settings, employees, expenses] = await Promise.all([
     prisma.setting.findMany({
-      where: { type: "expense_category" },
+      where: { 
+        tenantId, // SCOPE BY TENANT
+        type: "expense_category" 
+      },
       orderBy: [{ sortOrder: "asc" }, { value: "asc" }],
     }),
     prisma.employee.findMany({
+      where: {
+        tenantId, // SCOPE BY TENANT
+      },
       orderBy: { name: "asc" },
       select: { id: true, name: true, role: true, phone: true },
     }),
     prisma.expense.findMany({
+      where: {
+        tenantId, // SCOPE BY TENANT
+      },
       select: { category: true, pMethod: true },
     }),
   ]);

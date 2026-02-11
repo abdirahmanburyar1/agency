@@ -16,7 +16,11 @@ export async function GET() {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
+  const tenantId = getTenantIdFromSession(session);
   const roles = await prisma.role.findMany({
+    where: {
+      tenantId, // SCOPE BY TENANT
+    },
     orderBy: { name: "asc" },
   });
   return NextResponse.json(roles);

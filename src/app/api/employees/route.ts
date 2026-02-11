@@ -8,7 +8,13 @@ import { getTenantIdFromSession } from "@/lib/tenant";
 export async function GET() {
   await requirePermission(PERMISSION.EXPENSES_VIEW);
   try {
+    const session = await auth();
+    const tenantId = getTenantIdFromSession(session);
+    
     const employees = await prisma.employee.findMany({
+      where: {
+        tenantId, // SCOPE BY TENANT
+      },
       orderBy: { name: "asc" },
       select: { id: true, name: true, role: true, phone: true },
     });
