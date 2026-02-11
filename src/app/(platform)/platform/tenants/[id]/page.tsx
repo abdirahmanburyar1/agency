@@ -143,7 +143,7 @@ export default async function TenantDetailPage({ params }: { params: Promise<{ i
           <h2 className="text-xl font-bold text-slate-900 dark:text-white">Users</h2>
           <CreateAdminUserForm tenantId={tenant.id} />
         </div>
-        <UsersList users={tenant.users} />
+        <UsersList users={tenant.users} tenantId={tenant.id} />
       </div>
 
       {/* Client Information */}

@@ -1,6 +1,10 @@
 "use client";
 
-export default function UsersList({ users }: { users: any[] }) {
+import { useState } from "react";
+import EditUserModal from "./EditUserModal";
+
+export default function UsersList({ users, tenantId }: { users: any[]; tenantId: string }) {
+  const [editingUser, setEditingUser] = useState<any>(null);
   if (users.length === 0) {
     return (
       <div className="rounded-xl border border-slate-200 bg-white p-6 text-center dark:border-slate-800 dark:bg-slate-900">
@@ -10,6 +14,11 @@ export default function UsersList({ users }: { users: any[] }) {
   }
 
   return (
+    <>
+      {editingUser && (
+        <EditUserModal user={editingUser} tenantId={tenantId} onClose={() => setEditingUser(null)} />
+      )}
+
     <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow dark:border-slate-800 dark:bg-slate-900">
       <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
         <thead className="bg-slate-50 dark:bg-slate-800">
@@ -28,6 +37,9 @@ export default function UsersList({ users }: { users: any[] }) {
             </th>
             <th className="px-4 py-3 text-left text-xs font-medium uppercase text-slate-500 dark:text-slate-400">
               Created
+            </th>
+            <th className="px-4 py-3 text-right text-xs font-medium uppercase text-slate-500 dark:text-slate-400">
+              Actions
             </th>
           </tr>
         </thead>
@@ -59,10 +71,19 @@ export default function UsersList({ users }: { users: any[] }) {
               <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-400">
                 {new Date(user.createdAt).toLocaleDateString()}
               </td>
+              <td className="px-4 py-3 text-right">
+                <button
+                  onClick={() => setEditingUser(user)}
+                  className="rounded bg-blue-600 px-3 py-1 text-xs font-semibold text-white hover:bg-blue-700"
+                >
+                  Edit
+                </button>
+              </td>
             </tr>
           ))}
         </tbody>
       </table>
     </div>
+    </>
   );
 }
