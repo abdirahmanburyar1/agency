@@ -56,6 +56,10 @@ export default function SubscriptionExpiredPage() {
           <a
             href="/login"
             className="text-sm text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
+            onClick={(e) => {
+              e.preventDefault();
+              window.location.href = "/login";
+            }}
           >
             ← Back to Login
           </a>

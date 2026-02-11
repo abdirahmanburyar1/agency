@@ -14,9 +14,10 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [tenantId, setTenantId] = useState<string | null>(null);
+  const [tenantName, setTenantName] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [systemName, setSystemName] = useState("Daybah Travel Agency");
+  const [systemName, setSystemName] = useState("Travel Agency Management");
 
   useEffect(() => {
     fetch("/api/check-setup")
@@ -28,7 +29,7 @@ export default function LoginPage() {
   useEffect(() => {
     fetch("/api/tenants/current")
       .then((r) => r.json())
-      .then((current: { tenantId?: string | null; suspended?: boolean }) => {
+      .then((current: { tenantId?: string | null; name?: string | null; suspended?: boolean }) => {
         console.log("Tenant from API:", current); // DEBUG
         if (current?.suspended) {
           router.replace("/tenant-suspended");
@@ -37,6 +38,7 @@ export default function LoginPage() {
         const resolvedTenantId = current?.tenantId ?? DEFAULT_TENANT_ID;
         console.log("Setting tenantId to:", resolvedTenantId); // DEBUG
         setTenantId(resolvedTenantId);
+        setTenantName(current?.name || null);
       })
       .catch((err) => {
         console.error("Failed to get tenant:", err); // DEBUG
@@ -90,12 +92,12 @@ export default function LoginPage() {
       {/* Left: Branding */}
       <div className="hidden w-1/2 flex-col justify-between bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-900 p-12 lg:flex">
         <div>
-          <h2 className="text-3xl font-bold text-white">{systemName}</h2>
+          <h2 className="text-3xl font-bold text-white">{tenantName || systemName}</h2>
           <p className="mt-3 max-w-sm text-slate-300">
             Manage tickets, visas, expenses, and payments in one place. Professional travel agency management made simple.
           </p>
         </div>
-        <p className="text-sm text-slate-500">© {systemName}</p>
+        <p className="text-sm text-slate-500">© {tenantName || systemName}</p>
       </div>
 
       {/* Right: Form */}
@@ -135,7 +137,7 @@ export default function LoginPage() {
                 required
                 autoComplete="email"
                 className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 placeholder-slate-400 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:border-slate-600 dark:bg-slate-900 dark:text-white dark:placeholder-slate-500"
-                placeholder="you@daybah.com"
+                placeholder="you@example.com"
               />
             </div>
             <div>

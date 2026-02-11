@@ -1,6 +1,3 @@
-const ROOT_DOMAIN = process.env.NEXT_PUBLIC_APP_DOMAIN ?? "fayohealthtech.so";
-const LOGIN_URL = `https://${ROOT_DOMAIN}/login`;
-
 export default function TenantSuspendedPage() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-slate-50 px-4 dark:bg-slate-950">
@@ -60,8 +57,12 @@ export default function TenantSuspendedPage() {
 
         <div className="mt-6 text-center">
           <a
-            href={LOGIN_URL}
+            href="/login"
             className="text-sm text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
+            onClick={(e) => {
+              e.preventDefault();
+              window.location.href = "/login";
+            }}
           >
             ← Back to Login
           </a>
