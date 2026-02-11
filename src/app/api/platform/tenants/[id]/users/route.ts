@@ -65,7 +65,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   // Hash password
   const passwordHash = await bcrypt.hash(password, 12);
 
-  // Create admin user
+  // Create admin user (NOT platform admin)
   const user = await prisma.user.create({
     data: {
       email,
@@ -74,6 +74,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       roleId: adminRole.id,
       tenantId,
       isActive: true,
+      isPlatformAdmin: false, // Regular tenant admin, not platform admin
     },
     include: {
       role: true,
