@@ -76,7 +76,7 @@ export async function middleware(req: NextRequest) {
   }
 
   // Root domain without /platform path = redirect based on user type
-  if (!onSubdomain && req.nextUrl.pathname !== "/" && !isLoginPage) {
+  if (!onSubdomain && req.nextUrl.pathname !== "/" && !isLoginPage && !isSetupPage) {
     // Regular app pages on root domain: only platform admins can access
     if (!isLoggedIn) {
       return NextResponse.redirect(new URL("/login", req.url));
@@ -99,8 +99,8 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL("/login", req.url));
   }
 
-  // All other pages require login
-  if (!isLoggedIn) {
+  // Subdomains: All other pages require login
+  if (!isLoggedIn && onSubdomain) {
     return NextResponse.redirect(new URL("/login", req.url));
   }
 
