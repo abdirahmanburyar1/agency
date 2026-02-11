@@ -37,8 +37,15 @@ export default async function PlatformTenantsPage() {
           <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
             {tenants.map((t) => (
               <tr key={t.id}>
-                <td className="px-4 py-3 font-mono text-sm text-slate-900 dark:text-white">
-                  {t.subdomain}
+                <td className="px-4 py-3 font-mono text-sm">
+                  <a
+                    href={`https://${t.subdomain}.${process.env.NEXT_PUBLIC_APP_DOMAIN ?? "fayohealthtech.so"}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-emerald-600 hover:text-emerald-700 hover:underline dark:text-emerald-400"
+                  >
+                    {t.subdomain}
+                  </a>
                 </td>
                 <td className="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">{t.name}</td>
                 <td className="px-4 py-3">

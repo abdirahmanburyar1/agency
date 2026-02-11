@@ -12,6 +12,10 @@ export default async function PlatformLayout({
   if (!session?.user || !isPlatformAdmin) {
     redirect("/");
   }
+  
+  // Platform admins can access any tenant - just change the URL subdomain
+  const userTenantId = (session.user as { tenantId?: string | null })?.tenantId;
+  
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
       <header className="border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
@@ -26,12 +30,12 @@ export default async function PlatformLayout({
             >
               Tenants
             </Link>
-            <a
-              href={`https://daybah.${process.env.NEXT_PUBLIC_APP_DOMAIN ?? "fayohealthtech.so"}`}
+            <Link
+              href="/"
               className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
             >
-              Client Portal
-            </a>
+              Dashboard
+            </Link>
           </nav>
         </div>
       </header>

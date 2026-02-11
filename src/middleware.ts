@@ -32,14 +32,22 @@ export async function middleware(req: NextRequest) {
   });
 
   const isLoggedIn = !!token;
+  const isPlatformAdmin = (token as { isPlatformAdmin?: boolean })?.isPlatformAdmin;
+  const onSubdomain = isOnSubdomain(req.nextUrl.hostname);
+  
   const isLoginPage = req.nextUrl.pathname.startsWith("/login");
   const isSetupPage = req.nextUrl.pathname.startsWith("/setup");
   const isTrackPage = req.nextUrl.pathname.startsWith("/track");
   const isPlatformPage = req.nextUrl.pathname.startsWith("/platform");
   const isTenantSuspendedPage = req.nextUrl.pathname.startsWith("/tenant-suspended");
 
+  // Public pages - allow through but redirect if logged in
   if (isLoginPage || isSetupPage || isTrackPage || isTenantSuspendedPage) {
     if (isLoggedIn && !isSetupPage && !isTrackPage && !isTenantSuspendedPage) {
+      // Logged-in users on login page: redirect to platform or app based on admin status
+      if (!onSubdomain && isPlatformAdmin) {
+        return NextResponse.redirect(new URL("/platform", req.url));
+      }
       const perms = (token?.permissions as string[] | undefined) ?? [];
       const roleName = String((token?.roleName as string) ?? "").trim().toLowerCase();
       const hasLeader = perms.includes("haj_umrah.leader");
@@ -55,39 +63,50 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
+  // Platform pages - only accessible on root domain by platform admins
   if (isPlatformPage) {
-    const isPlatformAdmin = (token as { isPlatformAdmin?: boolean })?.isPlatformAdmin;
     if (!isLoggedIn || !isPlatformAdmin) {
-      return NextResponse.redirect(new URL("/", req.url));
+      return NextResponse.redirect(new URL("/login", req.url));
     }
-    // Platform admin lives at root domain only; redirect subdomain to root
-    const hostname = req.nextUrl.hostname || new URL(req.url).hostname;
-    if (isOnSubdomain(hostname)) {
-      return NextResponse.redirect(new URL(req.nextUrl.pathname, rootUrl(req)));
+    // If trying to access /platform on a subdomain, redirect to root domain
+    if (onSubdomain) {
+      return NextResponse.redirect(new URL(`${rootUrl(req)}/platform`, req.url));
     }
     return NextResponse.next();
   }
 
+  // Root domain without /platform path = redirect based on user type
+  if (!onSubdomain && req.nextUrl.pathname !== "/" && !isLoginPage) {
+    // Regular app pages on root domain: only platform admins can access
+    if (!isLoggedIn) {
+      return NextResponse.redirect(new URL("/login", req.url));
+    }
+    if (!isPlatformAdmin) {
+      // Non-platform admins should use their tenant subdomain
+      return NextResponse.redirect(new URL("/login", req.url));
+    }
+  }
+
+  // Root domain homepage: redirect platform admins to /platform
+  if (!onSubdomain && req.nextUrl.pathname === "/") {
+    if (!isLoggedIn) {
+      return NextResponse.redirect(new URL("/login", req.url));
+    }
+    if (isPlatformAdmin) {
+      return NextResponse.redirect(new URL("/platform", req.url));
+    }
+    // Non-platform admins on root domain homepage: redirect to login
+    return NextResponse.redirect(new URL("/login", req.url));
+  }
+
+  // All other pages require login
   if (!isLoggedIn) {
     return NextResponse.redirect(new URL("/login", req.url));
   }
 
-  // Root domain = platform admin only. Tenant app lives on subdomains (e.g. daybah.fayohealthtech.so).
-  const hostname = req.nextUrl.hostname || new URL(req.url).hostname;
-  if (!isOnSubdomain(hostname)) {
-    const isPlatformAdmin = (token as { isPlatformAdmin?: boolean })?.isPlatformAdmin;
-    if (isPlatformAdmin && req.nextUrl.pathname === "/") {
-      return NextResponse.redirect(new URL("/platform", rootUrl(req)));
-    }
-    // Non-platform-admin or app routes: redirect to Daybah subdomain
-    const daybahBase = hostname === "localhost"
-      ? `${req.nextUrl.protocol}//daybah.${req.nextUrl.host}`
-      : `https://daybah.${ROOT_DOMAIN}`;
-    return NextResponse.redirect(new URL(req.nextUrl.pathname + req.nextUrl.search, daybahBase));
-  }
-
+  // Subdomain app pages: handle role-based redirects
   const pathname = req.nextUrl.pathname;
-  if (pathname === "/") {
+  if (pathname === "/" && onSubdomain) {
     const perms = (token?.permissions as string[] | undefined) ?? [];
     const roleName = String((token?.roleName as string) ?? "").trim().toLowerCase();
     const hasLeader = perms.includes("haj_umrah.leader");
