@@ -31,6 +31,12 @@ export default async function PlatformLayout({
               Tenants
             </Link>
             <Link
+              href="/platform/subscription-plans"
+              className="text-sm font-medium text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+            >
+              Plans
+            </Link>
+            <Link
               href="/"
               className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
             >
