@@ -21,10 +21,10 @@ export default function SubscriptionExpiredPage() {
         </div>
 
         <h1 className="mb-2 text-center text-2xl font-bold text-slate-900 dark:text-slate-100">
-          Subscription Expired
+          Subscription Required
         </h1>
         <p className="mb-6 text-center text-slate-600 dark:text-slate-400">
-          Your subscription has expired or is no longer active. Please contact support to renew your subscription.
+          Your account does not have an active subscription. Please contact support to activate or renew your subscription plan.
         </p>
 
         <div className="rounded-lg bg-slate-50 p-4 dark:bg-slate-800/50">
