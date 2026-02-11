@@ -7,6 +7,8 @@ import { isDbConnectionError } from "@/lib/db-safe";
 import DatabaseErrorBanner from "@/components/DatabaseErrorBanner";
 import HajUmrahBookingsTable from "./HajUmrahBookingsTable";
 import { HajUmrahIcon, CalendarIcon, PackageIcon, PlusIcon } from "./icons";
+import { auth } from "@/auth";
+import { getTenantIdFromSession } from "@/lib/tenant";
 
 export default async function HajUmrahPage({
   searchParams,
@@ -20,9 +22,13 @@ export default async function HajUmrahPage({
     (await import("@/lib/permissions")).canAccess(PERMISSION.HAJ_UMRAH_EDIT),
   ]);
 
+  const session = await auth();
+  const tenantId = getTenantIdFromSession(session);
+
   // Fetch bookings WITHOUT packages to avoid Prisma rejecting null packageId (deleted packages)
   const bookingsQuery = () =>
     prisma.hajUmrahBooking.findMany({
+      where: { tenantId }, // SCOPE BY TENANT
       orderBy: { createdAt: "desc" },
       include: { customer: true, campaign: { include: { leader: true } } },
     });

@@ -4,13 +4,22 @@ import { requirePermission } from "@/lib/permissions";
 import { PERMISSION } from "@/lib/permissions";
 import DatabaseErrorBanner from "@/components/DatabaseErrorBanner";
 import { isDbConnectionError } from "@/lib/db-safe";
+import { auth } from "@/auth";
+import { getTenantIdFromSession } from "@/lib/tenant";
 
 export default async function ReceivablesPage() {
   await requirePermission(PERMISSION.RECEIVABLES_VIEW, { redirectOnForbidden: true });
 
+  const session = await auth();
+  const tenantId = getTenantIdFromSession(session);
+
   const paymentsQuery = () =>
     prisma.payment.findMany({
-      where: { canceledAt: null, status: { not: "refunded" } },
+      where: { 
+        tenantId, // SCOPE BY TENANT
+        canceledAt: null, 
+        status: { not: "refunded" } 
+      },
       orderBy: { date: "desc" },
       include: {
         ticket: { include: { customer: true } },

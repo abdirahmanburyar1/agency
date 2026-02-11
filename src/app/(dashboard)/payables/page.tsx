@@ -6,13 +6,21 @@ import { getSystemSettings } from "@/lib/system-settings";
 import DatabaseErrorBanner from "@/components/DatabaseErrorBanner";
 import { isDbConnectionError } from "@/lib/db-safe";
 import PayablesTableWithFilters, { type SerializedPayable } from "./PayablesTableWithFilters";
+import { auth } from "@/auth";
+import { getTenantIdFromSession } from "@/lib/tenant";
 
 export default async function PayablesPage() {
   await requirePermission(PERMISSION.PAYABLES_VIEW, { redirectOnForbidden: true });
 
+  const session = await auth();
+  const tenantId = getTenantIdFromSession(session);
+
   const payablesQuery = () =>
     prisma.payable.findMany({
-      where: { canceledAt: null },
+      where: { 
+        tenantId, // SCOPE BY TENANT
+        canceledAt: null 
+      },
       orderBy: { date: "desc" },
       include: { ticket: true, visa: true },
     });

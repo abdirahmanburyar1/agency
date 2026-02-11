@@ -3,6 +3,8 @@ import { prisma } from "@/lib/db";
 import { requirePermission } from "@/lib/permissions";
 import { PERMISSION } from "@/lib/permissions";
 import VisasTableWithFilters from "./VisasTableWithFilters";
+import { auth } from "@/auth";
+import { getTenantIdFromSession } from "@/lib/tenant";
 
 export default async function VisasPage() {
   await requirePermission(PERMISSION.VISAS_VIEW, { redirectOnForbidden: true });
@@ -11,13 +13,20 @@ export default async function VisasPage() {
     (await import("@/lib/permissions")).canAccess(PERMISSION.VISAS_EDIT),
   ]);
 
+  const session = await auth();
+  const tenantId = getTenantIdFromSession(session);
+
   const [visas, countryRows] = await Promise.all([
     prisma.visa.findMany({
+      where: { tenantId }, // SCOPE BY TENANT
       orderBy: { date: "desc" },
       include: { customerRelation: true },
     }),
     prisma.visa.findMany({
-      where: { country: { not: null } },
+      where: { 
+        tenantId, // SCOPE BY TENANT
+        country: { not: null } 
+      },
       select: { country: true },
       distinct: ["country"],
     }),

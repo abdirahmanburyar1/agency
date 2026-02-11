@@ -5,6 +5,8 @@ import { PERMISSION } from "@/lib/permissions";
 import TicketsTableWithFilters from "./TicketsTableWithFilters";
 import DatabaseErrorBanner from "@/components/DatabaseErrorBanner";
 import { isDbConnectionError } from "@/lib/db-safe";
+import { auth } from "@/auth";
+import { getTenantIdFromSession } from "@/lib/tenant";
 
 export default async function TicketsPage() {
   await requirePermission(PERMISSION.TICKETS_VIEW, { redirectOnForbidden: true });
@@ -12,8 +14,12 @@ export default async function TicketsPage() {
     PERMISSION.TICKETS_CREATE
   );
 
+  const session = await auth();
+  const tenantId = getTenantIdFromSession(session);
+
   const ticketsQuery = () =>
     prisma.ticket.findMany({
+      where: { tenantId }, // SCOPE BY TENANT
       orderBy: { createdAt: "desc" },
       include: { customer: true },
     });
@@ -26,11 +32,15 @@ export default async function TicketsPage() {
     const result = await Promise.all([
       ticketsQuery(),
       prisma.customer.findMany({
+        where: { tenantId }, // SCOPE BY TENANT
         orderBy: { name: "asc" },
         select: { id: true, name: true },
       }),
       prisma.ticket.findMany({
-        where: { airline: { not: null } },
+        where: { 
+          tenantId, // SCOPE BY TENANT
+          airline: { not: null } 
+        },
         select: { airline: true },
         distinct: ["airline"],
       }),

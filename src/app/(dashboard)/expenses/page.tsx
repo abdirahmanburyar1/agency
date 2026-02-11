@@ -4,6 +4,8 @@ import { requirePermission } from "@/lib/permissions";
 import { PERMISSION } from "@/lib/permissions";
 import { getCurrencyRates, toUsd } from "@/lib/currency-rates";
 import ExpensesByMonthBatches from "./ExpensesByMonthBatches";
+import { auth } from "@/auth";
+import { getTenantIdFromSession } from "@/lib/tenant";
 
 function toMonthKey(d: Date): string {
   const y = d.getFullYear();
@@ -22,9 +24,15 @@ export default async function ExpensesPage() {
   const canCreate = await (await import("@/lib/permissions")).canAccess(PERMISSION.EXPENSES_CREATE);
   const canApprove = await (await import("@/lib/permissions")).canAccess(PERMISSION.EXPENSES_APPROVE);
 
+  const session = await auth();
+  const tenantId = getTenantIdFromSession(session);
+
   const [expenses, currencyRates] = await Promise.all([
     prisma.expense.findMany({
-      where: { status: { not: "paid" } },
+      where: { 
+        tenantId, // SCOPE BY TENANT
+        status: { not: "paid" } 
+      },
       orderBy: { date: "desc" },
       include: { employee: true },
     }),

@@ -5,13 +5,19 @@ import { PERMISSION } from "@/lib/permissions";
 import { isDbConnectionError } from "@/lib/db-safe";
 import DatabaseErrorBanner from "@/components/DatabaseErrorBanner";
 import { CalendarIcon, PlusIcon, EyeIcon, UsersIcon } from "../icons";
+import { auth } from "@/auth";
+import { getTenantIdFromSession } from "@/lib/tenant";
 
 export default async function HajUmrahCampaignsPage() {
   await requirePermission(PERMISSION.HAJ_UMRAH_VIEW, { redirectOnForbidden: true });
   const canCreate = await (await import("@/lib/permissions")).canAccess(PERMISSION.HAJ_UMRAH_CREATE);
 
+  const session = await auth();
+  const tenantId = getTenantIdFromSession(session);
+
   const campaignsQuery = () =>
     prisma.hajUmrahCampaign.findMany({
+      where: { tenantId }, // SCOPE BY TENANT
       orderBy: { date: "desc" },
       include: {
         _count: { select: { bookings: true } },

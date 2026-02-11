@@ -7,6 +7,7 @@ import { getPaymentVisibilityWhere } from "@/lib/cargo";
 import DatabaseErrorBanner from "@/components/DatabaseErrorBanner";
 import { isDbConnectionError } from "@/lib/db-safe";
 import PaymentsTableWithFilters, { type SerializedPayment } from "./PaymentsTableWithFilters";
+import { getTenantIdFromSession } from "@/lib/tenant";
 
 function hasCargoPermission(permissions: string[]): boolean {
   return permissions.some((p) => p.startsWith("cargo."));
@@ -14,6 +15,7 @@ function hasCargoPermission(permissions: string[]): boolean {
 
 export default async function PaymentsPage() {
   const session = await requirePermission(PERMISSION.PAYMENTS_VIEW, { redirectOnForbidden: true });
+  const tenantId = getTenantIdFromSession(session);
   const permissions = (session.user as { permissions?: string[] }).permissions ?? [];
   const roleName = String((session.user as { roleName?: string }).roleName ?? "").trim();
   const locationId = (session.user as { locationId?: string | null }).locationId ?? null;
@@ -29,7 +31,11 @@ export default async function PaymentsPage() {
 
   const paymentsQuery = () =>
     prisma.payment.findMany({
-      where: { canceledAt: null, ...paymentWhere },
+      where: { 
+        tenantId, // SCOPE BY TENANT
+        canceledAt: null, 
+        ...paymentWhere 
+      },
       orderBy: { createdAt: "desc" },
       include: {
         ticket: { include: { customer: true } },

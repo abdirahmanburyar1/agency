@@ -3,12 +3,21 @@ import { prisma } from "@/lib/db";
 import { canAccess, requirePermission } from "@/lib/permissions";
 import { PERMISSION } from "@/lib/permissions";
 import CustomersTable from "./CustomersTable";
+import { auth } from "@/auth";
+import { getTenantIdFromSession } from "@/lib/tenant";
 
 export default async function CustomersPage() {
   await requirePermission(PERMISSION.CUSTOMERS_VIEW, { redirectOnForbidden: true });
   const canCreate = await canAccess(PERMISSION.CUSTOMERS_CREATE);
   const canEdit = await canAccess(PERMISSION.CUSTOMERS_EDIT);
-  const customers = await prisma.customer.findMany({ orderBy: { name: "asc" } });
+  
+  const session = await auth();
+  const tenantId = getTenantIdFromSession(session);
+  
+  const customers = await prisma.customer.findMany({ 
+    where: { tenantId }, // SCOPE BY TENANT
+    orderBy: { name: "asc" } 
+  });
 
   return (
     <main className="w-full py-6 sm:py-8">
