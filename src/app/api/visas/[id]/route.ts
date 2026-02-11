@@ -3,6 +3,8 @@ import { prisma } from "@/lib/db";
 import { requirePermission } from "@/lib/permissions";
 import { PERMISSION } from "@/lib/permissions";
 import { handleAuthError } from "@/lib/api-auth";
+import { auth } from "@/auth";
+import { getTenantIdFromSession } from "@/lib/tenant";
 
 export async function GET(
   _request: Request,
@@ -16,9 +18,15 @@ export async function GET(
     throw e;
   }
   try {
+    const session = await auth();
+    const tenantId = getTenantIdFromSession(session);
     const { id } = await params;
-    const visa = await prisma.visa.findUnique({
-      where: { id },
+    
+    const visa = await prisma.visa.findFirst({
+      where: { 
+        id,
+        tenantId, // SCOPE BY TENANT - security check
+      },
       include: { customerRelation: true },
     });
     if (!visa) {
@@ -43,6 +51,8 @@ export async function PATCH(
     throw e;
   }
   try {
+    const session = await auth();
+    const tenantId = getTenantIdFromSession(session);
     const { id } = await params;
     const body = await request.json();
     const referenceTrimmed = String(body.reference ?? "").trim();
@@ -54,8 +64,11 @@ export async function PATCH(
       );
     }
 
-    const visa = await prisma.visa.findUnique({
-      where: { id },
+    const visa = await prisma.visa.findFirst({
+      where: { 
+        id,
+        tenantId, // SCOPE BY TENANT - security check
+      },
     });
 
     if (!visa) {

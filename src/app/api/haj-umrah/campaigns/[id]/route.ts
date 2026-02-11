@@ -22,9 +22,13 @@ export async function GET(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
   try {
+    const tenantId = (await import("@/lib/tenant")).getTenantIdFromSession(session);
     const { id } = await params;
-    const campaign = await prisma.hajUmrahCampaign.findUnique({
-      where: { id },
+    const campaign = await prisma.hajUmrahCampaign.findFirst({
+      where: { 
+        id,
+        tenantId, // SCOPE BY TENANT - security check
+      },
       include: {
         leader: { select: { id: true, name: true, email: true } },
         bookings: {

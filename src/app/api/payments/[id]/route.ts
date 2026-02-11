@@ -23,6 +23,7 @@ export async function GET(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
   try {
+    const tenantId = (await import("@/lib/tenant")).getTenantIdFromSession(session);
     const { id } = await params;
     const permissions = (session.user as { permissions?: string[] }).permissions ?? [];
     const roleName = String((session.user as { roleName?: string }).roleName ?? "").trim();
@@ -38,7 +39,11 @@ export async function GET(
     );
 
     const payment = await prisma.payment.findFirst({
-      where: { id, ...paymentWhere },
+      where: { 
+        id, 
+        tenantId, // SCOPE BY TENANT - security check
+        ...paymentWhere 
+      },
       include: {
         ticket: { include: { customer: true } },
         visa: { include: { customerRelation: true } },

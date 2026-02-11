@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { getDashboard } from "@/lib/dashboard";
 import { auth } from "@/auth";
+import { getTenantIdFromSession } from "@/lib/tenant";
 import { PERMISSION } from "@/lib/permissions";
 import DashboardCharts from "@/components/DashboardCharts";
 import DashboardDateFilter from "@/components/DashboardDateFilter";
@@ -28,6 +29,7 @@ export default async function Home({
   const session = await auth();
   if (!session?.user) redirect("/login");
 
+  const tenantId = getTenantIdFromSession(session);
   const perms = (session.user as { permissions?: string[] })?.permissions ?? [];
   const roleName = String((session.user as { roleName?: string })?.roleName ?? "").trim();
   const isAdmin = roleName.toLowerCase() === "admin";
@@ -49,8 +51,8 @@ export default async function Home({
   const toDate = toStr ? new Date(toStr) : null;
   const dateFilter =
     fromDate && toDate && !Number.isNaN(fromDate.getTime()) && !Number.isNaN(toDate.getTime()) && fromDate <= toDate
-      ? { fromDate, toDate }
-      : undefined;
+      ? { fromDate, toDate, tenantId } // Include tenantId in filter
+      : { fromDate: new Date(), toDate: new Date(), tenantId }; // Always pass tenantId
 
   let dashboard: Awaited<ReturnType<typeof getDashboard>> | null = null;
   try {

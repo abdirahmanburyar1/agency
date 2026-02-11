@@ -5,6 +5,8 @@ import { requirePermission } from "@/lib/permissions";
 import { PERMISSION } from "@/lib/permissions";
 import { handleAuthError } from "@/lib/api-auth";
 import { trigger, EVENTS } from "@/lib/pusher";
+import { auth } from "@/auth";
+import { getTenantIdFromSession } from "@/lib/tenant";
 
 export async function GET(
   _request: Request,
@@ -18,9 +20,15 @@ export async function GET(
     throw e;
   }
   try {
+    const session = await auth();
+    const tenantId = getTenantIdFromSession(session);
     const { id } = await params;
-    const booking = await prisma.hajUmrahBooking.findUnique({
-      where: { id },
+    
+    const booking = await prisma.hajUmrahBooking.findFirst({
+      where: { 
+        id,
+        tenantId, // SCOPE BY TENANT - security check
+      },
       include: {
         customer: true,
         campaign: { include: { leader: { select: { id: true, name: true, email: true } } } },

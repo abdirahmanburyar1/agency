@@ -4,6 +4,8 @@ import { prisma } from "@/lib/db";
 import { requirePermission } from "@/lib/permissions";
 import { PERMISSION } from "@/lib/permissions";
 import { handleAuthError } from "@/lib/api-auth";
+import { auth } from "@/auth";
+import { getTenantIdFromSession } from "@/lib/tenant";
 
 export async function PATCH(
   request: Request,
@@ -17,6 +19,8 @@ export async function PATCH(
     throw e;
   }
   try {
+    const session = await auth();
+    const tenantId = getTenantIdFromSession(session);
     const { id } = await params;
     const body = await request.json();
     const referenceTrimmed = (body.reference ?? "").trim();
@@ -28,8 +32,11 @@ export async function PATCH(
       );
     }
 
-    const ticket = await prisma.ticket.findUnique({
-      where: { id },
+    const ticket = await prisma.ticket.findFirst({
+      where: { 
+        id,
+        tenantId, // SCOPE BY TENANT - security check
+      },
       include: { payments: true, payables: true },
     });
 

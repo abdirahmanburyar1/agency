@@ -2,15 +2,23 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requirePermission } from "@/lib/permissions";
 import { PERMISSION } from "@/lib/permissions";
+import { auth } from "@/auth";
+import { getTenantIdFromSession } from "@/lib/tenant";
 
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   await requirePermission(PERMISSION.EXPENSES_VIEW);
+  const session = await auth();
+  const tenantId = getTenantIdFromSession(session);
   const { id } = await params;
-  const expense = await prisma.expense.findUnique({
-    where: { id },
+  
+  const expense = await prisma.expense.findFirst({
+    where: { 
+      id,
+      tenantId, // SCOPE BY TENANT - security check
+    },
     include: { employee: true },
   });
   if (!expense) {
@@ -24,7 +32,18 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   await requirePermission(PERMISSION.EXPENSES_EDIT);
+  const session = await auth();
+  const tenantId = getTenantIdFromSession(session);
   const { id } = await params;
+  
+  // Verify expense belongs to tenant
+  const existing = await prisma.expense.findFirst({
+    where: { id, tenantId },
+  });
+  if (!existing) {
+    return NextResponse.json({ error: "Expense not found" }, { status: 404 });
+  }
+  
   const body = await request.json();
   const amount = body.amount != null ? parseFloat(body.amount) : undefined;
   if (amount != null && (isNaN(amount) || amount <= 0)) {

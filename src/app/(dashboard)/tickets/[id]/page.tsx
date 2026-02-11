@@ -14,8 +14,14 @@ export async function generateMetadata({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const ticket = await prisma.ticket.findUnique({
-    where: { id },
+  const session = await (await import("@/auth")).auth();
+  const tenantId = (await import("@/lib/tenant")).getTenantIdFromSession(session);
+  
+  const ticket = await prisma.ticket.findFirst({
+    where: { 
+      id,
+      tenantId, // SCOPE BY TENANT - security check
+    },
     select: { reference: true },
   });
   if (!ticket) return { title: "Ticket" };
@@ -51,9 +57,15 @@ export default async function TicketDetailPage({
   await requirePermission(PERMISSION.TICKETS_VIEW, { redirectOnForbidden: true });
   const { id } = await params;
 
+  const session = await (await import("@/auth")).auth();
+  const tenantId = (await import("@/lib/tenant")).getTenantIdFromSession(session);
+
   const [ticket, systemSettings] = await Promise.all([
-    prisma.ticket.findUnique({
-      where: { id },
+    prisma.ticket.findFirst({
+      where: { 
+        id,
+        tenantId, // SCOPE BY TENANT - security check
+      },
       include: { customer: true, adjustments: { orderBy: { createdAt: "asc" } } },
     }),
     getSystemSettings(),

@@ -41,8 +41,14 @@ export default async function VisaDetailPage({
   await requirePermission(PERMISSION.VISAS_VIEW, { redirectOnForbidden: true });
   const { id } = await params;
 
-  const visa = await prisma.visa.findUnique({
-    where: { id },
+  const session = await (await import("@/auth")).auth();
+  const tenantId = (await import("@/lib/tenant")).getTenantIdFromSession(session);
+
+  const visa = await prisma.visa.findFirst({
+    where: { 
+      id,
+      tenantId, // SCOPE BY TENANT - security check
+    },
     include: {
       customerRelation: true,
       payments: { orderBy: { createdAt: "desc" }, include: { receipts: { select: { amount: true } } } },

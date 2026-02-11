@@ -14,8 +14,14 @@ export default async function HajUmrahBookingPage({
   const canEdit = await (await import("@/lib/permissions")).canAccess(PERMISSION.HAJ_UMRAH_EDIT);
   const { id } = await params;
 
-  const booking = await prisma.hajUmrahBooking.findUnique({
-    where: { id },
+  const session = await (await import("@/auth")).auth();
+  const tenantId = (await import("@/lib/tenant")).getTenantIdFromSession(session);
+
+  const booking = await prisma.hajUmrahBooking.findFirst({
+    where: { 
+      id,
+      tenantId, // SCOPE BY TENANT - security check
+    },
     include: {
       customer: true,
       campaign: { include: { leader: { select: { id: true, name: true, email: true } } } },

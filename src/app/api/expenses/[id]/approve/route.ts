@@ -3,12 +3,15 @@ import { prisma } from "@/lib/db";
 import { requirePermission } from "@/lib/permissions";
 import { PERMISSION } from "@/lib/permissions";
 import { auth } from "@/auth";
+import { getTenantIdFromSession } from "@/lib/tenant";
 
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   await requirePermission(PERMISSION.EXPENSES_APPROVE);
+  const session = await auth();
+  const tenantId = getTenantIdFromSession(session);
   const { id } = await params;
   const body = await request.json();
   const action = body.action; // "approve" | "reject"
@@ -17,7 +20,12 @@ export async function POST(
     return NextResponse.json({ error: "Invalid action. Use 'approve' or 'reject'" }, { status: 400 });
   }
 
-  const expense = await prisma.expense.findUnique({ where: { id } });
+  const expense = await prisma.expense.findFirst({ 
+    where: { 
+      id,
+      tenantId, // SCOPE BY TENANT - security check
+    } 
+  });
   if (!expense) {
     return NextResponse.json({ error: "Expense not found" }, { status: 404 });
   }
@@ -29,7 +37,6 @@ export async function POST(
     );
   }
 
-  const session = await auth();
   const userId = (session?.user as { id?: string })?.id;
 
   const updated = await prisma.expense.update({

@@ -31,6 +31,7 @@ function monthsInRange(fromDate: Date, toDate: Date): { monthStr: string; label:
 export type DashboardDateFilter = {
   fromDate: Date;
   toDate: Date;
+  tenantId: string; // REQUIRED for tenant isolation
 };
 
 function getCurrentMonthRange(): { from: Date; to: Date } {
@@ -41,12 +42,18 @@ function getCurrentMonthRange(): { from: Date; to: Date } {
 }
 
 export async function getDashboard(filter?: DashboardDateFilter) {
+  if (!filter?.tenantId) {
+    throw new Error("tenantId is required for dashboard");
+  }
+  
   const now = new Date();
   const currentMonth = getCurrentMonthRange();
   const fromDate = filter?.fromDate ?? currentMonth.from;
   const toDate = filter?.toDate ?? currentMonth.to;
+  const tenantId = filter.tenantId;
 
   const dateRange = {
+    tenantId, // SCOPE BY TENANT - security check
     date: {
       gte: startOfDay(fromDate),
       lte: endOfDay(toDate),
@@ -55,7 +62,7 @@ export async function getDashboard(filter?: DashboardDateFilter) {
 
   const ticketWhere = { ...dateRange, canceledAt: null };
   const paymentWhere = { ...dateRange, canceledAt: null, status: { not: "refunded" } };
-  const payableWhere = { ...dateRange };
+  const payableWhere = { ...dateRange }; // tenantId already in dateRange
   const expenseWhere = { ...dateRange, status: "paid" };
   const hajUmrahPaymentWhere = { ...paymentWhere, hajUmrahBookingId: { not: null }, status: { not: "refunded" } };
 
@@ -84,7 +91,10 @@ export async function getDashboard(filter?: DashboardDateFilter) {
   const fromForChart = startOfDay(fromDate);
   const toForChart = endOfDay(toDate);
   const chartMonths = monthsInRange(fromForChart, toForChart);
-  const chartDateWhere = { date: { gte: fromForChart, lte: toForChart } };
+  const chartDateWhere = { 
+    tenantId, // SCOPE BY TENANT - security check
+    date: { gte: fromForChart, lte: toForChart } 
+  };
 
   const [ticketByMonth, visaByMonth, hajUmrahByMonth] = await Promise.all([
     prisma.ticket.groupBy({

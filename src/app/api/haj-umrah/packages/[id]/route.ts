@@ -3,6 +3,8 @@ import { prisma } from "@/lib/db";
 import { requirePermission } from "@/lib/permissions";
 import { PERMISSION } from "@/lib/permissions";
 import { handleAuthError } from "@/lib/api-auth";
+import { auth } from "@/auth";
+import { getTenantIdFromSession } from "@/lib/tenant";
 
 export async function GET(
   _request: Request,
@@ -16,9 +18,15 @@ export async function GET(
     throw e;
   }
   try {
+    const session = await auth();
+    const tenantId = getTenantIdFromSession(session);
     const { id } = await params;
-    const pkg = await prisma.hajUmrahPackage.findUnique({
-      where: { id },
+    
+    const pkg = await prisma.hajUmrahPackage.findFirst({
+      where: { 
+        id,
+        tenantId, // SCOPE BY TENANT - security check
+      },
       include: { visaPrices: true },
     });
     if (!pkg) return NextResponse.json({ error: "Package not found" }, { status: 404 });
