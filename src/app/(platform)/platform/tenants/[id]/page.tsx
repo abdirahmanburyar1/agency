@@ -4,6 +4,8 @@ import Link from "next/link";
 import TenantInfoForm from "./TenantInfoForm";
 import SubscriptionCard from "./SubscriptionCard";
 import BillingHistory from "./BillingHistory";
+import CreateAdminUserForm from "./CreateAdminUserForm";
+import UsersList from "./UsersList";
 
 export default async function TenantDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -17,6 +19,12 @@ export default async function TenantDetailPage({ params }: { params: Promise<{ i
             orderBy: { dueDate: "desc" },
             take: 10,
           },
+        },
+        orderBy: { createdAt: "desc" },
+      },
+      users: {
+        include: {
+          role: true,
         },
         orderBy: { createdAt: "desc" },
       },
@@ -128,6 +136,15 @@ export default async function TenantDetailPage({ params }: { params: Promise<{ i
           <BillingHistory payments={activeSubscription.payments} />
         </div>
       )}
+
+      {/* Users Management */}
+      <div>
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-xl font-bold text-slate-900 dark:text-white">Users</h2>
+          <CreateAdminUserForm tenantId={tenant.id} />
+        </div>
+        <UsersList users={tenant.users} />
+      </div>
 
       {/* Client Information */}
       <div>
